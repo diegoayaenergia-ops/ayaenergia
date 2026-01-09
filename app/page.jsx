@@ -15,23 +15,23 @@ import {
 
 const USERS = {
   aya: {
-    empresa: "AYA Energia",
-    senha: "aya123",
+    empresa: "Aya Energia",
+    senha: "Aya@2024",
     access: ["ineer", "kamai", "elis", "os", "acionamentos", "compras"],
   },
   ineer: {
     empresa: "Ineer Energia",
-    senha: "ineer123",
+    senha: "k7m2s9qa",
     access: ["ineer"],
   },
   elis: {
     empresa: "Élis Energia",
-    senha: "elis123",
+    senha: "p4x8c2wz",
     access: ["elis"],
   },
   kamai: {
     empresa: "Kamai Solar",
-    senha: "kamai123",
+    senha: "r9d5m2e8",
     access: ["kamai"],
   },
 };
