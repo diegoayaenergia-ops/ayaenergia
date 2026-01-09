@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Wrench, ShoppingCart, ClipboardList } from "lucide-react";
+import {
+  Wrench,
+  ShoppingCart,
+  ClipboardList,
+  LogOut,
+} from "lucide-react";
 
 /* =========================
    USUÁRIOS / EMPRESAS
@@ -88,11 +93,19 @@ export default function Home() {
   const [empresa, setEmpresa] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
-
   const [active, setActive] = useState(null);
 
-  /* ================= LOGIN ================= */
+  /* ===== CARREGA SESSÃO ===== */
+  useEffect(() => {
+    const saved = localStorage.getItem("bi_user");
+    if (saved) {
+      const u = JSON.parse(saved);
+      setUser(u);
+      setActive(u.access[0]);
+    }
+  }, []);
 
+  /* ===== LOGIN ===== */
   const handleLogin = () => {
     const found = Object.values(USERS).find(
       (u) => u.empresa === empresa && u.senha === senha
@@ -103,53 +116,78 @@ export default function Home() {
       return;
     }
 
+    localStorage.setItem("bi_user", JSON.stringify(found));
     setUser(found);
     setActive(found.access[0]);
   };
 
-  /* ================= TELA LOGIN ================= */
+  /* ===== LOGOUT ===== */
+  const handleLogout = () => {
+    localStorage.removeItem("bi_user");
+    setUser(null);
+    setEmpresa("");
+    setSenha("");
+    setActive(null);
+  };
+
+  /* ================= LOGIN PAGE ================= */
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="bg-[#1a1a1a] p-8 rounded-xl w-full max-w-sm space-y-5 shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-zinc-900 to-black">
+        <div className="bg-zinc-950/80 backdrop-blur p-10 rounded-2xl w-full max-w-md space-y-6 shadow-2xl border border-white/10">
           <div className="flex justify-center">
-            <Image src="/logo-aya.png" alt="AYA" width={90} height={90} />
+            <Image src="/logo-aya.png" alt="AYA" width={100} height={100} />
           </div>
 
-          <h2 className="text-white text-center text-lg font-semibold">
-            Acesso ao Portal BI
-          </h2>
+          <div className="text-center space-y-1">
+            <h2 className="text-white text-xl font-semibold">
+              Portal de Business Intelligence
+            </h2>
+            <p className="text-white/50 text-sm">
+              Acesso exclusivo para clientes
+            </p>
+          </div>
 
-          <select
-            value={empresa}
-            onChange={(e) => setEmpresa(e.target.value)}
-            className="w-full p-2 rounded bg-black text-white border border-white/20"
-          >
-            <option value="">Selecione a empresa</option>
-            {Object.values(USERS).map((u) => (
-              <option key={u.empresa} value={u.empresa}>
-                {u.empresa}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-4">
+            <select
+              value={empresa}
+              onChange={(e) => setEmpresa(e.target.value)}
+              className="w-full p-3 rounded-lg bg-black text-white border border-white/20 focus:outline-none focus:border-[#2E7B41]"
+            >
+              <option value="">Selecione sua empresa</option>
+              {Object.values(USERS).map((u) => (
+                <option key={u.empresa} value={u.empresa}>
+                  {u.empresa}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="password"
-            placeholder="Senha"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-            className="w-full p-2 rounded bg-black text-white border border-white/20"
-          />
+            <input
+              type="password"
+              placeholder="Senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              className="w-full p-3 rounded-lg bg-black text-white border border-white/20 focus:outline-none focus:border-[#2E7B41]"
+            />
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && (
+              <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-2 rounded">
+                {error}
+              </div>
+            )}
 
-          <button
-            onClick={handleLogin}
-            className="w-full bg-[#2E7B41] hover:bg-[#256735] text-white py-2 rounded font-medium"
-          >
-            Entrar
-          </button>
+            <button
+              onClick={handleLogin}
+              className="w-full bg-[#2E7B41] hover:bg-[#256735] transition text-white py-3 rounded-lg font-medium"
+            >
+              Entrar no Portal
+            </button>
+          </div>
+
+          <p className="text-xs text-white/40 text-center">
+            © {new Date().getFullYear()} AYA Energia · BI Portal
+          </p>
         </div>
       </div>
     );
@@ -173,8 +211,16 @@ export default function Home() {
         }}
       >
         {/* HEADER */}
-        <div className="h-20 flex items-center justify-center border-b border-white/10">
-          <Image src="/logo-aya.png" alt="Logo" width={70} height={70} />
+        <div className="h-20 flex items-center justify-between px-4 border-b border-white/10">
+          <Image src="/logo-aya.png" alt="Logo" width={60} height={60} />
+
+          <button
+            onClick={handleLogout}
+            className="text-white/70 hover:text-white"
+            title="Sair"
+          >
+            <LogOut size={20} />
+          </button>
         </div>
 
         {/* MENU */}
@@ -187,7 +233,7 @@ export default function Home() {
               <button
                 key={r.id}
                 onClick={() => setActive(r.id)}
-                className={`flex items-center gap-3 px-2 py-2 rounded-lg transition-all text-sm w-full
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
                   ${
                     isActive
                       ? "bg-[#2E7B41] text-white shadow-md"
