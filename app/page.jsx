@@ -269,7 +269,7 @@ export default function Home() {
             );
           })}
         </div>
-      
+
         {/* BOTÃO DÚVIDAS */}
         <div className="border-t border-white/10 p-4">
           <button
@@ -298,10 +298,10 @@ export default function Home() {
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black overflow-hidden">
         {/* TOPBAR */}
-        <div className="absolute top-0 left-0 right-0 h-12 bg-black/60 backdrop-blur border-b border-white/10 z-10 flex items-center justify-between px-4 text-xs text-white/70">
+        {/* <div className="absolute top-0 left-0 right-0 h-12 bg-black/60 backdrop-blur border-b border-white/10 z-10 flex items-center justify-between px-4 text-xs text-white/70">
           <span>{user.empresa}</span>
           <span>{new Date().toLocaleString("pt-BR")}</span>
-        </div>
+        </div> */}
 
         {/* LOADING OVERLAY */}
         {loading && (
@@ -317,7 +317,7 @@ export default function Home() {
           <iframe
             key={report.id}
             src={formatUrl(report.src)}
-            className={`absolute left-0 right-0 bottom-0 top-12 w-full h-[calc(100%-3rem)] border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
+            className={`absolute inset-0 w-full h-full border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
               }`}
             allowFullScreen
             onLoad={() => {
@@ -325,6 +325,7 @@ export default function Home() {
               setFadeIn(true);
             }}
           />
+
 
         )}
       </div>
