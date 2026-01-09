@@ -84,12 +84,12 @@ const ALL_REPORTS = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
 ========================= */
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState(null);
   const [empresa, setEmpresa] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
 
-  const [active, setActive] = useState<string | null>(null);
+  const [active, setActive] = useState(null);
 
   /* ================= LOGIN ================= */
 
@@ -232,7 +232,7 @@ export default function Home() {
    POWER BI URL
 ========================= */
 
-function formatUrl(url: string) {
+function formatUrl(url) {
   if (!url) return url;
 
   const params = [
