@@ -203,61 +203,60 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
-      {/* SIDEBAR */}
-      <aside
-        className="h-full w-64 flex flex-col"
-        style={{
-          background: "linear-gradient(180deg, #464947ff 0%, #464947ff 100%)",
-        }}
-      >
-        {/* HEADER */}
-        <div className="h-20 flex items-center justify-between px-4 border-b border-white/10">
-          <Image src="/logo-aya.png" alt="Logo" width={60} height={60} />
+{/* SIDEBAR */}
+<aside
+  className="h-full w-64 flex flex-col"
+  style={{
+    background: "linear-gradient(180deg, #464947ff 0%, #464947ff 100%)",
+  }}
+>
+  {/* HEADER */}
+  <div className="h-20 flex items-center justify-center border-b border-white/10">
+    <Image src="/logo-aya.png" alt="Logo" width={60} height={60} />
+  </div>
 
-          <button
-            onClick={handleLogout}
-            className="text-white/70 hover:text-white"
-            title="Sair"
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
+  {/* MENU */}
+  <div className="flex-1 overflow-y-auto px-2 py-4 space-y-2">
+    {allowedReports.map((r) => {
+      const isActive = active === r.id;
+      const Icon = r.icon;
 
-        {/* MENU */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-2">
-          {allowedReports.map((r) => {
-            const isActive = active === r.id;
-            const Icon = r.icon;
+      return (
+        <button
+          key={r.id}
+          onClick={() => setActive(r.id)}
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
+            ${
+              isActive
+                ? "bg-[#2E7B41] text-white shadow-md"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
+            }
+          `}
+        >
+          {r.image ? (
+            <Image src={r.image} alt="" width={22} height={22} />
+          ) : (
+            Icon && <Icon className="w-5 h-5 shrink-0" />
+          )}
 
-            return (
-              <button
-                key={r.id}
-                onClick={() => setActive(r.id)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
-                  ${
-                    isActive
-                      ? "bg-[#2E7B41] text-white shadow-md"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
-                  }
-                `}
-              >
-                {r.image ? (
-                  <Image src={r.image} alt="" width={22} height={22} />
-                ) : (
-                  Icon && <Icon className="w-5 h-5 shrink-0" />
-                )}
+          <span className="truncate">{r.title}</span>
+        </button>
+      );
+    })}
+  </div>
 
-                <span className="truncate">{r.title}</span>
-              </button>
-            );
-          })}
-        </div>
+  {/* LOGOUT */}
+  <div className="border-t border-white/10 p-3">
+    <button
+      onClick={handleLogout}
+      className="flex items-center gap-2 text-white/70 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition"
+    >
+      <LogOut size={18} />
+      <span>Sair</span>
+    </button>
+  </div>
+</aside>
 
-        {/* FOOTER */}
-        <div className="h-12 flex items-center justify-center border-t border-white/10 text-xs text-white/60">
-          {user.empresa}
-        </div>
-      </aside>
 
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black">
