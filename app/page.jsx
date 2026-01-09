@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HelpCircle, X, Linkedin, Mail, Phone } from "lucide-react";
 import Image from "next/image";
 import {
   Wrench,
@@ -93,7 +94,12 @@ export default function Home() {
   const [empresa, setEmpresa] = useState("");
   const [senha, setSenha] = useState("");
   const [error, setError] = useState("");
+
   const [active, setActive] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [fadeIn, setFadeIn] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
+
 
   /* ===== CARREGA SESSÃO ===== */
   useEffect(() => {
@@ -102,6 +108,8 @@ export default function Home() {
       const u = JSON.parse(saved);
       setUser(u);
       setActive(u.access[0]);
+      setLoading(true);
+      setFadeIn(false);
     }
   }, []);
 
@@ -118,6 +126,8 @@ export default function Home() {
 
     localStorage.setItem("bi_user", JSON.stringify(found));
     setUser(found);
+    setFadeIn(false);
+    setLoading(true);
     setActive(found.access[0]);
   };
 
@@ -134,10 +144,10 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-zinc-900 to-black">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-[#0f2f1f] to-[#1f7a4a]">
         <div className="bg-zinc-950/80 backdrop-blur p-10 rounded-2xl w-full max-w-md space-y-6 shadow-2xl border border-white/10">
           <div className="flex justify-center">
-            <Image src="/logo-aya.png" alt="AYA" width={100} height={100} />
+            <Image src="/logo-aya.png" alt="AYA" width={110} height={110} />
           </div>
 
           <div className="text-center space-y-1">
@@ -153,7 +163,7 @@ export default function Home() {
             <select
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
-              className="w-full p-3 rounded-lg bg-black text-white border border-white/20 focus:outline-none focus:border-[#2E7B41]"
+              className="w-full p-3.5 rounded-lg bg-black text-white border border-white/20 focus:outline-none focus:border-[#2E7B41]"
             >
               <option value="">Selecione sua empresa</option>
               {Object.values(USERS).map((u) => (
@@ -179,7 +189,7 @@ export default function Home() {
 
             <button
               onClick={handleLogin}
-              className="w-full bg-[#2E7B41] hover:bg-[#256735] transition text-white py-3 rounded-lg font-medium"
+              className="w-full bg-[#2E7B57] hover:bg-[#2E7B45] transition text-white py-3 rounded-lg font-medium"
             >
               Entrar no Portal
             </button>
@@ -203,72 +213,181 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
-{/* SIDEBAR */}
-<aside
-  className="h-full w-64 flex flex-col"
-  style={{
-    background: "linear-gradient(180deg, #464947ff 0%, #464947ff 100%)",
-  }}
->
-  {/* HEADER */}
-  <div className="h-20 flex items-center justify-center border-b border-white/10">
-    <Image src="/logo-aya.png" alt="Logo" width={60} height={60} />
-  </div>
+      {/* SIDEBAR */}
+      <aside className="h-full w-64 flex flex-col bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36] border-r border-white/10 shadow-2xl">
+        {/* HEADER */}
+        <div className="h-20 flex items-center gap-3 px-5 border-b border-white/10">
+          <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
+          <div className="leading-tight">
+            <p className="text-white font-semibold text-sm">AYA Energia</p>
+            <p className="text-white/50 text-xs">BI Portal</p>
+          </div>
+        </div>
 
-  {/* MENU */}
-  <div className="flex-1 overflow-y-auto px-2 py-4 space-y-2">
-    {allowedReports.map((r) => {
-      const isActive = active === r.id;
-      const Icon = r.icon;
+        {/* MENU */}
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-2">
+          {allowedReports.map((r) => {
+            const isActive = active === r.id;
+            const Icon = r.icon;
 
-      return (
-        <button
-          key={r.id}
-          onClick={() => setActive(r.id)}
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
-            ${
-              isActive
-                ? "bg-[#2E7B41] text-white shadow-md"
-                : "text-white/80 hover:bg-white/10 hover:text-white"
-            }
-          `}
-        >
-          {r.image ? (
-            <Image src={r.image} alt="" width={22} height={22} />
-          ) : (
-            Icon && <Icon className="w-5 h-5 shrink-0" />
-          )}
+            return (
+              <button
+                key={r.id}
+                onClick={() => {
+                  setFadeIn(false);
+                  setLoading(true);
+                  setActive(r.id);
+                }}
+                className={`group relative flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm w-full overflow-hidden
+                  ${isActive
+                    ? "bg-white/10 text-white"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }
+                `}
+              >
+                {/* Barra lateral ativa */}
+                {isActive && (
+                  <span className="absolute left-0 top-0 h-full w-1 bg-[#2E7B57] rounded-r" />
+                )}
 
-          <span className="truncate">{r.title}</span>
-        </button>
-      );
-    })}
-  </div>
+                {r.image ? (
+                  <Image
+                    src={r.image}
+                    alt=""
+                    width={22}
+                    height={22}
+                    className="shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:brightness-110"
+                  />
+                ) : (
+                  Icon && (
+                    <Icon className="w-5 h-5 shrink-0 transition group-hover:scale-110" />
+                  )
+                )}
 
-  {/* LOGOUT */}
-  <div className="border-t border-white/10 p-3">
-    <button
-      onClick={handleLogout}
-      className="flex items-center gap-2 text-white/70 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition"
-    >
-      <LogOut size={18} />
-      <span>Sair</span>
-    </button>
-  </div>
-</aside>
+                <span className="truncate">{r.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      
+        {/* BOTÃO DÚVIDAS */}
+        <div className="border-t border-white/10 p-4">
+          <button
+            onClick={() => setShowSupport(true)}
+            className="flex items-center gap-3 text-white/70 hover:text-white w-full text-sm px-4 py-2 rounded-lg hover:bg-white/10 transition"
+          >
+            <HelpCircle size={18} />
+            <span>Dúvidas / Suporte</span>
+          </button>
+        </div>
 
+
+        {/* LOGOUT */}
+
+        <div className="border-t border-white/10 p-4">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-4 py-2 rounded-lg hover:bg-white/10 transition"
+          >
+            <LogOut size={18} />
+            <span>Sair do Portal</span>
+          </button>
+        </div>
+      </aside>
 
       {/* CONTEÚDO */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 relative bg-black overflow-hidden">
+        {/* TOPBAR */}
+        <div className="absolute top-0 left-0 right-0 h-12 bg-black/60 backdrop-blur border-b border-white/10 z-10 flex items-center justify-between px-4 text-xs text-white/70">
+          <span>{user.empresa}</span>
+          <span>{new Date().toLocaleString("pt-BR")}</span>
+        </div>
+
+        {/* LOADING OVERLAY */}
+        {loading && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="w-12 h-12 border-4 border-white/20 border-t-[#2E7B57] rounded-full animate-spin mb-4" />
+            <p className="text-white/80 text-sm tracking-wide">
+              Carregando: {report?.title || "relatório"}...
+            </p>
+          </div>
+        )}
+
         {report && (
           <iframe
             key={report.id}
             src={formatUrl(report.src)}
-            className="absolute inset-0 w-full h-full border-none"
+            className={`absolute left-0 right-0 bottom-0 top-12 w-full h-[calc(100%-3rem)] border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
+              }`}
             allowFullScreen
+            onLoad={() => {
+              setLoading(false);
+              setFadeIn(true);
+            }}
           />
+
         )}
       </div>
+      {/* MODAL SUPORTE */}
+      {showSupport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm">
+          <div className="bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+
+            {/* FECHAR */}
+            <button
+              onClick={() => setShowSupport(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex flex-col items-center text-center space-y-3">
+              {/* <Image src="/logo-aya.png" alt="AYA" width={70} height={70} /> */}
+
+              <h3 className="text-white text-lg font-semibold">
+                Suporte Técnico
+              </h3>
+
+              <p className="text-white/70 text-sm">
+                Entre em contato com o desenvolvedor
+              </p>
+
+              <p className="text-white font-medium">
+                Diego Sanchez D’Amaro
+              </p>
+            </div>
+
+            <div className="mt-6 space-y-3 text-sm">
+              <a
+                href="https://www.linkedin.com/in/diegodamaro/"
+                target="_blank"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-white"
+              >
+                <Linkedin size={18} />
+                <span>LinkedIn</span>
+              </a>
+
+              <a
+                href="mailto:diego.sanchez@ayaenergia.com.br"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-white"
+              >
+                <Mail size={18} />
+                <span>Email</span>
+              </a>
+
+              <a
+                href="https://wa.me/5511961995900"
+                target="_blank"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-white"
+              >
+                <Phone size={18} />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -284,8 +403,8 @@ function formatUrl(url) {
     "navContentPaneEnabled=false",
     "filterPaneEnabled=false",
     "pageView=fitToWidth",
-    "zoom=1",
   ].join("&");
+
 
   return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
 }
