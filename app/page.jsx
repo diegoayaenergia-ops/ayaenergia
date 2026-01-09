@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HelpCircle, X, Linkedin, Mail, Phone } from "lucide-react";
-import Image from "next/image";
 import {
   Wrench,
   ShoppingCart,
   ClipboardList,
   LogOut,
+  HelpCircle,
+  X,
+  Linkedin,
+  Mail,
+  Phone,
 } from "lucide-react";
+
+import Image from "next/image";
+
 
 /* =========================
    USUÁRIOS / EMPRESAS
@@ -99,6 +105,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [fadeIn, setFadeIn] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
 
 
   /* ===== CARREGA SESSÃO ===== */
@@ -214,18 +222,28 @@ export default function Home() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-black">
       {/* SIDEBAR */}
-      <aside className="h-full w-64 flex flex-col bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36] border-r border-white/10 shadow-2xl">
+      <aside
+        className={`relative h-full flex flex-col bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36]
+        border-r border-white/10 shadow-2xl transition-all duration-300
+        ${sidebarOpen ? "w-64" : "w-16"}`}
+      >
+
         {/* HEADER */}
-        <div className="h-20 flex items-center gap-3 px-5 border-b border-white/10">
-          <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
-          <div className="leading-tight">
+        <div className="h-16 flex items-center px-3 border-b border-white/10">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Image src="/logo-aya.png" alt="Logo" width={50} height={50} />
+            {sidebarOpen && (
+              <div className="leading-tight">
             <p className="text-white font-semibold text-sm">AYA Energia</p>
             <p className="text-white/50 text-xs">BI Portal</p>
+            </div>
+            )}
           </div>
         </div>
 
+
         {/* MENU */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-2">
+        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-2">
           {allowedReports.map((r) => {
             const isActive = active === r.id;
             const Icon = r.icon;
@@ -238,14 +256,13 @@ export default function Home() {
                   setLoading(true);
                   setActive(r.id);
                 }}
-                className={`group relative flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm w-full overflow-hidden
+                className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
                   ${isActive
                     ? "bg-white/10 text-white"
                     : "text-white/70 hover:bg-white/5 hover:text-white"
                   }
                 `}
               >
-                {/* Barra lateral ativa */}
                 {isActive && (
                   <span className="absolute left-0 top-0 h-full w-1 bg-[#2E7B57] rounded-r" />
                 )}
@@ -256,7 +273,7 @@ export default function Home() {
                     alt=""
                     width={22}
                     height={22}
-                    className="shrink-0 transition-all duration-200 group-hover:scale-110 group-hover:brightness-110"
+                    className="shrink-0 transition group-hover:scale-110"
                   />
                 ) : (
                   Icon && (
@@ -264,44 +281,47 @@ export default function Home() {
                   )
                 )}
 
-                <span className="truncate">{r.title}</span>
+                {sidebarOpen && <span className="truncate">{r.title}</span>}
               </button>
             );
           })}
         </div>
 
-        {/* BOTÃO DÚVIDAS */}
-        <div className="border-t border-white/10 p-4">
+        {/* BOTÃO SUPORTE */}
+        <div className="border-t border-white/10 p-2">
           <button
             onClick={() => setShowSupport(true)}
-            className="flex items-center gap-3 text-white/70 hover:text-white w-full text-sm px-4 py-2 rounded-lg hover:bg-white/10 transition"
+            title={!sidebarOpen ? "Suporte" : ""}
+            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition"
           >
             <HelpCircle size={18} />
-            <span>Dúvidas / Suporte</span>
+            {sidebarOpen && <span>Dúvidas / Suporte</span>}
           </button>
         </div>
-
 
         {/* LOGOUT */}
-
-        <div className="border-t border-white/10 p-4">
+        <div className="border-t border-white/10 p-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-4 py-2 rounded-lg hover:bg-white/10 transition"
+            title={!sidebarOpen ? "Sair" : ""}
+            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10 transition"
           >
             <LogOut size={18} />
-            <span>Sair do Portal</span>
+            {sidebarOpen && <span>Sair</span>}
           </button>
         </div>
+      
+      {/* FAIXA DE TOGGLE NA BORDA */}
+      <button
+        onClick={() => setSidebarOpen((v) => !v)}
+        className="absolute top-0 right-0 h-full w-2 bg-transparent hover:bg-white/10 transition"
+        title={sidebarOpen ? "Fechar menu" : "Abrir menu"}
+      />
       </aside>
+
 
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black overflow-hidden">
-        {/* TOPBAR */}
-        {/* <div className="absolute top-0 left-0 right-0 h-12 bg-black/60 backdrop-blur border-b border-white/10 z-10 flex items-center justify-between px-4 text-xs text-white/70">
-          <span>{user.empresa}</span>
-          <span>{new Date().toLocaleString("pt-BR")}</span>
-        </div> */}
 
         {/* LOADING OVERLAY */}
         {loading && (
