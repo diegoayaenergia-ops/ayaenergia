@@ -16,13 +16,22 @@ import {
   KeyRound,
 } from "lucide-react";
 
+import type { LucideIcon } from "lucide-react";
+
+type ReportItem = {
+  id: string;
+  title: string;
+  src: string;
+  image?: string;
+  icon?: LucideIcon;
+};
 import Image from "next/image";
 
 /* =========================
    RELATÓRIOS
 ========================= */
 
-const PORTFOLIO_REPORTS = [
+const  PORTFOLIO_REPORTS: ReportItem[] = [
   {
     id: "ineer",
     title: "Ineer Energia",
@@ -43,7 +52,7 @@ const PORTFOLIO_REPORTS = [
   },
 ];
 
-const INTERNAL_REPORTS = [
+const INTERNAL_REPORTS: ReportItem[] = [
   {
     id: "os",
     title: "Ordens de Serviço",
@@ -64,7 +73,7 @@ const INTERNAL_REPORTS = [
   },
 ];
 
-const ALL_REPORTS = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
+const ALL_REPORTS: ReportItem[] = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
 
 /* =========================
    PAGE
@@ -82,6 +91,7 @@ export default function Home() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [active, setActive] = useState<string>("home");
+  const [nextReport, setNextReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
@@ -107,6 +117,17 @@ export default function Home() {
   }, []);
 
   /* ===== BUSCA EMPRESAS ===== */
+  useEffect(() => {
+  if (!nextReport) return;
+
+  const t = setTimeout(() => {
+    setActive(nextReport);
+    setNextReport(null);
+  }, 150); // pequeno delay para suavizar
+
+  return () => clearTimeout(t);
+}, [nextReport]);
+
   useEffect(() => {
     async function loadCompanies() {
       try {
@@ -387,11 +408,12 @@ export default function Home() {
               <button
                 key={r.id}
                 onClick={() => {
+                  if (r.id === active) return;
                   setFadeIn(false);
                   setLoading(true);
-                  setActive(r.id);
-                  setLoading(true)
+                  setNextReport(r.id);
                 }}
+
                 className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
                   ${isActive
                     ? "bg-white/10 text-white"
@@ -453,9 +475,15 @@ export default function Home() {
 
         {/* TOGGLE */}
         <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="absolute top-0 right-0 h-full w-2 hover:bg-white/10"
-        />
+  onClick={() => setSidebarOpen((v) => !v)}
+  className="
+    absolute top-0 right-0 h-full w-3
+    cursor-col-resize
+    hover:bg-white/20
+    transition
+  "
+/>
+
       </aside>
 
       {/* CONTEÚDO */}
@@ -486,7 +514,7 @@ export default function Home() {
 
         {report && active !== "home" && (
           <iframe
-            key={report.id}
+            key={active}
             src={formatUrl(report.src)}
             className={`absolute inset-0 w-full h-full border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
               }`}
@@ -497,6 +525,7 @@ export default function Home() {
             }}
           />
         )}
+
       </div>
 
       {/* MODAL SUPORTE */}
