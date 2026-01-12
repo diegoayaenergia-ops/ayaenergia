@@ -81,8 +81,8 @@ export default function Home() {
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
 
-  const [active, setActive] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState<string>("home");
+  const [loading, setLoading] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -94,6 +94,7 @@ export default function Home() {
   const [resetMsg, setResetMsg] = useState("");
   const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   /* ===== CARREGA SESSÃO ===== */
   useEffect(() => {
@@ -102,8 +103,6 @@ export default function Home() {
       const u = JSON.parse(saved);
       setUser(u);
       setActive("home");
-      setLoading(true);
-      setFadeIn(false);
     }
   }, []);
 
@@ -116,8 +115,9 @@ export default function Home() {
         setCompanies(data.map((c: any) => c.client_name));
       } catch (err) {
         console.error("Erro ao buscar empresas");
+      } finally {
+        setCompaniesLoading(false);
       }
-      setCompaniesLoading(false);
     }
     loadCompanies();
   }, []);
@@ -146,20 +146,17 @@ export default function Home() {
 
       if (!res.ok) {
         setError(data.error || "Erro ao fazer login");
-        setLoginLoading(false);
         return;
       }
 
       localStorage.setItem("bi_user", JSON.stringify(data));
       setUser(data);
       setActive("home");
-      setLoading(true);
-      setFadeIn(false);
     } catch {
       setError("Erro de conexão com o servidor");
+    } finally {
+      setLoginLoading(false);
     }
-
-    setLoginLoading(false);
   };
 
   /* ===== LOGOUT ===== */
@@ -168,7 +165,6 @@ export default function Home() {
     setUser(null);
     setEmpresa("");
     setSenha("");
-    setActive(null);
   };
 
   /* ===== ALTERAR SENHA ===== */
@@ -184,6 +180,8 @@ export default function Home() {
       setResetMsg("A nova senha deve ter no mínimo 4 caracteres");
       return;
     }
+
+    setResetLoading(true);
 
     try {
       const res = await fetch("/api/change-password", {
@@ -204,89 +202,146 @@ export default function Home() {
       }
 
       setResetMsg("Senha alterada com sucesso ✅");
-      setOldPass("");
-      setNewPass("");
+
+      setTimeout(() => {
+        setShowReset(false);
+        setOldPass("");
+        setNewPass("");
+        setResetMsg("");
+      }, 1200);
     } catch {
       setResetMsg("Erro de conexão com o servidor");
+    } finally {
+      setResetLoading(false);
     }
   };
-
 
   /* ================= LOGIN PAGE ================= */
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-[#0f2f1f] to-[#1f7a4a]">
-        <div className="bg-zinc-950/80 backdrop-blur p-10 rounded-2xl w-full max-w-md space-y-6 shadow-2xl border border-white/10">
-          <div className="flex justify-center">
+      <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+
+        {/* VÍDEO DE FUNDO */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/video.mp4" type="video/mp4" />
+        </video>
+
+        {/* OVERLAY */}
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* CARD LOGIN */}
+        <div
+          className="
+          relative z-10
+          w-[520px] h-[300px]
+          bg-gradient-to-br from-[#0b3a2a] via-[#0b1f15] to-[#145a36]
+          rounded-xl
+          shadow-2xl
+          border border-white/10
+          grid grid-cols-2
+          overflow-hidden
+          backdrop-blur-sm
+        "
+        >
+
+          {/* LADO ESQUERDO */}
+          <div className="p-6 flex flex-col justify-center items-center text-center text-white bg-black/20">
             <Image src="/logo-aya.png" alt="AYA" width={110} height={110} />
-          </div>
 
-          <div className="text-center space-y-1">
-            <h2 className="text-white text-xl font-semibold">
+            <p className="mt-4 text-sm text-white/90 font-medium">
               Portal de Business Intelligence
-            </h2>
-            <p className="text-white/50 text-sm">
-              Acesso exclusivo para clientes
             </p>
+
+            <span className="mt-2 text-xs text-white/50">
+              BI Portal • AYA Energia
+            </span>
           </div>
 
-          <div className="space-y-4">
+          {/* LADO DIREITO */}
+          <div className="p-6 flex flex-col justify-center gap-3">
+
+            <h2 className="text-center text-white font-semibold text-sm mb-1">
+              Login
+            </h2>
+
+            {/* EMPRESA */}
             <select
               value={empresa}
               onChange={(e) => setEmpresa(e.target.value)}
-              className="w-full p-3.5 rounded-lg bg-black text-white border border-white/20"
+              className="
+              w-full px-3 py-2 rounded
+              bg-black/40 text-white text-sm
+              border border-white/20
+              focus:outline-none focus:border-[#2E7B57]
+            "
             >
               <option value="">
-                {companiesLoading
-                  ? "Carregando empresas..."
-                  : "Selecione sua empresa"}
+                {companiesLoading ? "Carregando empresas..." : "Selecione a empresa"}
               </option>
               {companies.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
+                <option key={name} value={name}>{name}</option>
               ))}
             </select>
 
+            {/* SENHA */}
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="w-full p-3 pr-10 rounded-lg bg-black text-white border border-white/20"
+                className="
+                w-full px-3 py-2 pr-10 rounded
+                bg-black/40 text-white text-sm
+                border border-white/20
+                focus:outline-none focus:border-[#2E7B57]
+              "
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
 
+            {/* ERRO */}
             {error && (
-              <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 p-2 rounded">
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">
                 {error}
               </div>
             )}
 
+            {/* BOTÃO */}
             <button
               onClick={handleLogin}
               disabled={loginLoading}
-              className="w-full bg-[#2E7B57] hover:bg-[#2E7B45] disabled:opacity-50 transition text-white py-3 rounded-lg font-medium"
+              className="
+              mt-1 w-full py-2 rounded
+              bg-[#2E7B57] hover:bg-[#2E7B45]
+              text-white text-sm font-semibold
+              transition disabled:opacity-50
+            "
             >
-              {loginLoading ? "Entrando..." : "Entrar no Portal"}
+              {loginLoading ? "Entrando..." : "Entrar"}
             </button>
+
           </div>
-          <p className="text-xs text-white/40 text-center">
-            © {new Date().getFullYear()} AYA Energia · BI Portal
-          </p>
         </div>
       </div>
     );
   }
+
+
+
 
   /* ================= PORTAL ================= */
 
@@ -313,8 +368,10 @@ export default function Home() {
             <Image src="/logo-aya.png" alt="Logo" width={50} height={50} />
             {sidebarOpen && (
               <div className="leading-tight">
-                <p className="text-white font-semibold text-sm">AYA Energia</p>
-                <p className="text-white/50 text-xs">BI Portal</p>
+                <p className="text-white font-semibold text-sm truncate">
+                  {user.empresa}
+                </p>
+                <p className="text-white/40 text-xs">BI Portal</p>
               </div>
             )}
           </button>
@@ -333,6 +390,7 @@ export default function Home() {
                   setFadeIn(false);
                   setLoading(true);
                   setActive(r.id);
+                  setLoading(true)
                 }}
                 className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
                   ${isActive
@@ -350,7 +408,7 @@ export default function Home() {
                   Icon && <Icon className="w-5 h-5" />
                 )}
 
-                {sidebarOpen && <span>{r.title}</span>}
+                {sidebarOpen && <span className="truncate">{r.title}</span>}
               </button>
             );
           })}
@@ -359,7 +417,14 @@ export default function Home() {
         {/* SUPORTE */}
         <div className="border-t border-white/10 p-2 space-y-1">
           <button
-            onClick={() => setShowReset(true)}
+            onClick={() => {
+              setResetMsg("");
+              setOldPass("");
+              setNewPass("");
+              setShowOldPass(false);
+              setShowNewPass(false);
+              setShowReset(true);
+            }}
             className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
           >
             <KeyRound size={18} />
@@ -478,14 +543,14 @@ export default function Home() {
             Redefinir Senha
           </h3>
 
-          {/* SENHA ATUAL */}
           <div className="relative mb-3">
             <input
               type={showOldPass ? "text" : "password"}
               placeholder="Senha atual"
               value={oldPass}
               onChange={(e) => setOldPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-black text-white border border-white/20"
+              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
             />
             <button
               type="button"
@@ -496,14 +561,14 @@ export default function Home() {
             </button>
           </div>
 
-          {/* NOVA SENHA */}
           <div className="relative mb-3">
             <input
               type={showNewPass ? "text" : "password"}
               placeholder="Nova senha"
               value={newPass}
               onChange={(e) => setNewPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-black text-white border border-white/20"
+              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
             />
             <button
               type="button"
@@ -515,18 +580,26 @@ export default function Home() {
           </div>
 
           {resetMsg && (
-            <p className="text-sm text-white/80 mb-3">{resetMsg}</p>
+            <div
+              className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
+                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                : "bg-red-500/10 text-red-400 border-red-500/20"
+                }`}
+            >
+              {resetMsg}
+            </div>
           )}
 
           <button
             onClick={handleChangePassword}
-            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B45]"
+            disabled={resetLoading || !oldPass || !newPass}
+            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B57]
+                       disabled: disabled:cursor-not-allowed transition"
           >
-            Alterar Senha
+            {resetLoading ? "Alterando..." : "Alterar Senha"}
           </button>
         </Modal>
       )}
-
     </div>
   );
 }
@@ -538,10 +611,10 @@ export default function Home() {
 function Modal({ children, onClose }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+      <div className="bg-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-white/50 hover:text-white"
+          className="absolute top-4 right-4 text-white/60 hover:text-white"
         >
           <X size={18} />
         </button>
@@ -550,6 +623,7 @@ function Modal({ children, onClose }: any) {
     </div>
   );
 }
+
 
 /* =========================
    POWER BI URL
