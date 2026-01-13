@@ -5,14 +5,14 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const empresa = body.empresa?.trim();
+    const login = body.login?.trim();
     const oldPassword = body.oldPassword?.trim();
     const newPassword = body.newPassword?.trim();
 
-    console.log("EMPRESA:", empresa);
+    console.log("LOGIN:", login);
     console.log("OLD PASS DIGITADA:", oldPassword);
 
-    if (!empresa || !oldPassword || !newPassword) {
+    if (!login || !oldPassword || !newPassword) {
       return NextResponse.json(
         { error: "Dados incompletos" },
         { status: 400 }
@@ -22,21 +22,21 @@ export async function POST(req: Request) {
     const { data: client, error } = await supabase
       .from("clients")
       .select("*")
-      .eq("client_name", empresa)
+      .eq("login", login) // 🔥 busca pelo login
       .single();
 
     console.log("CLIENT DO BANCO:", client);
 
     if (error || !client) {
       return NextResponse.json(
-        { error: "Cliente não encontrado" },
+        { error: "Usuário não encontrado" },
         { status: 404 }
       );
     }
 
     console.log("SENHA NO BANCO:", client.password);
 
-    // ✅ COMPARAÇÃO CORRETA (coluna password)
+    // ⚠️ ainda em texto puro (ok por enquanto)
     if (String(client.password).trim() !== oldPassword) {
       return NextResponse.json(
         { error: "Senha atual incorreta" },
@@ -44,7 +44,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ ATUALIZA NA COLUNA CERTA
     const { error: updateError } = await supabase
       .from("clients")
       .update({ password: newPassword })

@@ -3,15 +3,15 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   try {
-    const { empresa, password } = await req.json();
+    const { login, password } = await req.json();
 
-    console.log("➡️ EMPRESA:", empresa);
+    console.log("➡️ LOGIN:", login);
     console.log("➡️ SENHA DIGITADA:", password);
 
     const { data: client, error } = await supabase
       .from("clients")
       .select("*")
-      .eq("client_name", empresa)
+      .eq("login", login)   // 🔥 usa nova coluna
       .single();
 
     console.log("➡️ CLIENT DO BANCO:", client);
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     if (error || !client) {
       return NextResponse.json(
-        { error: "Empresa não encontrada" },
+        { error: "Login não encontrado" },
         { status: 401 }
       );
     }
@@ -36,7 +36,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       id: client.id,
       client_id: client.client_id,
-      empresa: client.client_name,
+      empresa: client.client_name, // ainda pode retornar nome da empresa
+      login: client.login,
       access: client.access,
     });
   } catch (err) {

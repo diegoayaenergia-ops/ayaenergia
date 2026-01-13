@@ -31,7 +31,7 @@ import Image from "next/image";
    RELATÓRIOS
 ========================= */
 
-const  PORTFOLIO_REPORTS: ReportItem[] = [
+const PORTFOLIO_REPORTS: ReportItem[] = [
   {
     id: "ineer",
     title: "Ineer Energia",
@@ -81,13 +81,10 @@ const ALL_REPORTS: ReportItem[] = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [empresa, setEmpresa] = useState("");
+  const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-
-  const [companies, setCompanies] = useState<string[]>([]);
-  const [companiesLoading, setCompaniesLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [active, setActive] = useState<string>("home");
@@ -118,35 +115,20 @@ export default function Home() {
 
   /* ===== BUSCA EMPRESAS ===== */
   useEffect(() => {
-  if (!nextReport) return;
+    if (!nextReport) return;
 
-  const t = setTimeout(() => {
-    setActive(nextReport);
-    setNextReport(null);
-  }, 150); // pequeno delay para suavizar
+    const t = setTimeout(() => {
+      setActive(nextReport);
+      setNextReport(null);
+    }, 150); // pequeno delay para suavizar
 
-  return () => clearTimeout(t);
-}, [nextReport]);
-
-  useEffect(() => {
-    async function loadCompanies() {
-      try {
-        const res = await fetch("/api/clients");
-        const data = await res.json();
-        setCompanies(data.map((c: any) => c.client_name));
-      } catch (err) {
-        console.error("Erro ao buscar empresas");
-      } finally {
-        setCompaniesLoading(false);
-      }
-    }
-    loadCompanies();
-  }, []);
+    return () => clearTimeout(t);
+  }, [nextReport]);
 
   /* ===== LOGIN ===== */
   const handleLogin = async () => {
-    if (!empresa || !senha) {
-      setError("Selecione a empresa e informe a senha");
+    if (!login || !senha) {
+      setError("Informe login e senha");
       return;
     }
 
@@ -158,7 +140,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          empresa: empresa.trim(),
+          login: login.trim(),
           password: senha.trim(),
         }),
       });
@@ -170,9 +152,18 @@ export default function Home() {
         return;
       }
 
+      // 👉 dispara form fake para o Chrome salvar
+      const f = document.getElementById("chrome-save-form") as HTMLFormElement;
+      if (f) {
+        (f.elements.namedItem("username") as HTMLInputElement).value = login;
+        (f.elements.namedItem("password") as HTMLInputElement).value = senha;
+        f.submit();
+      }
+
       localStorage.setItem("bi_user", JSON.stringify(data));
       setUser(data);
       setActive("home");
+
     } catch {
       setError("Erro de conexão com o servidor");
     } finally {
@@ -184,7 +175,7 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem("bi_user");
     setUser(null);
-    setEmpresa("");
+    setLogin("");
     setSenha("");
   };
 
@@ -209,10 +200,11 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          empresa: String(user.empresa).trim(),
+          login: String(user.login).trim(),
           oldPassword: oldPass.trim(),
           newPassword: newPass.trim(),
         }),
+
       });
 
       const data = await res.json();
@@ -286,44 +278,52 @@ export default function Home() {
           </div>
 
           {/* LADO DIREITO */}
-          <div className="p-6 flex flex-col justify-center gap-3">
-
+          <form
+            method="post"
+            action="/login"
+            className="p-6 flex flex-col justify-center gap-3"
+            onSubmit={(e) => {
+              e.preventDefault(); // continua SPA
+              handleLogin();
+            }}
+          >
             <h2 className="text-center text-white font-semibold text-sm mb-1">
               Login
             </h2>
 
-            {/* EMPRESA */}
-            <select
-              value={empresa}
-              onChange={(e) => setEmpresa(e.target.value)}
+            {/* LOGIN */}
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              placeholder="Login"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
               className="
-              w-full px-3 py-2 rounded
-              bg-black/40 text-white text-sm
-              border border-white/20
-              focus:outline-none focus:border-[#2E7B57]
-            "
-            >
-              <option value="">
-                {companiesLoading ? "Carregando empresas..." : "Selecione a empresa"}
-              </option>
-              {companies.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
+      w-full px-3 py-2 rounded
+      bg-black/40 text-white text-sm
+      border border-white/20
+      focus:outline-none focus:border-[#2E7B57]
+    "
+            />
 
             {/* SENHA */}
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"}
+                id="current-password"
+                type="password"  
+                name="password"
+                autoComplete="current-password"
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="
-                w-full px-3 py-2 pr-10 rounded
-                bg-black/40 text-white text-sm
-                border border-white/20
-                focus:outline-none focus:border-[#2E7B57]
-              "
+        w-full px-3 py-2 pr-10 rounded
+        bg-black/40 text-white text-sm
+        border border-white/20
+        focus:outline-none focus:border-[#2E7B57]
+      "
               />
               <button
                 type="button"
@@ -343,19 +343,18 @@ export default function Home() {
 
             {/* BOTÃO */}
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loginLoading}
               className="
-              mt-1 w-full py-2 rounded
-              bg-[#2E7B57] hover:bg-[#2E7B45]
-              text-white text-sm font-semibold
-              transition disabled:opacity-50
-            "
+      mt-1 w-full py-2 rounded
+      bg-[#2E7B57] hover:bg-[#2E7B45]
+      text-white text-sm font-semibold
+      transition disabled:opacity-50
+    "
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
-
-          </div>
+          </form>
         </div>
       </div>
     );
@@ -475,14 +474,14 @@ export default function Home() {
 
         {/* TOGGLE */}
         <button
-  onClick={() => setSidebarOpen((v) => !v)}
-  className="
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="
     absolute top-0 right-0 h-full w-3
     cursor-col-resize
     hover:bg-white/20
     transition
   "
-/>
+        />
 
       </aside>
 
