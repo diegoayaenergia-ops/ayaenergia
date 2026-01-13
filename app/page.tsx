@@ -2,21 +2,17 @@
 
 import { useEffect, useState } from "react";
 import {
-  Wrench,
-  ShoppingCart,
-  ClipboardList,
-  LogOut,
-  HelpCircle,
   X,
-  Linkedin,
-  Mail,
-  Phone,
   Eye,
   EyeOff,
-  KeyRound,
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
+
+/* =========================
+   TYPES
+========================= */
 
 type ReportItem = {
   id: string;
@@ -25,7 +21,6 @@ type ReportItem = {
   image?: string;
   icon?: LucideIcon;
 };
-import Image from "next/image";
 
 /* =========================
    RELATÓRIOS
@@ -56,19 +51,16 @@ const INTERNAL_REPORTS: ReportItem[] = [
   {
     id: "os",
     title: "Ordens de Serviço",
-    icon: ClipboardList,
     src: "https://app.powerbi.com/view?r=eyJrIjoiYzQzYjZjM2YtMzc0OS00MDMwLWI1N2EtODFjZGZmYjczMTlkIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
   {
     id: "acionamentos",
-    title: "Análise de Acionamentos",
-    icon: Wrench,
+    title: "Acionamentos",
     src: "https://app.powerbi.com/view?r=eyJrIjoiM2ZkZGQzZjgtNmQ1Yi00YjdhLWFmOGEtYTQ3MTBiMTk2YmU3IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
   {
     id: "compras",
-    title: "Controle de Compras",
-    icon: ShoppingCart,
+    title: "Compras",
     src: "https://app.powerbi.com/view?r=eyJrIjoiMGQ1YmMyMjctMWYzMy00NTg4LWJkNWYtNGI4OWE0MWViZmUyIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
 ];
@@ -91,8 +83,8 @@ export default function Home() {
   const [nextReport, setNextReport] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
+
   const [showSupport, setShowSupport] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   /* ==== RESET PASSWORD ==== */
   const [showReset, setShowReset] = useState(false);
@@ -103,7 +95,7 @@ export default function Home() {
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  /* ===== CARREGA SESSÃO ===== */
+  /* ===== SESSÃO ===== */
   useEffect(() => {
     const saved = localStorage.getItem("bi_user");
     if (saved) {
@@ -113,15 +105,13 @@ export default function Home() {
     }
   }, []);
 
-  /* ===== BUSCA EMPRESAS ===== */
+  /* ===== TROCA RELATÓRIO ===== */
   useEffect(() => {
     if (!nextReport) return;
-
     const t = setTimeout(() => {
       setActive(nextReport);
       setNextReport(null);
-    }, 150); // pequeno delay para suavizar
-
+    }, 150);
     return () => clearTimeout(t);
   }, [nextReport]);
 
@@ -150,14 +140,6 @@ export default function Home() {
       if (!res.ok) {
         setError(data.error || "Erro ao fazer login");
         return;
-      }
-
-      // 👉 dispara form fake para o Chrome salvar
-      const f = document.getElementById("chrome-save-form") as HTMLFormElement;
-      if (f) {
-        (f.elements.namedItem("username") as HTMLInputElement).value = login;
-        (f.elements.namedItem("password") as HTMLInputElement).value = senha;
-        f.submit();
       }
 
       localStorage.setItem("bi_user", JSON.stringify(data));
@@ -204,7 +186,6 @@ export default function Home() {
           oldPassword: oldPass.trim(),
           newPassword: newPass.trim(),
         }),
-
       });
 
       const data = await res.json();
@@ -235,123 +216,51 @@ export default function Home() {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
 
-        {/* VÍDEO DE FUNDO */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
           <source src="/video.mp4" type="video/mp4" />
         </video>
 
-        {/* OVERLAY */}
         <div className="absolute inset-0 bg-black/50" />
 
-        {/* CARD LOGIN */}
-        <div
-          className="
-          relative z-10
-          w-[520px] h-[300px]
-          bg-gradient-to-br from-[#0b3a2a] via-[#0b1f15] to-[#145a36]
-          rounded-xl
-          shadow-2xl
-          border border-white/10
-          grid grid-cols-2
-          overflow-hidden
-          backdrop-blur-sm
-        "
-        >
+        <div className="relative z-10 w-[520px] h-[300px] bg-gradient-to-br from-[#0b3a2a] via-[#0b1f15] to-[#145a36]
+          rounded-xl shadow-2xl border border-white/10 grid grid-cols-2 overflow-hidden">
 
-          {/* LADO ESQUERDO */}
-          <div className="p-6 flex flex-col justify-center items-center text-center text-white bg-black/20">
+          <div className="p-6 flex flex-col justify-center items-center text-white bg-black/20">
             <Image src="/logo-aya.png" alt="AYA" width={110} height={110} />
-
-            <p className="mt-4 text-sm text-white/90 font-medium">
-              Portal de Business Intelligence
-            </p>
-
-            <span className="mt-2 text-xs text-white/50">
-              BI Portal • AYA Energia
-            </span>
+            <p className="mt-4 text-sm">Portal de Business Intelligence</p>
           </div>
 
-          {/* LADO DIREITO */}
           <form
-            method="post"
-            action="/login"
             className="p-6 flex flex-col justify-center gap-3"
-            onSubmit={(e) => {
-              e.preventDefault(); // continua SPA
-              handleLogin();
-            }}
+            onSubmit={(e) => { e.preventDefault(); handleLogin(); }}
           >
-            <h2 className="text-center text-white font-semibold text-sm mb-1">
-              Login
-            </h2>
+            <h2 className="text-center text-white text-sm font-semibold">Login</h2>
 
-            {/* LOGIN */}
             <input
-              id="username"
-              name="username"
-              type="text"
-              autoComplete="username"
               placeholder="Login"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              className="
-      w-full px-3 py-2 rounded
-      bg-black/40 text-white text-sm
-      border border-white/20
-      focus:outline-none focus:border-[#2E7B57]
-    "
+              className="px-3 py-2 rounded bg-black/40 text-white text-sm border border-white/20"
             />
 
-            {/* SENHA */}
             <div className="relative">
               <input
-                id="current-password"
-                type="password"  
-                name="password"
-                autoComplete="current-password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="
-        w-full px-3 py-2 pr-10 rounded
-        bg-black/40 text-white text-sm
-        border border-white/20
-        focus:outline-none focus:border-[#2E7B57]
-      "
+                className="w-full px-3 py-2 pr-10 rounded bg-black/40 text-white text-sm border border-white/20"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-              >
+              <button type="button" onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
 
-            {/* ERRO */}
-            {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">
-                {error}
-              </div>
-            )}
+            {error && <div className="text-xs text-red-400">{error}</div>}
 
-            {/* BOTÃO */}
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="
-      mt-1 w-full py-2 rounded
-      bg-[#2E7B57] hover:bg-[#2E7B45]
-      text-white text-sm font-semibold
-      transition disabled:opacity-50
-    "
-            >
+            <button disabled={loginLoading}
+              className="mt-1 py-2 rounded bg-[#2E7B57] text-white text-sm font-semibold">
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
           </form>
@@ -359,9 +268,6 @@ export default function Home() {
       </div>
     );
   }
-
-
-
 
   /* ================= PORTAL ================= */
 
@@ -372,38 +278,19 @@ export default function Home() {
   const report = allowedReports.find((r) => r.id === active);
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-black">
-      {/* SIDEBAR */}
-      <aside
-        className={`relative h-full flex flex-col bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36]
-        border-r border-white/10 shadow-2xl transition-all duration-300
-        ${sidebarOpen ? "w-64" : "w-16"}`}
-      >
-        {/* HEADER */}
-        <div className="h-16 flex items-center px-3 border-b border-white/10">
-          <button
-            onClick={() => setActive("home")}
-            className="flex items-center gap-2 overflow-hidden w-full text-left"
-          >
-            <Image src="/logo-aya.png" alt="Logo" width={50} height={50} />
-            {sidebarOpen && (
-              <div className="leading-tight">
-                <p className="text-white font-semibold text-sm truncate">
-                  {user.empresa}
-                </p>
-                <p className="text-white/40 text-xs">BI Portal</p>
-              </div>
-            )}
-          </button>
-        </div>
+    <div className="flex flex-col h-screen w-full bg-black">
 
-        {/* MENU */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-2">
-          {allowedReports.map((r) => {
-            const isActive = active === r.id;
-            const Icon = r.icon;
+      {/* ===== TOP BAR ===== */}
+      <header className="h-14 w-full flex items-center justify-between px-6
+        bg-gradient-to-r from-black via-[#0b1f15] to-[#145a36]
+        border-b border-white/10">
 
-            return (
+        <div className="flex items-center gap-6">
+          <Image src="/logo-aya.png" alt="Logo" width={36} height={36} />
+          <span className="text-white text-sm font-semibold">{user.empresa}</span>
+
+          <div className="flex gap-4 ml-6">
+            {allowedReports.map((r) => (
               <button
                 key={r.id}
                 onClick={() => {
@@ -412,99 +299,38 @@ export default function Home() {
                   setLoading(true);
                   setNextReport(r.id);
                 }}
-
-                className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
-                  ${isActive
-                    ? "bg-white/10 text-white"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                className={`text-sm transition
+                  ${active === r.id
+                    ? "text-white font-semibold"
+                    : "text-white/60 hover:text-white"
                   }`}
               >
-                {isActive && (
-                  <span className="absolute left-0 top-0 h-full w-1 bg-[#2E7B57] rounded-r" />
-                )}
-
-                {r.image ? (
-                  <Image src={r.image} alt="" width={22} height={22} />
-                ) : (
-                  Icon && <Icon className="w-5 h-5" />
-                )}
-
-                {sidebarOpen && <span className="truncate">{r.title}</span>}
+                {r.title}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
-        {/* SUPORTE */}
-        <div className="border-t border-white/10 p-2 space-y-1">
-          <button
-            onClick={() => {
-              setResetMsg("");
-              setOldPass("");
-              setNewPass("");
-              setShowOldPass(false);
-              setShowNewPass(false);
-              setShowReset(true);
-            }}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
-          >
-            <KeyRound size={18} />
-            {sidebarOpen && <span>Redefinir Senha</span>}
-          </button>
-
-          <button
-            onClick={() => setShowSupport(true)}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
-          >
-            <HelpCircle size={18} />
-            {sidebarOpen && <span>Dúvidas / Suporte</span>}
-          </button>
+        <div className="flex items-center gap-4 text-sm text-white/70">
+          <button onClick={() => setShowReset(true)} className="hover:text-white">Redefinir Senha</button>
+          <button onClick={() => setShowSupport(true)} className="hover:text-white">Suporte</button>
+          <button onClick={handleLogout} className="hover:text-white">Sair</button>
         </div>
+      </header>
 
-        {/* LOGOUT */}
-        <div className="border-t border-white/10 p-2">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
-          >
-            <LogOut size={18} />
-            {sidebarOpen && <span>Sair</span>}
-          </button>
-        </div>
+      {/* ===== CONTEÚDO ===== */}
+      <main className="flex-1 relative">
 
-        {/* TOGGLE */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="
-    absolute top-0 right-0 h-full w-3
-    cursor-col-resize
-    hover:bg-white/20
-    transition
-  "
-        />
-
-      </aside>
-
-      {/* CONTEÚDO */}
-      <div className="flex-1 relative bg-black">
         {loading && active !== "home" && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70">
             <div className="w-12 h-12 border-4 border-white/20 border-t-[#2E7B57] rounded-full animate-spin mb-4" />
-            <p className="text-white/80 text-sm">
-              Carregando: {report?.title || "relatório"}...
-            </p>
+            <p className="text-white/80 text-sm">Carregando...</p>
           </div>
         )}
 
         {active === "home" && (
           <div className="absolute inset-0">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-            >
+            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
               <source src="/video.mp4" type="video/mp4" />
             </video>
             <div className="absolute inset-0 bg-black/40" />
@@ -515,8 +341,8 @@ export default function Home() {
           <iframe
             key={active}
             src={formatUrl(report.src)}
-            className={`absolute inset-0 w-full h-full border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
-              }`}
+            className={`absolute inset-0 w-full h-full border-none transition-opacity duration-500
+              ${fadeIn ? "opacity-100" : "opacity-0"}`}
             allowFullScreen
             onLoad={() => {
               setLoading(false);
@@ -524,105 +350,43 @@ export default function Home() {
             }}
           />
         )}
+      </main>
 
-      </div>
-
-      {/* MODAL SUPORTE */}
+      {/* ===== MODAIS ===== */}
       {showSupport && (
         <Modal onClose={() => setShowSupport(false)}>
-          <h3 className="text-white text-lg font-semibold mb-2">
-            Suporte Técnico
-          </h3>
-          <p className="text-white/70 text-sm mb-4">
-            Entre em contato com o desenvolvedor
-          </p>
-
-          <div className="space-y-3 text-sm">
-            <a
-              href="https://www.linkedin.com/in/diegodamaro/"
-              target="_blank"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Linkedin size={18} /> LinkedIn
-            </a>
-
-            <a
-              href="mailto:diego.sanchez@ayaenergia.com.br"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Mail size={18} /> Email
-            </a>
-
-            <a
-              href="https://wa.me/5511961995900"
-              target="_blank"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Phone size={18} /> WhatsApp
-            </a>
-          </div>
+          <h3 className="text-white text-lg font-semibold mb-3">Suporte Técnico</h3>
+          <p className="text-white/70 text-sm mb-4">diego.sanchez@ayaenergia.com.br</p>
+          <p className="text-white/70 text-sm">WhatsApp: (11) 96199-5900</p>
         </Modal>
       )}
 
-      {/* MODAL RESET SENHA */}
       {showReset && (
         <Modal onClose={() => setShowReset(false)}>
-          <h3 className="text-white text-lg font-semibold mb-4">
-            Redefinir Senha
-          </h3>
+          <h3 className="text-white text-lg font-semibold mb-4">Redefinir Senha</h3>
 
-          <div className="relative mb-3">
-            <input
-              type={showOldPass ? "text" : "password"}
-              placeholder="Senha atual"
-              value={oldPass}
-              onChange={(e) => setOldPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowOldPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-            >
-              {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <input
+            type={showOldPass ? "text" : "password"}
+            placeholder="Senha atual"
+            value={oldPass}
+            onChange={(e) => setOldPass(e.target.value)}
+            className="w-full mb-3 p-3 rounded bg-[#145a36] text-white border border-white/20"
+          />
 
-          <div className="relative mb-3">
-            <input
-              type={showNewPass ? "text" : "password"}
-              placeholder="Nova senha"
-              value={newPass}
-              onChange={(e) => setNewPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNewPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-            >
-              {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
+          <input
+            type={showNewPass ? "text" : "password"}
+            placeholder="Nova senha"
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+            className="w-full mb-3 p-3 rounded bg-[#145a36] text-white border border-white/20"
+          />
 
-          {resetMsg && (
-            <div
-              className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
-                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                : "bg-red-500/10 text-red-400 border-red-500/20"
-                }`}
-            >
-              {resetMsg}
-            </div>
-          )}
+          {resetMsg && <div className="text-sm mb-3 text-white">{resetMsg}</div>}
 
           <button
             onClick={handleChangePassword}
-            disabled={resetLoading || !oldPass || !newPass}
-            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B57]
-                       disabled: disabled:cursor-not-allowed transition"
+            disabled={resetLoading}
+            className="w-full bg-[#2E7B57] py-2 rounded text-white"
           >
             {resetLoading ? "Alterando..." : "Alterar Senha"}
           </button>
@@ -633,17 +397,14 @@ export default function Home() {
 }
 
 /* =========================
-   MODAL BASE
+   MODAL
 ========================= */
 
 function Modal({ children, onClose }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white">
           <X size={18} />
         </button>
         {children}
@@ -652,9 +413,8 @@ function Modal({ children, onClose }: any) {
   );
 }
 
-
 /* =========================
-   POWER BI URL
+   POWER BI PARAMS
 ========================= */
 
 function formatUrl(url: string) {
