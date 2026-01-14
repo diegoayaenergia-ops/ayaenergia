@@ -25,11 +25,120 @@ type ReportItem = {
   image?: string;
   icon?: LucideIcon;
 };
+
+type CourseItem = {
+  id: string;
+  title: string;
+  description?: string;
+  videoUrl: string;
+  formUrl: string;
+};
+
+
 import Image from "next/image";
 
 /* =========================
    RELATÓRIOS
 ========================= */
+const COURSES: CourseItem[] = [
+  {
+    id: "modulo:inversor-1",
+    title: "Módulo Inversores",
+    description: "Introdução e ",
+    videoUrl:
+      "https://ayaenergiabr.sharepoint.com/sites/AyaEnergia/_layouts/15/embed.aspx?UniqueId=0a72e85f-f5c2-4a61-b5d2-595c53d52b5f&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-2",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+    "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-3",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+      "https://www.youtube.com/embed/6OZ23Ljnm4c?si=VdQi-hJc5BN6Ds4Y",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-4",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+    "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+     formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-5",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-6",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+     "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+  {
+    id: "modulo:inversor-7",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+     "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
+      formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+    {
+    id: "modulo:inversor-8",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+     "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+    {
+    id: "modulo:inversor-9",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+    "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+    {
+    id: "modulo:inversor-10",
+    title: "Como usar os Relatórios",
+    description: "Filtros, páginas e análises",
+    videoUrl:
+    "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
+    formUrl:
+      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+  },
+];
+const COURSES_MENU: ReportItem = {
+  id: "cursos",
+  title: "Cursos",
+  icon: ClipboardList,
+  src: "", // não usa iframe Power BI
+};
+
 
 const PORTFOLIO_REPORTS: ReportItem[] = [
   {
@@ -73,7 +182,12 @@ const INTERNAL_REPORTS: ReportItem[] = [
   },
 ];
 
-const ALL_REPORTS: ReportItem[] = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
+const ALL_REPORTS: ReportItem[] = [
+  ...PORTFOLIO_REPORTS,
+  ...INTERNAL_REPORTS,
+  COURSES_MENU,
+];
+
 
 /* =========================
    PAGE
@@ -88,9 +202,6 @@ export default function Home() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [active, setActive] = useState<string>("home");
-  const [nextReport, setNextReport] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [fadeIn, setFadeIn] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -102,6 +213,8 @@ export default function Home() {
   const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [focus, setFocus] = useState(false);
+
 
   /* ===== CARREGA SESSÃO ===== */
   useEffect(() => {
@@ -113,17 +226,18 @@ export default function Home() {
     }
   }, []);
 
-  /* ===== BUSCA EMPRESAS ===== */
+
   useEffect(() => {
-    if (!nextReport) return;
+    const last = localStorage.getItem("last_report");
+    if (last) setActive(last);
+  }, []);
 
-    const t = setTimeout(() => {
-      setActive(nextReport);
-      setNextReport(null);
-    }, 150); // pequeno delay para suavizar
+  useEffect(() => {
+    if (active !== "home") {
+      localStorage.setItem("last_report", active);
+    }
+  }, [active]);
 
-    return () => clearTimeout(t);
-  }, [nextReport]);
 
   /* ===== LOGIN ===== */
   const handleLogin = async () => {
@@ -378,108 +492,100 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
 
-      <header className="h-16 w-full flex items-center justify-between px-4 
-bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
+      {!focus && (
 
+        <header className="h-16 w-full flex items-center justify-between px-4 
+bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
 border-b border-white/10 shadow-xl">
 
 
-        {/* LOGO */}
-        <button
-          onClick={() => setActive("home")}
-          className="flex items-center gap-3"
-        >
-          <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
-          <div className="leading-tight text-left">
-            <p className="text-white font-semibold text-sm">
-              {user.empresa}
-            </p>
-            <p className="text-white/40 text-xs">BI Portal</p>
-          </div>
-        </button>
+          {/* LOGO */}
+          <button
+            onClick={() => setActive("home")}
+            className="flex items-center gap-3"
+          >
+            <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
+            <div className="leading-tight text-left">
+              <p className="text-white font-semibold text-sm">
+                {user.empresa}
+              </p>
+              <p className="text-white/40 text-xs">BI Portal</p>
+            </div>
+          </button>
 
-        {/* MENU */}
-        <nav className="flex items-center gap-2 overflow-x-auto">
-          {allowedReports.map((r) => {
-            const isActive = active === r.id;
-            const Icon = r.icon;
+          {/* MENU */}
+          <nav className="flex items-center gap-2 overflow-x-auto">
+            {allowedReports.map((r) => {
+              const isActive = active === r.id;
+              const Icon = r.icon;
 
-            return (
-              <button
-                key={r.id}
-                onClick={() => {
-                  if (r.id === active) return;
-                  setFadeIn(false);
-                  setLoading(true);
-                  setNextReport(r.id);
-                }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    if (r.id === active) return;
+                    setActive(r.id);
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
             ${isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                      ? "bg-white/15 text-white border-b-2 border-[#5CAE70]"
+                      : "text-white/70 hover:bg-white/10"}
+
                   }`}
-              >
-                {/* {r.image ? (
+                >
+                  {/* {r.image ? (
                   <Image src={r.image} alt="" width={20} height={20} />
                 ) : (
                   Icon && <Icon size={18} />
                 )} */}
 
-                <span>{r.title}</span>
-              </button>
-            );
-          })}
-        </nav>
+                  <span>{r.title}</span>
+                </button>
+              );
+            })}
+          </nav>
 
-        {/* AÇÕES */}
-        <div className="flex items-center gap-2">
+          {/* AÇÕES */}
+          <div className="flex items-center gap-2">
 
-          {/* Redefinir Senha */}
-          <button
-            onClick={() => {
-              setResetMsg("");
-              setOldPass("");
-              setNewPass("");
-              setShowReset(true);
-            }}
-            className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
-            title="Redefinir Senha"
-          >
-            <KeyRound size={18} />
-          </button>
+            {/* Redefinir Senha */}
+            <button
+              onClick={() => {
+                setResetMsg("");
+                setOldPass("");
+                setNewPass("");
+                setShowReset(true);
+              }}
+              className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
+              title="Redefinir Senha"
+            >
+              <KeyRound size={18} />
+            </button>
 
-          {/* Suporte */}
-          <button
-            onClick={() => setShowSupport(true)}
-            className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
-            title="Suporte"
-          >
-            <HelpCircle size={18} />
-          </button>
+            {/* Suporte */}
+            <button
+              onClick={() => setShowSupport(true)}
+              className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
+              title="Suporte"
+            >
+              <HelpCircle size={18} />
+            </button>
 
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded hover:bg-red-500/20 text-white/70 hover:text-red-400"
-            title="Sair"
-          >
-            <LogOut size={18} />
-          </button>
-        </div>
-      </header>
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded hover:bg-red-500/20 text-white/70 hover:text-red-400"
+              title="Sair"
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
+      )}
 
 
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black">
-        {loading && active !== "home" && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="w-12 h-12 border-4 border-white/20 border-t-[#2E7B57] rounded-full animate-spin mb-4" />
-            <p className="text-white/80 text-sm">
-              Carregando: {report?.title || "relatório"}...
-            </p>
-          </div>
-        )}
-
         {active === "home" && (
           <div className="absolute inset-0">
 
@@ -512,9 +618,7 @@ border-b border-white/10 shadow-xl">
                 <button
                   onClick={() => {
                     if (allowedReports[0]) {
-                      setNextReport(allowedReports[0].id);
-                      setLoading(true);
-                      setFadeIn(false);
+                      setActive(allowedReports[0].id);
                     }
                   }}
                   className="
@@ -532,20 +636,84 @@ border-b border-white/10 shadow-xl">
 
           </div>
         )}
+        {active === "cursos" && (
+          <div className="absolute inset-0 overflow-y-auto bg-white p-8">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+              {COURSES.map((course) => (
+                <div
+                  key={course.id}
+                  className="bg-[#145a36] rounded-xl border border-white/10 shadow-lg overflow-hidden"
+                >
+                  <div className="p-4">
+                    <h2 className="text-white font-semibold text-lg">
+                      {course.title}
+
+                    </h2>
+                    {course.description && (
+                      <p className="text-white/70 text-sm mt-1">
+                        {course.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="relative aspect-video">
+                    <iframe
+                      src={course.videoUrl}
+                      className="w-full h-full"
+                      allow="fullscreen"
+                      allowFullScreen
+                    />
+
+                    <button
+                      onClick={() => {
+                        const iframe = document.querySelector("iframe");
+                        iframe?.requestFullscreen();
+                      }}
+                      className="
+    absolute top-1 right-1
+     text-white
+    px-5 py-3
+    rounded-xl
+    text-xl
+    hover:bg-black/90
+    transition
+  "
+                    >
+                      ⛶
+                    </button>
+                  </div>
+
+                  <div className="p-4 border-t border-white/10">
+                    <a
+                      href={course.formUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="
+        w-full inline-flex items-center justify-center gap-2
+        px-4 py-2 rounded-lg
+        bg-[#2E7B57] hover:bg-[#256947]
+        text-white font-semibold text-sm
+        transition shadow
+      "
+                    >
+                      Realizar Teste Final
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
 
-        {report && active !== "home" && (
+        {report && active !== "home" && active !== "cursos" && (
           <iframe
             key={active}
             src={formatUrl(report.src)}
-            className={`absolute inset-0 w-full h-full border-none transition-opacity duration-500 ${fadeIn ? "opacity-100" : "opacity-0"
-              }`}
+            className="absolute inset-0 w-full h-full border-none"
             allowFullScreen
-            onLoad={() => {
-              setLoading(false);
-              setFadeIn(true);
-            }}
           />
+
         )}
 
       </div>
