@@ -312,7 +312,7 @@ export default function Home() {
             <div className="relative">
               <input
                 id="current-password"
-                type="password"  
+                type="password"
                 name="password"
                 autoComplete="current-password"
                 placeholder="Senha"
@@ -372,33 +372,29 @@ export default function Home() {
   const report = allowedReports.find((r) => r.id === active);
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-black">
-      {/* SIDEBAR */}
-      <aside
-        className={`relative h-full flex flex-col bg-gradient-to-b from-black via-[#0b1f15] to-[#145a36]
-        border-r border-white/10 shadow-2xl transition-all duration-300
-        ${sidebarOpen ? "w-64" : "w-16"}`}
-      >
-        {/* HEADER */}
-        <div className="h-16 flex items-center px-3 border-b border-white/10">
-          <button
-            onClick={() => setActive("home")}
-            className="flex items-center gap-2 overflow-hidden w-full text-left"
-          >
-            <Image src="/logo-aya.png" alt="Logo" width={50} height={50} />
-            {sidebarOpen && (
-              <div className="leading-tight">
-                <p className="text-white font-semibold text-sm truncate">
-                  {user.empresa}
-                </p>
-                <p className="text-white/40 text-xs">BI Portal</p>
-              </div>
-            )}
-          </button>
-        </div>
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
+
+      {/* TOP BAR */}
+      <header className="h-16 w-full flex items-center justify-between px-4 
+bg-gradient-to-r from-black via-[#0b1f15] to-[#145a36]
+border-b border-white/10 shadow-xl">
+
+        {/* LOGO */}
+        <button
+          onClick={() => setActive("home")}
+          className="flex items-center gap-3"
+        >
+          <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
+          <div className="leading-tight text-left">
+            <p className="text-white font-semibold text-sm">
+              {user.empresa}
+            </p>
+            <p className="text-white/40 text-xs">BI Portal</p>
+          </div>
+        </button>
 
         {/* MENU */}
-        <div className="flex-1 overflow-y-auto px-2 py-3 space-y-2">
+        <nav className="flex items-center gap-2 overflow-x-auto">
           {allowedReports.map((r) => {
             const isActive = active === r.id;
             const Icon = r.icon;
@@ -412,78 +408,61 @@ export default function Home() {
                   setLoading(true);
                   setNextReport(r.id);
                 }}
-
-                className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm w-full
-                  ${isActive
-                    ? "bg-white/10 text-white"
-                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
+            ${isActive
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
               >
-                {isActive && (
-                  <span className="absolute left-0 top-0 h-full w-1 bg-[#2E7B57] rounded-r" />
-                )}
-
                 {r.image ? (
-                  <Image src={r.image} alt="" width={22} height={22} />
+                  <Image src={r.image} alt="" width={20} height={20} />
                 ) : (
-                  Icon && <Icon className="w-5 h-5" />
+                  Icon && <Icon size={18} />
                 )}
 
-                {sidebarOpen && <span className="truncate">{r.title}</span>}
+                <span>{r.title}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
 
-        {/* SUPORTE */}
-        <div className="border-t border-white/10 p-2 space-y-1">
+        {/* AÇÕES */}
+        <div className="flex items-center gap-2">
+
+          {/* Redefinir Senha */}
           <button
             onClick={() => {
               setResetMsg("");
               setOldPass("");
               setNewPass("");
-              setShowOldPass(false);
-              setShowNewPass(false);
               setShowReset(true);
             }}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
+            title="Redefinir Senha"
           >
             <KeyRound size={18} />
-            {sidebarOpen && <span>Redefinir Senha</span>}
           </button>
 
+          {/* Suporte */}
           <button
             onClick={() => setShowSupport(true)}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
+            title="Suporte"
           >
             <HelpCircle size={18} />
-            {sidebarOpen && <span>Dúvidas / Suporte</span>}
           </button>
-        </div>
 
-        {/* LOGOUT */}
-        <div className="border-t border-white/10 p-2">
+          {/* Logout */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 text-white/60 hover:text-white w-full text-sm px-3 py-2 rounded-lg hover:bg-white/10"
+            className="p-2 rounded hover:bg-red-500/20 text-white/70 hover:text-red-400"
+            title="Sair"
           >
             <LogOut size={18} />
-            {sidebarOpen && <span>Sair</span>}
           </button>
         </div>
+      </header>
 
-        {/* TOGGLE */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className="
-    absolute top-0 right-0 h-full w-3
-    cursor-col-resize
-    hover:bg-white/20
-    transition
-  "
-        />
-
-      </aside>
 
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black">
@@ -498,6 +477,8 @@ export default function Home() {
 
         {active === "home" && (
           <div className="absolute inset-0">
+
+            {/* VÍDEO */}
             <video
               autoPlay
               loop
@@ -507,9 +488,46 @@ export default function Home() {
             >
               <source src="/video.mp4" type="video/mp4" />
             </video>
-            <div className="absolute inset-0 bg-black/40" />
+
+            {/* OVERLAY */}
+            <div className="absolute inset-0 bg-black/50" />
+
+            {/* CONTEÚDO SOBRE O VÍDEO */}
+            <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
+
+              <h1 className="text-white text-4xl md:text-5xl font-bold tracking-tight drop-shadow-lg">
+                Portal de Business Intelligence
+              </h1>
+
+              <p className="mt-4 text-white/80 text-lg max-w-2xl">
+                Monitoramento, indicadores e performance das usinas.
+              </p>
+
+              <div className="mt-6 flex gap-4">
+                <button
+                  onClick={() => {
+                    if (allowedReports[0]) {
+                      setNextReport(allowedReports[0].id);
+                      setLoading(true);
+                      setFadeIn(false);
+                    }
+                  }}
+                  className="
+            px-6 py-3 rounded-lg
+            bg-[#2E7B57] hover:bg-[#256947]
+            text-white font-semibold
+            transition
+            shadow-lg
+          "
+                >
+                  Acessar Relatórios
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
+
 
         {report && active !== "home" && (
           <iframe
