@@ -374,10 +374,10 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
 
-      {/* TOP BAR */}
       <header className="h-16 w-full flex items-center justify-between px-4 
-bg-gradient-to-r from-black via-[#0b1f15] to-[#145a36]
+bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
 border-b border-white/10 shadow-xl">
+
 
         {/* LOGO */}
         <button
