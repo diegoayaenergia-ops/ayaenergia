@@ -252,20 +252,23 @@ export default function Home() {
         {/* CARD LOGIN */}
         <div
           className="
-          relative z-10
-          w-[520px] h-[300px]
-          bg-gradient-to-br from-[#0b3a2a] via-[#0b1f15] to-[#145a36]
-          rounded-xl
-          shadow-2xl
-          border border-white/10
-          grid grid-cols-2
-          overflow-hidden
-          backdrop-blur-sm
-        "
+    relative z-10
+    w-[520px] h-[300px]
+    bg-[#1C4D28]
+    rounded-xl
+    shadow-2xl
+    border border-white/10
+    grid grid-cols-2
+    overflow-hidden
+    backdrop-blur-sm
+  "
         >
+          {/* DIVISÓRIA CENTRAL */}
+          <div className="absolute left-1/2 top-6 bottom-6 w-px bg-white/40" />
+
 
           {/* LADO ESQUERDO */}
-          <div className="p-6 flex flex-col justify-center items-center text-center text-white bg-black/20">
+          <div className="p-6 flex flex-col justify-center items-center text-center text-white ">
             <Image src="/logo-aya.png" alt="AYA" width={110} height={110} />
 
             <p className="mt-4 text-sm text-white/90 font-medium">
@@ -302,8 +305,8 @@ export default function Home() {
               onChange={(e) => setLogin(e.target.value)}
               className="
       w-full px-3 py-2 rounded
-      bg-black/40 text-white text-sm
-      border border-white/20
+      bg-#2E7B41 text-white text-sm
+      border border-white/40
       focus:outline-none focus:border-[#2E7B57]
     "
             />
@@ -312,19 +315,20 @@ export default function Home() {
             <div className="relative">
               <input
                 id="current-password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 autoComplete="current-password"
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="
-        w-full px-3 py-2 pr-10 rounded
-        bg-black/40 text-white text-sm
-        border border-white/20
-        focus:outline-none focus:border-[#2E7B57]
-      "
+    w-full px-3 py-2 pr-10 rounded
+    bg-#2E7B41 text-white text-sm
+    border border-white/40
+    focus:outline-none focus:border-[#2E7B57]
+  "
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
@@ -347,7 +351,7 @@ export default function Home() {
               disabled={loginLoading}
               className="
       mt-1 w-full py-2 rounded
-      bg-[#2E7B57] hover:bg-[#2E7B45]
+      bg-[#2E7B45] hover:bg-[#5CAE70]
       text-white text-sm font-semibold
       transition disabled:opacity-50
     "
@@ -376,6 +380,7 @@ export default function Home() {
 
       <header className="h-16 w-full flex items-center justify-between px-4 
 bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
+
 border-b border-white/10 shadow-xl">
 
 
@@ -414,11 +419,11 @@ border-b border-white/10 shadow-xl">
                     : "text-white/70 hover:bg-white/10 hover:text-white"
                   }`}
               >
-                {r.image ? (
+                {/* {r.image ? (
                   <Image src={r.image} alt="" width={20} height={20} />
                 ) : (
                   Icon && <Icon size={18} />
-                )}
+                )} */}
 
                 <span>{r.title}</span>
               </button>
