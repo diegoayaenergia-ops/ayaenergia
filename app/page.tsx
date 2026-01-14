@@ -253,7 +253,7 @@ export default function Home() {
         <div
           className="
     relative z-10
-    w-[520px] h-[300px]
+    w-[510px] h-[250px]
     bg-[#1C4D28]
     rounded-xl
     shadow-2xl
