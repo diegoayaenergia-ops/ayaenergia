@@ -64,7 +64,7 @@ const COURSES: CourseItem[] = [
     title: "Inversores Fotovoltaicos",
     description: "Filtros, páginas e análises",
     videoUrl:
-      "https://www.youtube.com/embed/6OZ23Ljnm4c?si=VdQi-hJc5BN6Ds4Y",
+      "https://www.youtube.com/embed/6Gdfb2OXnAo?si=8O2u9UzuhoSnGmps",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
@@ -210,7 +210,6 @@ export default function Home() {
 
   const [active, setActive] = useState<string>("home");
   const [showSupport, setShowSupport] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   /* ==== RESET PASSWORD ==== */
   const [showReset, setShowReset] = useState(false);
@@ -222,6 +221,8 @@ export default function Home() {
   const [resetLoading, setResetLoading] = useState(false);
   const [focus, setFocus] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
+  const completingRef = useRef<string | null>(null);
+
   const progressPercent = Math.round(
     (stats.length / COURSES.length) * 100
   );
@@ -229,16 +230,8 @@ export default function Home() {
     if (index === 0) return true;
     return stats.includes(COURSES[index - 1].id);
   };
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  const totalCourses = COURSES.length;
-  const watchedCount = stats.length;
-
 
   const isWatched = (id: string) => stats.includes(id);
-
-  const isLocked = (index: number) =>
-    index > currentCourse && !isWatched(COURSES[currentCourse].id);
 
   function getCourseIndexFromStats(stats: string[]) {
     const index = COURSES.findIndex(
@@ -248,15 +241,15 @@ export default function Home() {
     // se todos foram assistidos, fica no último
     return index === -1 ? COURSES.length - 1 : index;
   }
-  const progress = Math.round(
-    (stats.length / COURSES.length) * 100
-  );
 
   const completeCourse = async (index: number) => {
     const courseId = COURSES[index].id;
 
-    // evita chamada duplicada
+    // 🔒 trava duplicação TOTAL
     if (stats.includes(courseId)) return;
+    if (completingRef.current === courseId) return;
+
+    completingRef.current = courseId;
 
     const res = await fetch("/api/user/stats", {
       method: "POST",
@@ -275,7 +268,11 @@ export default function Home() {
       setUser(updatedUser);
       localStorage.setItem("bi_user", JSON.stringify(updatedUser));
     }
+
+    // libera para próxima aula
+    completingRef.current = null;
   };
+
   function getYoutubeId(url: string) {
     if (!url) return "";
 
@@ -289,11 +286,17 @@ export default function Home() {
 
   /* ===== CARREGA SESSÃO ===== */
   useEffect(() => {
-    if (active === "cursos" && stats.length >= 0) {
-      const courseIndex = getCourseIndexFromStats(stats);
-      setCurrentCourse(courseIndex);
-    }
+    if (active !== "cursos") return;
+
+    const nextIndex = getCourseIndexFromStats(stats);
+
+    setCurrentCourse((prev) => {
+      if (prev === nextIndex) return prev;
+      setVideoLoading(true);
+      return nextIndex;
+    });
   }, [active, stats]);
+
 
   useEffect(() => {
     const saved = localStorage.getItem("bi_user");
@@ -313,6 +316,8 @@ export default function Home() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentCourse]);
+
+
   useEffect(() => {
     const last = localStorage.getItem("last_report");
     if (last) setActive(last);
@@ -497,7 +502,7 @@ export default function Home() {
               onChange={(e) => setLogin(e.target.value)}
               className="
       w-full px-3 py-2 rounded
-      bg-#2E7B41 text-white text-sm
+       text-white text-sm
       border border-white/40
       focus:outline-none focus:border-[#2E7B57]
     "
@@ -515,7 +520,7 @@ export default function Home() {
                 onChange={(e) => setSenha(e.target.value)}
                 className="
     w-full px-3 py-2 pr-10 rounded
-    bg-#2E7B41 text-white text-sm
+     text-white text-sm
     border border-white/40
     focus:outline-none focus:border-[#2E7B57]
   "
@@ -555,11 +560,6 @@ export default function Home() {
       </div>
     );
   }
-
-
-  const allWatched = COURSES.every(course =>
-    stats.includes(course.id)
-  );
 
 
   /* ================= PORTAL ================= */
@@ -772,7 +772,11 @@ border-b border-white/10 shadow-xl">
                       {/* ===== AULA (LINHA PRINCIPAL) ===== */}
                       <button
                         disabled={locked}
-                        onClick={() => setCurrentCourse(index)}
+                        onClick={() => {
+                          if (!canAccess(index)) return;
+                          setVideoLoading(true);
+                          setCurrentCourse(index);
+                        }}
                         className={`
       w-full flex items-center gap-3 px-4 py-3 text-left
       hover:bg-white/5
@@ -833,7 +837,7 @@ border-b border-white/10 shadow-xl">
               <div className="relative w-full h-full bg-black">
                 <div className="absolute inset-0">
                   <YouTube
-                    videoId={getYoutubeId(COURSES[currentCourse].videoUrl)}
+                    videoId={getYoutubeId(COURSES[currentCourse]?.videoUrl ?? "")}
                     className="absolute inset-0 w-full h-full"
                     iframeClassName="absolute inset-0 w-full h-full"
                     opts={{
@@ -841,23 +845,20 @@ border-b border-white/10 shadow-xl">
                       height: "100%",
                       playerVars: {
                         autoplay: 1,
-                        controls: 1,
-                        rel: 0,
-                        modestbranding: 1,
+                        controls: 1,          // 0 se quiser SEM controles
+                        rel: 0,               // sem vídeos relacionados
+                        modestbranding: 1,        // remove título (deprecated, mas ajuda)
+                        fs: 1,                // fullscreen permitido
+                        iv_load_policy: 3,    // remove anotações
+                        disablekb: 1,         // desativa teclado
+                        playsinline: 1,
                       },
                     }}
+
                     onReady={() => setVideoLoading(false)}
                     onStateChange={(e) => {
-                      if (e.data === 0) {
-                        completeCourse(currentCourse);
-
-                        if (currentCourse < COURSES.length - 1) {
-                          setTimeout(() => {
-                            setCurrentCourse((prev) => prev + 1);
-                            setVideoLoading(true);
-                          }, 800);
-                        }
-                      }
+                      if (e.data !== 0) return;
+                      completeCourse(currentCourse);
                     }}
                   />
                 </div>
@@ -988,8 +989,13 @@ border-b border-white/10 shadow-xl">
             <button
               onClick={handleChangePassword}
               disabled={resetLoading || !oldPass || !newPass}
-              className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B57]
-                       disabled: disabled:cursor-not-allowed transition"
+              className="
+  w-full bg-[#2E7B57] py-2 rounded text-white
+  hover:bg-[#256947]
+  disabled:opacity-50 disabled:cursor-not-allowed
+  transition
+"
+
             >
               {resetLoading ? "Alterando..." : "Alterar Senha"}
             </button>
