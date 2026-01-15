@@ -43,7 +43,7 @@ import Image from "next/image";
 const COURSES: CourseItem[] = [
   {
     id: "modulo:inversor-1",
-    title: "Inversor",
+    title: "CMP (Cabine Medição Primária)",
     description: "Introdução e ",
     videoUrl:
       "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
@@ -52,7 +52,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-2",
-    title: "Cabine de Medição Primaria",
+    title: "SKID",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
@@ -61,7 +61,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-3",
-    title: "Skid",
+    title: "Inversores Fotovoltaicos",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/6OZ23Ljnm4c?si=VdQi-hJc5BN6Ds4Y",
@@ -70,7 +70,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-4",
-    title: "Sistema de Tracker",
+    title: "Estruturas Mecanicas",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
@@ -79,7 +79,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-5",
-    title: "Como usar os Relatórios",
+    title: "Estruturas Automação",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
@@ -88,7 +88,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-6",
-    title: "Como usar os Relatórios",
+    title: "Redes e informática",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
@@ -97,7 +97,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-7",
-    title: "Como usar os Relatórios",
+    title: "CFTV (Circuito Fechado de TV)",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
@@ -106,7 +106,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-8",
-    title: "Como usar os Relatórios",
+    title: "Nobreak",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
@@ -115,7 +115,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-9",
-    title: "Como usar os Relatórios",
+    title: "Indicadores técnicos de eficiencia ",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
@@ -124,7 +124,7 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-10",
-    title: "Como usar os Relatórios",
+    title: "Eletricidade Basica ",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
@@ -288,6 +288,13 @@ export default function Home() {
 
 
   /* ===== CARREGA SESSÃO ===== */
+  useEffect(() => {
+    if (active === "cursos" && stats.length >= 0) {
+      const courseIndex = getCourseIndexFromStats(stats);
+      setCurrentCourse(courseIndex);
+    }
+  }, [active, stats]);
+
   useEffect(() => {
     const saved = localStorage.getItem("bi_user");
     if (saved) {
@@ -755,62 +762,62 @@ border-b border-white/10 shadow-xl">
 
                   return (
                     <div
-  key={course.id}
-  className={`
+                      key={course.id}
+                      className={`
     rounded-lg transition
     ${activeItem && "bg-[#1f2e27] ring-1 ring-[#5CAE70]/40"}
     ${locked && "opacity-40"}
   `}
->
-  {/* ===== AULA (LINHA PRINCIPAL) ===== */}
-  <button
-    disabled={locked}
-    onClick={() => setCurrentCourse(index)}
-    className={`
+                    >
+                      {/* ===== AULA (LINHA PRINCIPAL) ===== */}
+                      <button
+                        disabled={locked}
+                        onClick={() => setCurrentCourse(index)}
+                        className={`
       w-full flex items-center gap-3 px-4 py-3 text-left
       hover:bg-white/5
     `}
-  >
-    <span
-      className={`
+                      >
+                        <span
+                          className={`
         w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shrink-0
         ${watched && "bg-[#5CAE70] text-black"}
         ${activeItem && !watched && "border border-[#5CAE70] text-[#5CAE70]"}
         ${locked && "border border-white/20 text-white/30"}
       `}
-    >
-      {watched ? "✓" : activeItem ? "▶" : "🔒"}
-    </span>
+                        >
+                          {watched ? "✓" : activeItem ? "▶" : "🔒"}
+                        </span>
 
-    <div className="flex-1">
-      <p className="text-white text-sm font-medium leading-tight">
-        {course.title}
-      </p>
-      <span className="text-xs text-white/40">
-        Aula {index + 1}
-      </span>
-    </div>
-  </button>
+                        <div className="flex-1">
+                          <p className="text-white text-sm font-medium leading-tight">
+                            {course.title}
+                          </p>
+                          <span className="text-xs text-white/40">
+                            Aula {index + 1}
+                          </span>
+                        </div>
+                      </button>
 
-  {/* ===== AÇÕES SECUNDÁRIAS ===== */}
-  {course.formUrl && (
-    <div className="px-14 pb-3">
-      <a
-        href={course.formUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`
+                      {/* ===== AÇÕES SECUNDÁRIAS ===== */}
+                      {course.formUrl && (
+                        <div className="px-14 pb-3">
+                          <a
+                            href={course.formUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`
           inline-flex items-center gap-2 text-xs font-medium rounded-md px-3 py-1.5 transition
           ${watched
-            ? "bg-white/10 text-white hover:bg-white/20"
-            : "text-white/30 cursor-not-allowed pointer-events-none"}
+                                ? "bg-white/10 text-white hover:bg-white/20"
+                                : "text-white/30 cursor-not-allowed pointer-events-none"}
         `}
-      >
-        📄 Avaliação da Aula
-      </a>
-    </div>
-  )}
-</div>
+                          >
+                            📄 Avaliação da Aula
+                          </a>
+                        </div>
+                      )}
+                    </div>
 
 
                   );
@@ -823,63 +830,45 @@ border-b border-white/10 shadow-xl">
             <main className="flex-1 flex flex-col">
 
               {/* VIDEO */}
-              <div className="relative w-full bg-black">
+              <div className="relative w-full h-full bg-black">
+                <div className="absolute inset-0">
+                  <YouTube
+                    videoId={getYoutubeId(COURSES[currentCourse].videoUrl)}
+                    className="absolute inset-0 w-full h-full"
+                    iframeClassName="absolute inset-0 w-full h-full"
+                    opts={{
+                      width: "100%",
+                      height: "100%",
+                      playerVars: {
+                        autoplay: 1,
+                        controls: 1,
+                        rel: 0,
+                        modestbranding: 1,
+                      },
+                    }}
+                    onReady={() => setVideoLoading(false)}
+                    onStateChange={(e) => {
+                      if (e.data === 0) {
+                        completeCourse(currentCourse);
 
-                {/* WRAPPER 16:9 */}
-                <div className="relative w-full aspect-video">
-
-                  {COURSES[currentCourse].videoUrl.includes("youtube") ? (
-                    <div className="absolute inset-0">
-                      <YouTube
-                        videoId={getYoutubeId(COURSES[currentCourse].videoUrl)}
-                        className="youtube-player absolute inset-0 w-full h-full"
-                        opts={{
-                          playerVars: {
-                            autoplay: 1,
-                            controls: 1,
-                            rel: 0,
-                            modestbranding: 1,
-                          },
-                        }}
-                        onReady={() => setVideoLoading(false)}
-                        onStateChange={(e) => {
-                          if (e.data === 0) {
-                            completeCourse(currentCourse);
-
-                            // avança automaticamente
-                            if (currentCourse < COURSES.length - 1) {
-                              setTimeout(() => {
-                                setCurrentCourse((prev) => prev + 1);
-                                setVideoLoading(true);
-                              }, 800);
-                            }
-                          }
-                        }}
-
-                      />
-
-
-
-                      {videoLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black">
-                          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                        </div>
-                      )}
-
-                    </div>
-
-                  ) : (
-
-                    <iframe
-                      src={COURSES[currentCourse].videoUrl}
-                      className="absolute inset-0 w-full h-full border-0"
-                      allow="fullscreen"
-                      allowFullScreen
-                    />
-                  )}
-
+                        if (currentCourse < COURSES.length - 1) {
+                          setTimeout(() => {
+                            setCurrentCourse((prev) => prev + 1);
+                            setVideoLoading(true);
+                          }, 800);
+                        }
+                      }
+                    }}
+                  />
                 </div>
+
+                {videoLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                    <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                  </div>
+                )}
               </div>
+
 
 
 
