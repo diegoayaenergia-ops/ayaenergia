@@ -1,6 +1,7 @@
 "use client";
+
 import YouTube from "react-youtube";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Wrench,
   ShoppingCart,
@@ -15,9 +16,12 @@ import {
   EyeOff,
   KeyRound,
 } from "lucide-react";
-
 import type { LucideIcon } from "lucide-react";
+import Image from "next/image";
 
+/* =========================
+   TYPES
+========================= */
 type ReportItem = {
   id: string;
   title: string;
@@ -34,11 +38,8 @@ type CourseItem = {
   formUrl: string;
 };
 
-
-import Image from "next/image";
-
 /* =========================
-   RELATÓRIOS
+   CURSOS
 ========================= */
 const COURSES: CourseItem[] = [
   {
@@ -47,99 +48,84 @@ const COURSES: CourseItem[] = [
     description: "Introdução e ",
     videoUrl:
       "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-2",
     title: "SKID",
     description: "Filtros, páginas e análises",
     videoUrl:
-      "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+      "https://www.youtube.com/embed/wD_Pwcj45Lk?si=RZ4sHTIAx2bLccFx",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-3",
     title: "Inversores Fotovoltaicos",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/6Gdfb2OXnAo?si=8O2u9UzuhoSnGmps",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/6Gdfb2OXnAo?si=8O2u9UzuhoSnGmps",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-4",
     title: "Estruturas Mecanicas",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-5",
     title: "Estruturas Automação",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-6",
     title: "Redes e informática",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-7",
     title: "CFTV (Circuito Fechado de TV)",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-8",
     title: "Nobreak",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-9",
-    title: "Indicadores técnicos de eficiencia ",
+    title: "Indicadores técnicos de eficiencia",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-10",
-    title: "Eletricidade Basica ",
+    title: "Eletricidade Basica",
     description: "Filtros, páginas e análises",
-    videoUrl:
-      "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
-    formUrl:
-      "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
+    videoUrl: "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
+    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
 ];
+
 const COURSES_MENU: ReportItem = {
   id: "cursos",
   title: "Cursos",
   icon: ClipboardList,
-  src: "", // não usa iframe Power BI
+  src: "",
 };
 
-
+/* =========================
+   RELATÓRIOS
+========================= */
 const PORTFOLIO_REPORTS: ReportItem[] = [
   {
     id: "ineer",
@@ -182,25 +168,43 @@ const INTERNAL_REPORTS: ReportItem[] = [
   },
 ];
 
-const ALL_REPORTS: ReportItem[] = [
-  ...PORTFOLIO_REPORTS,
-  ...INTERNAL_REPORTS,
-  COURSES_MENU,
-];
+const ALL_REPORTS: ReportItem[] = [...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS, COURSES_MENU];
 
+/* =========================
+   HELPERS
+========================= */
+function formatUrl(url: string) {
+  if (!url) return url;
+
+  const params = [
+    "navContentPaneEnabled=false",
+    "filterPaneEnabled=false",
+    "pageView=fitToWidth",
+  ].join("&");
+
+  return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
+}
+
+function getYoutubeId(url: string) {
+  if (!url) return "";
+  const regExp =
+    /(?:youtube\.com\/embed\/|youtube\.com\/watch\?v=|youtu\.be\/)([^?&]+)/;
+  const match = url.match(regExp);
+  return match ? match[1] : "";
+}
 
 /* =========================
    PAGE
 ========================= */
-
 export default function Home() {
+
+  const [booting, setBooting] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [stats, setStats] = useState<string[]>([]);
   const [currentCourse, setCurrentCourse] = useState(0);
-  const currentCourseId = COURSES[currentCourse]?.id;
-  const canAdvance = currentCourseId
-    ? stats.includes(currentCourseId)
-    : false;
+
+  const currentCourseId = useRef<string | null>(null);
+  const completingRef = useRef<string | null>(null);
 
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
@@ -210,6 +214,7 @@ export default function Home() {
 
   const [active, setActive] = useState<string>("home");
   const [showSupport, setShowSupport] = useState(false);
+  const loginJustHappened = useRef(false);
 
   /* ==== RESET PASSWORD ==== */
   const [showReset, setShowReset] = useState(false);
@@ -219,13 +224,14 @@ export default function Home() {
   const [showOldPass, setShowOldPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  /* ==== UI ==== */
   const [focus, setFocus] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
-  const completingRef = useRef<string | null>(null);
+  const [videoError, setVideoError] = useState("");
 
-  const progressPercent = Math.round(
-    (stats.length / COURSES.length) * 100
-  );
+  const progressPercent = Math.round((stats.length / COURSES.length) * 100);
+
   const canAccess = (index: number) => {
     if (index === 0) return true;
     return stats.includes(COURSES[index - 1].id);
@@ -233,96 +239,106 @@ export default function Home() {
 
   const isWatched = (id: string) => stats.includes(id);
 
-  function getCourseIndexFromStats(stats: string[]) {
-    const index = COURSES.findIndex(
-      (course) => !stats.includes(course.id)
-    );
-
-    // se todos foram assistidos, fica no último
+  function getCourseIndexFromStats(s: string[]) {
+    const index = COURSES.findIndex((course) => !s.includes(course.id));
     return index === -1 ? COURSES.length - 1 : index;
   }
 
-  const completeCourse = async (index: number) => {
-    const courseId = COURSES[index].id;
-
-    // 🔒 trava duplicação TOTAL
+  const completeCourse = async (courseId: string) => {
+    if (!courseId) return;
     if (stats.includes(courseId)) return;
-    if (completingRef.current === courseId) return;
+    if (completingRef.current) return;
 
     completingRef.current = courseId;
 
-    const res = await fetch("/api/user/stats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        login: user.login,
-        courseId,
-      }),
-    });
+    try {
+      const res = await fetch("/api/user/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login: user.login, courseId }),
+      });
 
-    if (res.ok) {
+      if (!res.ok) return;
+
       const data = await res.json();
-      setStats(data.stats);
 
+      setStats(data.stats);
       const updatedUser = { ...user, stats: data.stats };
       setUser(updatedUser);
       localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+    } finally {
+      completingRef.current = null;
     }
-
-    // libera para próxima aula
-    completingRef.current = null;
   };
 
-  function getYoutubeId(url: string) {
-    if (!url) return "";
+  /* ===== Persist active tab ===== */
+  useEffect(() => {
+    if (booting) return;
+    localStorage.setItem("activeTab", active);
+  }, [active, booting]);
 
-    const regExp =
-      /(?:youtube\.com\/embed\/|youtube\.com\/watch\?v=|youtu\.be\/)([^?&]+)/;
+  /* ===== Carrega sessão ===== */
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("bi_user");
+      const savedTab = localStorage.getItem("activeTab");
+      const savedCourse = localStorage.getItem("currentCourseIndex");
 
-    const match = url.match(regExp);
-    return match ? match[1] : "";
-  }
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+
+        setUser(u);
+        setStats(Array.isArray(u.stats) ? u.stats : []);
+
+        if (savedTab) {
+          setActive(savedTab);
+        }
+
+        if (savedTab === "cursos") {
+          if (savedCourse !== null) {
+            setCurrentCourse(Number(savedCourse));
+          } else {
+            setCurrentCourse(
+              getCourseIndexFromStats(
+                Array.isArray(u.stats) ? u.stats : []
+              )
+            );
+          }
+        }
+      }
+    } finally {
+      setBooting(false);
+    }
+  }, []);
 
 
-  /* ===== CARREGA SESSÃO ===== */
+  /* ===== Track courseId ref ===== */
+  useEffect(() => {
+    currentCourseId.current = COURSES[currentCourse]?.id || null;
+    // quando muda de aula, mostra loading e limpa erro
+    setVideoLoading(true);
+    setVideoError("");
+  }, [currentCourse]);
+
+  /* ===== Persist course index ===== */
+  useEffect(() => {
+    if (active === "cursos") {
+      localStorage.setItem("currentCourseIndex", String(currentCourse));
+    }
+  }, [currentCourse, active]);
+
+  /* ===== Avança para próxima aula APENAS quando concluir a atual ===== */
   useEffect(() => {
     if (active !== "cursos") return;
 
-    const nextIndex = getCourseIndexFromStats(stats);
+    const currentId = COURSES[currentCourse]?.id;
+    if (!currentId) return;
 
-    setCurrentCourse((prev) => {
-      if (prev === nextIndex) return prev;
-      setVideoLoading(true);
-      return nextIndex;
-    });
-  }, [active, stats]);
+    // só avança se o curso atual acabou de ser marcado como assistido
+    if (!stats.includes(currentId)) return;
 
-
-  useEffect(() => {
-    const saved = localStorage.getItem("bi_user");
-    if (saved) {
-      const u = JSON.parse(saved);
-
-      setUser(u);
-      setStats(u.stats || []);
-
-      const courseIndex = getCourseIndexFromStats(u.stats || []);
-      setCurrentCourse(courseIndex);
-
-      setActive("home");
-    }
-  }, []);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentCourse]);
-
-
-  useEffect(() => {
-    const last = localStorage.getItem("last_report");
-    if (last) setActive(last);
-  }, []);
-
+    setCurrentCourse((prev) => Math.min(prev + 1, COURSES.length - 1));
+  }, [stats, active, currentCourse]);
 
   /* ===== LOGIN ===== */
   const handleLogin = async () => {
@@ -351,18 +367,16 @@ export default function Home() {
         return;
       }
 
-      // 👉 dispara form fake para o Chrome salvar
-      const f = document.getElementById("chrome-save-form") as HTMLFormElement;
-      if (f) {
-        (f.elements.namedItem("username") as HTMLInputElement).value = login;
-        (f.elements.namedItem("password") as HTMLInputElement).value = senha;
-        f.submit();
-      }
-
       localStorage.setItem("bi_user", JSON.stringify(data));
-      setUser(data);
-      setActive("home");
+      loginJustHappened.current = true;
 
+      setUser(data);
+      setStats(data.stats || []);
+
+      const savedTab = localStorage.getItem("activeTab");
+      setActive(savedTab || "home");
+
+      loginJustHappened.current = false;
     } catch {
       setError("Erro de conexão com o servidor");
     } finally {
@@ -373,7 +387,14 @@ export default function Home() {
   /* ===== LOGOUT ===== */
   const handleLogout = () => {
     localStorage.removeItem("bi_user");
+    localStorage.removeItem("currentCourseIndex");
+    localStorage.removeItem("activeTab");
+
     setUser(null);
+    setStats([]);
+    setCurrentCourse(0);
+    setActive("home");
+
     setLogin("");
     setSenha("");
   };
@@ -403,7 +424,6 @@ export default function Home() {
           oldPassword: oldPass.trim(),
           newPassword: newPass.trim(),
         }),
-
       });
 
       const data = await res.json();
@@ -429,19 +449,26 @@ export default function Home() {
   };
 
   /* ================= LOGIN PAGE ================= */
+  if (booting) {
+    return (
+      <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+          <source src="/video.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+          <div className="text-white/70 text-sm">Carregando sessão…</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-
         {/* VÍDEO DE FUNDO */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
           <source src="/video.mp4" type="video/mp4" />
         </video>
 
@@ -451,30 +478,24 @@ export default function Home() {
         {/* CARD LOGIN */}
         <div
           className="
-    relative z-10
-    w-[510px] h-[250px]
-    bg-[#1C4D28]
-    rounded-xl
-    shadow-2xl
-    border border-white/10
-    grid grid-cols-2
-    overflow-hidden
-    backdrop-blur-sm
-  "
+            relative z-10
+            w-[510px] h-[250px]
+            bg-[#1C4D28]
+            rounded-xl
+            shadow-2xl
+            border border-white/10
+            grid grid-cols-2
+            overflow-hidden
+            backdrop-blur-sm
+          "
         >
           {/* DIVISÓRIA CENTRAL */}
           <div className="absolute left-1/2 top-6 bottom-6 w-px bg-white/40" />
 
-
           {/* LADO ESQUERDO */}
-          <div className="p-6 flex flex-col justify-center items-center text-center text-white ">
+          <div className="p-6 flex flex-col justify-center items-center text-center text-white">
             <Image src="/logo-aya.png" alt="AYA" width={150} height={150} />
-
-
-
-            <span className="mt-2 text-xs text-white/50">
-              Portal • AYA Energia
-            </span>
+            <span className="mt-2 text-xs text-white/50">Portal • AYA Energia</span>
           </div>
 
           {/* LADO DIREITO */}
@@ -483,13 +504,11 @@ export default function Home() {
             action="/login"
             className="p-6 flex flex-col justify-center gap-3"
             onSubmit={(e) => {
-              e.preventDefault(); // continua SPA
+              e.preventDefault();
               handleLogin();
             }}
           >
-            <h2 className="text-center text-white font-semibold text-sm mb-1">
-              Login
-            </h2>
+            <h2 className="text-center text-white font-semibold text-sm mb-1">Login</h2>
 
             {/* LOGIN */}
             <input
@@ -501,11 +520,11 @@ export default function Home() {
               value={login}
               onChange={(e) => setLogin(e.target.value)}
               className="
-      w-full px-3 py-2 rounded
-       text-white text-sm
-      border border-white/40
-      focus:outline-none focus:border-[#2E7B57]
-    "
+                w-full px-3 py-2 rounded
+                text-white text-sm
+                border border-white/40
+                focus:outline-none focus:border-[#2E7B57]
+              "
             />
 
             {/* SENHA */}
@@ -519,13 +538,12 @@ export default function Home() {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 className="
-    w-full px-3 py-2 pr-10 rounded
-     text-white text-sm
-    border border-white/40
-    focus:outline-none focus:border-[#2E7B57]
-  "
+                  w-full px-3 py-2 pr-10 rounded
+                  text-white text-sm
+                  border border-white/40
+                  focus:outline-none focus:border-[#2E7B57]
+                "
               />
-
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
@@ -547,11 +565,11 @@ export default function Home() {
               type="submit"
               disabled={loginLoading}
               className="
-      mt-1 w-full py-2 rounded
-      bg-[#2E7B45] hover:bg-[#5CAE70]
-      text-white text-sm font-semibold
-      transition disabled:opacity-50
-    "
+                mt-1 w-full py-2 rounded
+                bg-[#2E7B45] hover:bg-[#5CAE70]
+                text-white text-sm font-semibold
+                transition disabled:opacity-50
+              "
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
@@ -561,35 +579,23 @@ export default function Home() {
     );
   }
 
-
   /* ================= PORTAL ================= */
-
-  const allowedReports = ALL_REPORTS.filter((r) =>
-    user.access.includes(r.id)
-  );
-
+  const allowedReports = ALL_REPORTS.filter((r) => user.access.includes(r.id));
   const report = allowedReports.find((r) => r.id === active);
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
-
       {!focus && (
-
-        <header className="h-16 w-full flex items-center justify-between px-4 
-bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
-border-b border-white/10 shadow-xl">
-
-
+        <header
+          className="h-16 w-full flex items-center justify-between px-4
+          bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
+          border-b border-white/10 shadow-xl"
+        >
           {/* LOGO */}
-          <button
-            onClick={() => setActive("home")}
-            className="flex items-center gap-3"
-          >
+          <button onClick={() => setActive("home")} className="flex items-center gap-3">
             <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
             <div className="leading-tight text-left">
-              <p className="text-white font-semibold text-sm">
-                Aya Energia
-              </p>
+              <p className="text-white font-semibold text-sm">Aya Energia</p>
               <p className="text-white/40 text-xs">Portal</p>
             </div>
           </button>
@@ -598,7 +604,6 @@ border-b border-white/10 shadow-xl">
           <nav className="flex items-center gap-2 overflow-x-auto">
             {allowedReports.map((r) => {
               const isActive = active === r.id;
-              const Icon = r.icon;
 
               return (
                 <button
@@ -614,18 +619,11 @@ border-b border-white/10 shadow-xl">
                     setActive(r.id);
                   }}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
-            ${isActive
+                    ${isActive
                       ? "bg-white/15 text-white border-b-2 border-[#5CAE70]"
-                      : "text-white/70 hover:bg-white/10"}
-
-                  }`}
+                      : "text-white/70 hover:bg-white/10"
+                    }`}
                 >
-                  {/* {r.image ? (
-                  <Image src={r.image} alt="" width={20} height={20} />
-                ) : (
-                  Icon && <Icon size={18} />
-                )} */}
-
                   <span>{r.title}</span>
                 </button>
               );
@@ -634,8 +632,6 @@ border-b border-white/10 shadow-xl">
 
           {/* AÇÕES */}
           <div className="flex items-center gap-2">
-
-            {/* Redefinir Senha */}
             <button
               onClick={() => {
                 setResetMsg("");
@@ -649,7 +645,6 @@ border-b border-white/10 shadow-xl">
               <KeyRound size={18} />
             </button>
 
-            {/* Suporte */}
             <button
               onClick={() => setShowSupport(true)}
               className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
@@ -658,7 +653,6 @@ border-b border-white/10 shadow-xl">
               <HelpCircle size={18} />
             </button>
 
-            {/* Logout */}
             <button
               onClick={handleLogout}
               className="p-2 rounded hover:bg-red-500/20 text-white/70 hover:text-red-400"
@@ -670,33 +664,17 @@ border-b border-white/10 shadow-xl">
         </header>
       )}
 
-
       {/* CONTEÚDO */}
       <div className="flex-1 relative bg-black">
         {active === "home" && (
           <div className="absolute inset-0">
-
-            {/* VÍDEO */}
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-            >
+            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
               <source src="/video.mp4" type="video/mp4" />
             </video>
 
-            {/* OVERLAY */}
             <div className="absolute inset-0 bg-black/50" />
 
-            {/* CONTEÚDO SOBRE O VÍDEO */}
             <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
-
-              {/* <h1 className="text-white text-4xl md:text-5xl font-bold tracking-tight drop-shadow-lg">
-                Aya Energia - O&M
-              </h1> */}
-
               <p className="mt-4 text-white/80 text-lg max-w-2xl">
                 Monitoramento, indicadores e performance das usinas.
               </p>
@@ -704,42 +682,29 @@ border-b border-white/10 shadow-xl">
               <div className="mt-6 flex gap-4">
                 <button
                   onClick={() => {
-                    if (allowedReports[0]) {
-                      setActive(allowedReports[0].id);
-                    }
+                    if (allowedReports[0]) setActive(allowedReports[0].id);
                   }}
                   className="
-            px-6 py-3 rounded-lg
-            bg-[#2E7B57] hover:bg-[#256947]
-            text-white font-semibold
-            transition
-            shadow-lg
-          "
+                    px-6 py-3 rounded-lg
+                    bg-[#2E7B57] hover:bg-[#256947]
+                    text-white font-semibold
+                    transition shadow-lg
+                  "
                 >
                   Acessar Conteúdos
                 </button>
               </div>
             </div>
-
           </div>
         )}
+
         {active === "cursos" && (
           <div className="absolute inset-0 bg-[#0b0f0d] flex">
-
             {/* ============ SIDEBAR ============ */}
             <aside className="w-[320px] bg-[#0f1512] border-r border-white/10 flex flex-col">
-
-              {/* HEADER */}
               <div className="p-4 border-b border-white/10">
-                <h3 className="text-white font-semibold text-base">
-                  Conteúdo do Curso
-                </h3>
+                <h3 className="text-white font-semibold text-base">Conteúdo do Curso</h3>
 
-                {/* <p className="text-white/40 text-xs mt-1">
-                  {watchedCount} de {totalCourses} aulas concluídas
-                </p> */}
-
-                {/* PROGRESS BAR */}
                 <div className="mt-1">
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
@@ -753,7 +718,6 @@ border-b border-white/10 shadow-xl">
                 </div>
               </div>
 
-              {/* LISTA DE AULAS */}
               <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 {COURSES.map((course, index) => {
                   const watched = isWatched(course.id);
@@ -764,46 +728,36 @@ border-b border-white/10 shadow-xl">
                     <div
                       key={course.id}
                       className={`
-    rounded-lg transition
-    ${activeItem && "bg-[#1f2e27] ring-1 ring-[#5CAE70]/40"}
-    ${locked && "opacity-40"}
-  `}
+                        rounded-lg transition
+                        ${activeItem ? "bg-[#1f2e27] ring-1 ring-[#5CAE70]/40" : ""}
+                        ${locked ? "opacity-40" : ""}
+                      `}
                     >
-                      {/* ===== AULA (LINHA PRINCIPAL) ===== */}
                       <button
                         disabled={locked}
                         onClick={() => {
                           if (!canAccess(index)) return;
-                          setVideoLoading(true);
                           setCurrentCourse(index);
                         }}
-                        className={`
-      w-full flex items-center gap-3 px-4 py-3 text-left
-      hover:bg-white/5
-    `}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5"
                       >
                         <span
                           className={`
-        w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shrink-0
-        ${watched && "bg-[#5CAE70] text-black"}
-        ${activeItem && !watched && "border border-[#5CAE70] text-[#5CAE70]"}
-        ${locked && "border border-white/20 text-white/30"}
-      `}
+                            w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shrink-0
+                            ${watched ? "bg-[#5CAE70] text-black" : ""}
+                            ${activeItem && !watched ? "border border-[#5CAE70] text-[#5CAE70]" : ""}
+                            ${locked ? "border border-white/20 text-white/30" : ""}
+                          `}
                         >
                           {watched ? "✓" : activeItem ? "▶" : "🔒"}
                         </span>
 
                         <div className="flex-1">
-                          <p className="text-white text-sm font-medium leading-tight">
-                            {course.title}
-                          </p>
-                          <span className="text-xs text-white/40">
-                            Aula {index + 1}
-                          </span>
+                          <p className="text-white text-sm font-medium leading-tight">{course.title}</p>
+                          <span className="text-xs text-white/40">Aula {index + 1}</span>
                         </div>
                       </button>
 
-                      {/* ===== AÇÕES SECUNDÁRIAS ===== */}
                       {course.formUrl && (
                         <div className="px-14 pb-3">
                           <a
@@ -811,29 +765,25 @@ border-b border-white/10 shadow-xl">
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`
-          inline-flex items-center gap-2 text-xs font-medium rounded-md px-3 py-1.5 transition
-          ${watched
+                              inline-flex items-center gap-2 text-xs font-medium rounded-md px-3 py-1.5 transition
+                              ${watched
                                 ? "bg-white/10 text-white hover:bg-white/20"
-                                : "text-white/30 cursor-not-allowed pointer-events-none"}
-        `}
+                                : "text-white/30 cursor-not-allowed pointer-events-none"
+                              }
+                            `}
                           >
                             📄 Avaliação da Aula
                           </a>
                         </div>
                       )}
                     </div>
-
-
                   );
                 })}
-
               </div>
             </aside>
 
             {/* ============ PLAYER ============ */}
             <main className="flex-1 flex flex-col">
-
-              {/* VIDEO */}
               <div className="relative w-full h-full bg-black">
                 <div className="absolute inset-0">
                   <YouTube
@@ -845,20 +795,35 @@ border-b border-white/10 shadow-xl">
                       height: "100%",
                       playerVars: {
                         autoplay: 1,
-                        controls: 1,          // 0 se quiser SEM controles
-                        rel: 0,               // sem vídeos relacionados
-                        modestbranding: 1,        // remove título (deprecated, mas ajuda)
-                        fs: 1,                // fullscreen permitido
-                        iv_load_policy: 3,    // remove anotações
-                        disablekb: 1,         // desativa teclado
+                        controls: 1, // 0 se quiser SEM controles
+                        rel: 0,
+                        modestbranding: 1,
+                        fs: 1,
+                        iv_load_policy: 3,
+                        disablekb: 0, // 1 se quiser bloquear teclado
                         playsinline: 1,
                       },
                     }}
-
-                    onReady={() => setVideoLoading(false)}
+                    onReady={(e) => {
+                      setVideoLoading(false);
+                      setVideoError("");
+                      // opcional: sugere qualidade
+                      try {
+                        e.target.setPlaybackQuality?.("hd1080");
+                      } catch { }
+                    }}
+                    onError={() => {
+                      setVideoLoading(false);
+                      setVideoError("Não foi possível carregar o vídeo. Verifique o link ou permissões.");
+                    }}
                     onStateChange={(e) => {
+                      // 0 = ended
                       if (e.data !== 0) return;
-                      completeCourse(currentCourse);
+
+                      const courseId = currentCourseId.current;
+                      if (!courseId) return;
+
+                      completeCourse(courseId);
                     }}
                   />
                 </div>
@@ -868,177 +833,147 @@ border-b border-white/10 shadow-xl">
                     <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
                   </div>
                 )}
+
+                {videoError && !videoLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
+                    <div className="max-w-md text-center">
+                      <p className="text-white font-semibold">Erro no player</p>
+                      <p className="text-white/70 text-sm mt-2">{videoError}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-
-
-
-
             </main>
           </div>
-        )
-        }
+        )}
 
-        {
-          report && active !== "home" && active !== "cursos" && (
-            <iframe
-              key={active}
-              src={formatUrl(report.src)}
-              className="absolute inset-0 w-full h-full border-none"
-              allowFullScreen
-            />
-
-          )
-        }
-
-      </div >
+        {report && active !== "home" && active !== "cursos" && (
+          <iframe
+            key={active}
+            src={formatUrl(report.src)}
+            className="absolute inset-0 w-full h-full border-none"
+            allowFullScreen
+          />
+        )}
+      </div>
 
       {/* MODAL SUPORTE */}
-      {
-        showSupport && (
-          <Modal onClose={() => setShowSupport(false)}>
-            <h3 className="text-white text-lg font-semibold mb-2">
-              Suporte Técnico
-            </h3>
-            <p className="text-white/70 text-sm mb-4">
-              Entre em contato com o desenvolvedor
-            </p>
+      {showSupport && (
+        <Modal onClose={() => setShowSupport(false)}>
+          <h3 className="text-white text-lg font-semibold mb-2">Suporte Técnico</h3>
+          <p className="text-white/70 text-sm mb-4">Entre em contato com o desenvolvedor</p>
 
-            <div className="space-y-3 text-sm">
-              <a
-                href="https://www.linkedin.com/in/diegodamaro/"
-                target="_blank"
-                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-              >
-                <Linkedin size={18} /> LinkedIn
-              </a>
+          <div className="space-y-3 text-sm">
+            <a
+              href="https://www.linkedin.com/in/diegodamaro/"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+            >
+              <Linkedin size={18} /> LinkedIn
+            </a>
 
-              <a
-                href="mailto:diego.sanchez@ayaenergia.com.br"
-                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-              >
-                <Mail size={18} /> Email
-              </a>
+            <a
+              href="mailto:diego.sanchez@ayaenergia.com.br"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+            >
+              <Mail size={18} /> Email
+            </a>
 
-              <a
-                href="https://wa.me/5511961995900"
-                target="_blank"
-                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-              >
-                <Phone size={18} /> WhatsApp
-              </a>
-            </div>
-          </Modal>
-        )
-      }
+            <a
+              href="https://wa.me/5511961995900"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+            >
+              <Phone size={18} /> WhatsApp
+            </a>
+          </div>
+        </Modal>
+      )}
 
       {/* MODAL RESET SENHA */}
-      {
-        showReset && (
-          <Modal onClose={() => setShowReset(false)}>
-            <h3 className="text-white text-lg font-semibold mb-4">
-              Redefinir Senha
-            </h3>
+      {showReset && (
+        <Modal onClose={() => setShowReset(false)}>
+          <h3 className="text-white text-lg font-semibold mb-4">Redefinir Senha</h3>
 
-            <div className="relative mb-3">
-              <input
-                type={showOldPass ? "text" : "password"}
-                placeholder="Senha atual"
-                value={oldPass}
-                onChange={(e) => setOldPass(e.target.value)}
-                className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowOldPass((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-              >
-                {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-
-            <div className="relative mb-3">
-              <input
-                type={showNewPass ? "text" : "password"}
-                placeholder="Nova senha"
-                value={newPass}
-                onChange={(e) => setNewPass(e.target.value)}
-                className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPass((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-              >
-                {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-
-            {resetMsg && (
-              <div
-                className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
-                  ? "bg-green-500/10 text-green-400 border-green-500/20"
-                  : "bg-red-500/10 text-red-400 border-red-500/20"
-                  }`}
-              >
-                {resetMsg}
-              </div>
-            )}
-
+          <div className="relative mb-3">
+            <input
+              type={showOldPass ? "text" : "password"}
+              placeholder="Senha atual"
+              value={oldPass}
+              onChange={(e) => setOldPass(e.target.value)}
+              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+                focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
+            />
             <button
-              onClick={handleChangePassword}
-              disabled={resetLoading || !oldPass || !newPass}
-              className="
-  w-full bg-[#2E7B57] py-2 rounded text-white
-  hover:bg-[#256947]
-  disabled:opacity-50 disabled:cursor-not-allowed
-  transition
-"
-
+              type="button"
+              onClick={() => setShowOldPass((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
             >
-              {resetLoading ? "Alterando..." : "Alterar Senha"}
+              {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-          </Modal>
-        )
-      }
-    </div >
+          </div>
+
+          <div className="relative mb-3">
+            <input
+              type={showNewPass ? "text" : "password"}
+              placeholder="Nova senha"
+              value={newPass}
+              onChange={(e) => setNewPass(e.target.value)}
+              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+                focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPass((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+            >
+              {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {resetMsg && (
+            <div
+              className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
+                ? "bg-green-500/10 text-green-400 border-green-500/20"
+                : "bg-red-500/10 text-red-400 border-red-500/20"
+                }`}
+            >
+              {resetMsg}
+            </div>
+          )}
+
+          <button
+            onClick={handleChangePassword}
+            disabled={resetLoading || !oldPass || !newPass}
+            className="
+              w-full bg-[#2E7B57] py-2 rounded text-white
+              hover:bg-[#256947]
+              disabled:opacity-50 disabled:cursor-not-allowed
+              transition
+            "
+          >
+            {resetLoading ? "Alterando..." : "Alterar Senha"}
+          </button>
+        </Modal>
+      )}
+    </div>
   );
 }
 
 /* =========================
    MODAL BASE
 ========================= */
-
 function Modal({ children, onClose }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white">
           <X size={18} />
         </button>
         {children}
       </div>
     </div>
   );
-}
-
-
-/* =========================
-   POWER BI URL
-========================= */
-
-function formatUrl(url: string) {
-  if (!url) return url;
-
-  const params = [
-    "navContentPaneEnabled=false",
-    "filterPaneEnabled=false",
-    "pageView=fitToWidth",
-  ].join("&");
-
-  return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
 }

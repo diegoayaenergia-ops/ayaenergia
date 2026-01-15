@@ -1,17 +1,42 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+function normalizeStats(value: any): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
 export async function POST(req: Request) {
   try {
-    const { login, password } = await req.json();
+    const body = await req.json();
+    const login = String(body?.login ?? "").trim();
+    const password = String(body?.password ?? "").trim();
 
     console.log("➡️ LOGIN:", login);
-    console.log("➡️ SENHA DIGITADA:", password);
+    console.log("➡️ SENHA DIGITADA:", password ? "[OK]" : "[VAZIA]");
+
+    if (!login || !password) {
+      return NextResponse.json(
+        { error: "Informe login e senha" },
+        { status: 400 }
+      );
+    }
 
     const { data: client, error } = await supabase
       .from("clients")
-      .select("*")
-      .eq("login", login)   // 🔥 usa nova coluna
+      .select("id, client_id, client_name, login, access, stats, password, created_at")
+      .eq("login", login)
       .single();
 
     console.log("➡️ CLIENT DO BANCO:", client);
@@ -24,7 +49,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("➡️ SENHA NO BANCO:", client.password);
+    console.log("➡️ SENHA NO BANCO:", client.password ? "[OK]" : "[VAZIA]");
 
     if (password !== client.password) {
       return NextResponse.json(
@@ -36,9 +61,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       id: client.id,
       client_id: client.client_id,
-      empresa: client.client_name, // ainda pode retornar nome da empresa
+      empresa: client.client_name, // nome exibível
       login: client.login,
-      access: client.access,
+      access: client.access || [],
+      stats: normalizeStats(client.stats),
+      created_at: client.created_at,
     });
   } catch (err) {
     console.error("🔥 ERRO LOGIN:", err);
