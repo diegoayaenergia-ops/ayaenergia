@@ -33,3 +33,10 @@ body {
 html, body {
   height: 100%;
 }
+
+.youtube-player iframe {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  inset: 0;
+}

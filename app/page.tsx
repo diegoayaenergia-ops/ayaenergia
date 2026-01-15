@@ -1,6 +1,6 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import YouTube from "react-youtube";
+import { useEffect, useState, useRef } from "react";
 import {
   Wrench,
   ShoppingCart,
@@ -43,25 +43,25 @@ import Image from "next/image";
 const COURSES: CourseItem[] = [
   {
     id: "modulo:inversor-1",
-    title: "Módulo Inversores",
+    title: "Inversor",
     description: "Introdução e ",
     videoUrl:
-      "https://ayaenergiabr.sharepoint.com/sites/AyaEnergia/_layouts/15/embed.aspx?UniqueId=0a72e85f-f5c2-4a61-b5d2-595c53d52b5f&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create",
+      "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-2",
-    title: "Como usar os Relatórios",
+    title: "Cabine de Medição Primaria",
     description: "Filtros, páginas e análises",
     videoUrl:
-    "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
+      "https://www.youtube.com/embed/Vqd_FfZz4ZI?si=5QyJ9uOxgupusW4F",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
     id: "modulo:inversor-3",
-    title: "Como usar os Relatórios",
+    title: "Skid",
     description: "Filtros, páginas e análises",
     videoUrl:
       "https://www.youtube.com/embed/6OZ23Ljnm4c?si=VdQi-hJc5BN6Ds4Y",
@@ -70,11 +70,11 @@ const COURSES: CourseItem[] = [
   },
   {
     id: "modulo:inversor-4",
-    title: "Como usar os Relatórios",
+    title: "Sistema de Tracker",
     description: "Filtros, páginas e análises",
     videoUrl:
-    "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
-     formUrl:
+      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+    formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
@@ -91,7 +91,7 @@ const COURSES: CourseItem[] = [
     title: "Como usar os Relatórios",
     description: "Filtros, páginas e análises",
     videoUrl:
-     "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
+      "https://www.youtube.com/embed/LwC4oOSH7ko?si=U7vhZdXNKiSKr5RW",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
@@ -100,34 +100,34 @@ const COURSES: CourseItem[] = [
     title: "Como usar os Relatórios",
     description: "Filtros, páginas e análises",
     videoUrl:
-     "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
-      formUrl:
+      "https://www.youtube.com/embed/lu7qWZYP2To?si=hIsQaT5NGdFFywMs",
+    formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
-    {
+  {
     id: "modulo:inversor-8",
     title: "Como usar os Relatórios",
     description: "Filtros, páginas e análises",
     videoUrl:
-     "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
+      "https://www.youtube.com/embed/W9AO7g2Cgdc?si=tpKfmY-hL4SB9bJH",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
-    {
+  {
     id: "modulo:inversor-9",
     title: "Como usar os Relatórios",
     description: "Filtros, páginas e análises",
     videoUrl:
-    "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
+      "https://www.youtube.com/embed/Xo4LrG-irLI?si=4zvMX60u0saSwFrA",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
-    {
+  {
     id: "modulo:inversor-10",
     title: "Como usar os Relatórios",
     description: "Filtros, páginas e análises",
     videoUrl:
-    "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
+      "https://www.youtube.com/embed/alzphVrX3dU?si=3aYJfiQMBNtosWr3",
     formUrl:
       "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
@@ -195,6 +195,13 @@ const ALL_REPORTS: ReportItem[] = [
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
+  const [stats, setStats] = useState<string[]>([]);
+  const [currentCourse, setCurrentCourse] = useState(0);
+  const currentCourseId = COURSES[currentCourse]?.id;
+  const canAdvance = currentCourseId
+    ? stats.includes(currentCourseId)
+    : false;
+
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -214,6 +221,70 @@ export default function Home() {
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [focus, setFocus] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const progressPercent = Math.round(
+    (stats.length / COURSES.length) * 100
+  );
+  const canAccess = (index: number) => {
+    if (index === 0) return true;
+    return stats.includes(COURSES[index - 1].id);
+  };
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const totalCourses = COURSES.length;
+  const watchedCount = stats.length;
+
+
+  const isWatched = (id: string) => stats.includes(id);
+
+  const isLocked = (index: number) =>
+    index > currentCourse && !isWatched(COURSES[currentCourse].id);
+
+  function getCourseIndexFromStats(stats: string[]) {
+    const index = COURSES.findIndex(
+      (course) => !stats.includes(course.id)
+    );
+
+    // se todos foram assistidos, fica no último
+    return index === -1 ? COURSES.length - 1 : index;
+  }
+  const progress = Math.round(
+    (stats.length / COURSES.length) * 100
+  );
+
+  const completeCourse = async (index: number) => {
+    const courseId = COURSES[index].id;
+
+    // evita chamada duplicada
+    if (stats.includes(courseId)) return;
+
+    const res = await fetch("/api/user/stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        login: user.login,
+        courseId,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setStats(data.stats);
+
+      const updatedUser = { ...user, stats: data.stats };
+      setUser(updatedUser);
+      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+    }
+  };
+  function getYoutubeId(url: string) {
+    if (!url) return "";
+
+    const regExp =
+      /(?:youtube\.com\/embed\/|youtube\.com\/watch\?v=|youtu\.be\/)([^?&]+)/;
+
+    const match = url.match(regExp);
+    return match ? match[1] : "";
+  }
 
 
   /* ===== CARREGA SESSÃO ===== */
@@ -221,22 +292,24 @@ export default function Home() {
     const saved = localStorage.getItem("bi_user");
     if (saved) {
       const u = JSON.parse(saved);
+
       setUser(u);
+      setStats(u.stats || []);
+
+      const courseIndex = getCourseIndexFromStats(u.stats || []);
+      setCurrentCourse(courseIndex);
+
       setActive("home");
     }
   }, []);
 
-
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [currentCourse]);
   useEffect(() => {
     const last = localStorage.getItem("last_report");
     if (last) setActive(last);
   }, []);
-
-  useEffect(() => {
-    if (active !== "home") {
-      localStorage.setItem("last_report", active);
-    }
-  }, [active]);
 
 
   /* ===== LOGIN ===== */
@@ -383,14 +456,12 @@ export default function Home() {
 
           {/* LADO ESQUERDO */}
           <div className="p-6 flex flex-col justify-center items-center text-center text-white ">
-            <Image src="/logo-aya.png" alt="AYA" width={110} height={110} />
+            <Image src="/logo-aya.png" alt="AYA" width={150} height={150} />
 
-            <p className="mt-4 text-sm text-white/90 font-medium">
-              Portal de Business Intelligence
-            </p>
+
 
             <span className="mt-2 text-xs text-white/50">
-              BI Portal • AYA Energia
+              Portal • AYA Energia
             </span>
           </div>
 
@@ -479,6 +550,9 @@ export default function Home() {
   }
 
 
+  const allWatched = COURSES.every(course =>
+    stats.includes(course.id)
+  );
 
 
   /* ================= PORTAL ================= */
@@ -507,9 +581,9 @@ border-b border-white/10 shadow-xl">
             <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
             <div className="leading-tight text-left">
               <p className="text-white font-semibold text-sm">
-                {user.empresa}
+                Aya Energia
               </p>
-              <p className="text-white/40 text-xs">BI Portal</p>
+              <p className="text-white/40 text-xs">Portal</p>
             </div>
           </button>
 
@@ -524,6 +598,12 @@ border-b border-white/10 shadow-xl">
                   key={r.id}
                   onClick={() => {
                     if (r.id === active) return;
+
+                    if (r.id === "cursos") {
+                      const courseIndex = getCourseIndexFromStats(stats);
+                      setCurrentCourse(courseIndex);
+                    }
+
                     setActive(r.id);
                   }}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
@@ -606,9 +686,9 @@ border-b border-white/10 shadow-xl">
             {/* CONTEÚDO SOBRE O VÍDEO */}
             <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-6">
 
-              <h1 className="text-white text-4xl md:text-5xl font-bold tracking-tight drop-shadow-lg">
-                Portal de Business Intelligence
-              </h1>
+              {/* <h1 className="text-white text-4xl md:text-5xl font-bold tracking-tight drop-shadow-lg">
+                Aya Energia - O&M
+              </h1> */}
 
               <p className="mt-4 text-white/80 text-lg max-w-2xl">
                 Monitoramento, indicadores e performance das usinas.
@@ -629,7 +709,7 @@ border-b border-white/10 shadow-xl">
             shadow-lg
           "
                 >
-                  Acessar Relatórios
+                  Acessar Conteúdos
                 </button>
               </div>
             </div>
@@ -637,189 +717,297 @@ border-b border-white/10 shadow-xl">
           </div>
         )}
         {active === "cursos" && (
-          <div className="absolute inset-0 overflow-y-auto bg-white p-8">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
-              {COURSES.map((course) => (
-                <div
-                  key={course.id}
-                  className="bg-[#145a36] rounded-xl border border-white/10 shadow-lg overflow-hidden"
-                >
-                  <div className="p-4">
-                    <h2 className="text-white font-semibold text-lg">
-                      {course.title}
+          <div className="absolute inset-0 bg-[#0b0f0d] flex">
 
-                    </h2>
-                    {course.description && (
-                      <p className="text-white/70 text-sm mt-1">
-                        {course.description}
-                      </p>
-                    )}
+            {/* ============ SIDEBAR ============ */}
+            <aside className="w-[320px] bg-[#0f1512] border-r border-white/10 flex flex-col">
+
+              {/* HEADER */}
+              <div className="p-4 border-b border-white/10">
+                <h3 className="text-white font-semibold text-base">
+                  Conteúdo do Curso
+                </h3>
+
+                {/* <p className="text-white/40 text-xs mt-1">
+                  {watchedCount} de {totalCourses} aulas concluídas
+                </p> */}
+
+                {/* PROGRESS BAR */}
+                <div className="mt-1">
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#5CAE70] transition-all"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
+                  <span className="text-xs text-white/40 mt-1 block">
+                    {progressPercent}% concluído
+                  </span>
+                </div>
+              </div>
 
-                  <div className="relative aspect-video">
+              {/* LISTA DE AULAS */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {COURSES.map((course, index) => {
+                  const watched = isWatched(course.id);
+                  const activeItem = index === currentCourse;
+                  const locked = !canAccess(index);
+
+                  return (
+                    <div
+  key={course.id}
+  className={`
+    rounded-lg transition
+    ${activeItem && "bg-[#1f2e27] ring-1 ring-[#5CAE70]/40"}
+    ${locked && "opacity-40"}
+  `}
+>
+  {/* ===== AULA (LINHA PRINCIPAL) ===== */}
+  <button
+    disabled={locked}
+    onClick={() => setCurrentCourse(index)}
+    className={`
+      w-full flex items-center gap-3 px-4 py-3 text-left
+      hover:bg-white/5
+    `}
+  >
+    <span
+      className={`
+        w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shrink-0
+        ${watched && "bg-[#5CAE70] text-black"}
+        ${activeItem && !watched && "border border-[#5CAE70] text-[#5CAE70]"}
+        ${locked && "border border-white/20 text-white/30"}
+      `}
+    >
+      {watched ? "✓" : activeItem ? "▶" : "🔒"}
+    </span>
+
+    <div className="flex-1">
+      <p className="text-white text-sm font-medium leading-tight">
+        {course.title}
+      </p>
+      <span className="text-xs text-white/40">
+        Aula {index + 1}
+      </span>
+    </div>
+  </button>
+
+  {/* ===== AÇÕES SECUNDÁRIAS ===== */}
+  {course.formUrl && (
+    <div className="px-14 pb-3">
+      <a
+        href={course.formUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`
+          inline-flex items-center gap-2 text-xs font-medium rounded-md px-3 py-1.5 transition
+          ${watched
+            ? "bg-white/10 text-white hover:bg-white/20"
+            : "text-white/30 cursor-not-allowed pointer-events-none"}
+        `}
+      >
+        📄 Avaliação da Aula
+      </a>
+    </div>
+  )}
+</div>
+
+
+                  );
+                })}
+
+              </div>
+            </aside>
+
+            {/* ============ PLAYER ============ */}
+            <main className="flex-1 flex flex-col">
+
+              {/* VIDEO */}
+              <div className="relative w-full bg-black">
+
+                {/* WRAPPER 16:9 */}
+                <div className="relative w-full aspect-video">
+
+                  {COURSES[currentCourse].videoUrl.includes("youtube") ? (
+                    <div className="absolute inset-0">
+                      <YouTube
+                        videoId={getYoutubeId(COURSES[currentCourse].videoUrl)}
+                        className="youtube-player absolute inset-0 w-full h-full"
+                        opts={{
+                          playerVars: {
+                            autoplay: 1,
+                            controls: 1,
+                            rel: 0,
+                            modestbranding: 1,
+                          },
+                        }}
+                        onReady={() => setVideoLoading(false)}
+                        onStateChange={(e) => {
+                          if (e.data === 0) {
+                            completeCourse(currentCourse);
+
+                            // avança automaticamente
+                            if (currentCourse < COURSES.length - 1) {
+                              setTimeout(() => {
+                                setCurrentCourse((prev) => prev + 1);
+                                setVideoLoading(true);
+                              }, 800);
+                            }
+                          }
+                        }}
+
+                      />
+
+
+
+                      {videoLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black">
+                          <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                        </div>
+                      )}
+
+                    </div>
+
+                  ) : (
+
                     <iframe
-                      src={course.videoUrl}
-                      className="w-full h-full"
+                      src={COURSES[currentCourse].videoUrl}
+                      className="absolute inset-0 w-full h-full border-0"
                       allow="fullscreen"
                       allowFullScreen
                     />
+                  )}
 
-                    <button
-                      onClick={() => {
-                        const iframe = document.querySelector("iframe");
-                        iframe?.requestFullscreen();
-                      }}
-                      className="
-    absolute top-1 right-1
-     text-white
-    px-5 py-3
-    rounded-xl
-    text-xl
-    hover:bg-black/90
-    transition
-  "
-                    >
-                      ⛶
-                    </button>
-                  </div>
-
-                  <div className="p-4 border-t border-white/10">
-                    <a
-                      href={course.formUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="
-        w-full inline-flex items-center justify-center gap-2
-        px-4 py-2 rounded-lg
-        bg-[#2E7B57] hover:bg-[#256947]
-        text-white font-semibold text-sm
-        transition shadow
-      "
-                    >
-                      Realizar Teste Final
-                    </a>
-                  </div>
                 </div>
-              ))}
-            </div>
+              </div>
+
+
+
+            </main>
           </div>
-        )}
+        )
+        }
 
+        {
+          report && active !== "home" && active !== "cursos" && (
+            <iframe
+              key={active}
+              src={formatUrl(report.src)}
+              className="absolute inset-0 w-full h-full border-none"
+              allowFullScreen
+            />
 
-        {report && active !== "home" && active !== "cursos" && (
-          <iframe
-            key={active}
-            src={formatUrl(report.src)}
-            className="absolute inset-0 w-full h-full border-none"
-            allowFullScreen
-          />
+          )
+        }
 
-        )}
-
-      </div>
+      </div >
 
       {/* MODAL SUPORTE */}
-      {showSupport && (
-        <Modal onClose={() => setShowSupport(false)}>
-          <h3 className="text-white text-lg font-semibold mb-2">
-            Suporte Técnico
-          </h3>
-          <p className="text-white/70 text-sm mb-4">
-            Entre em contato com o desenvolvedor
-          </p>
+      {
+        showSupport && (
+          <Modal onClose={() => setShowSupport(false)}>
+            <h3 className="text-white text-lg font-semibold mb-2">
+              Suporte Técnico
+            </h3>
+            <p className="text-white/70 text-sm mb-4">
+              Entre em contato com o desenvolvedor
+            </p>
 
-          <div className="space-y-3 text-sm">
-            <a
-              href="https://www.linkedin.com/in/diegodamaro/"
-              target="_blank"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Linkedin size={18} /> LinkedIn
-            </a>
+            <div className="space-y-3 text-sm">
+              <a
+                href="https://www.linkedin.com/in/diegodamaro/"
+                target="_blank"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+              >
+                <Linkedin size={18} /> LinkedIn
+              </a>
 
-            <a
-              href="mailto:diego.sanchez@ayaenergia.com.br"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Mail size={18} /> Email
-            </a>
+              <a
+                href="mailto:diego.sanchez@ayaenergia.com.br"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+              >
+                <Mail size={18} /> Email
+              </a>
 
-            <a
-              href="https://wa.me/5511961995900"
-              target="_blank"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
-              <Phone size={18} /> WhatsApp
-            </a>
-          </div>
-        </Modal>
-      )}
+              <a
+                href="https://wa.me/5511961995900"
+                target="_blank"
+                className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+              >
+                <Phone size={18} /> WhatsApp
+              </a>
+            </div>
+          </Modal>
+        )
+      }
 
       {/* MODAL RESET SENHA */}
-      {showReset && (
-        <Modal onClose={() => setShowReset(false)}>
-          <h3 className="text-white text-lg font-semibold mb-4">
-            Redefinir Senha
-          </h3>
+      {
+        showReset && (
+          <Modal onClose={() => setShowReset(false)}>
+            <h3 className="text-white text-lg font-semibold mb-4">
+              Redefinir Senha
+            </h3>
 
-          <div className="relative mb-3">
-            <input
-              type={showOldPass ? "text" : "password"}
-              placeholder="Senha atual"
-              value={oldPass}
-              onChange={(e) => setOldPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+            <div className="relative mb-3">
+              <input
+                type={showOldPass ? "text" : "password"}
+                placeholder="Senha atual"
+                value={oldPass}
+                onChange={(e) => setOldPass(e.target.value)}
+                className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
                          focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowOldPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-            >
-              {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-
-          <div className="relative mb-3">
-            <input
-              type={showNewPass ? "text" : "password"}
-              placeholder="Nova senha"
-              value={newPass}
-              onChange={(e) => setNewPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowNewPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
-            >
-              {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-
-          {resetMsg && (
-            <div
-              className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
-                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                : "bg-red-500/10 text-red-400 border-red-500/20"
-                }`}
-            >
-              {resetMsg}
+              />
+              <button
+                type="button"
+                onClick={() => setShowOldPass((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+              >
+                {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-          )}
 
-          <button
-            onClick={handleChangePassword}
-            disabled={resetLoading || !oldPass || !newPass}
-            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B57]
+            <div className="relative mb-3">
+              <input
+                type={showNewPass ? "text" : "password"}
+                placeholder="Nova senha"
+                value={newPass}
+                onChange={(e) => setNewPass(e.target.value)}
+                className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
+                         focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPass((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+              >
+                {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {resetMsg && (
+              <div
+                className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
+                  ? "bg-green-500/10 text-green-400 border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border-red-500/20"
+                  }`}
+              >
+                {resetMsg}
+              </div>
+            )}
+
+            <button
+              onClick={handleChangePassword}
+              disabled={resetLoading || !oldPass || !newPass}
+              className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#2E7B57]
                        disabled: disabled:cursor-not-allowed transition"
-          >
-            {resetLoading ? "Alterando..." : "Alterar Senha"}
-          </button>
-        </Modal>
-      )}
-    </div>
+            >
+              {resetLoading ? "Alterando..." : "Alterar Senha"}
+            </button>
+          </Modal>
+        )
+      }
+    </div >
   );
 }
 

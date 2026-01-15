@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-back";
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from("clients")
-    .select("client_name")
-    .order("client_name");
+  try {
+    const { data, error } = await supabaseServer
+      .from("clients")
+      .select("client_name")
+      .order("client_name");
 
-  if (error) {
+    if (error) {
+      return NextResponse.json(
+        { error: "Erro ao buscar empresas" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch {
     return NextResponse.json(
-      { error: "Erro ao buscar empresas" },
+      { error: "Erro inesperado no servidor" },
       { status: 500 }
     );
   }
-
-  return NextResponse.json(data);
 }
