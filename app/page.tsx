@@ -664,27 +664,14 @@ export default function Home() {
 
             <div className="absolute inset-0 bg-black/35" />
 
-            <div className="relative z-10 w-full h-full flex flex-col items-center justify-center px-6">
-              <div className="w-full max-w-6xl h-[560px]">
-                <BrazilTopoMap activeUFs={["SP", "MT", "GO", "PE", "RJ", "BA"]} height={560} />
-              </div>
-{/* 
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setActive("cursos")}
-                  className="
-                    px-10 py-3.5 rounded-xl
-                    bg-[#2E7B57] hover:bg-[#256947]
-                    text-white font-semibold text-base
-                    shadow-lg shadow-black/40
-                    border border-white/10
-                    active:scale-[0.98]
-                    transition
-                  "
-                >
-                  Acessar Conteúdos
-                </button>
-              </div> */}
+            <div className="relative z-10 w-full h-full flex items-center justify-center px-6">
+              <Image
+                src="/logo-aya.png"
+                alt="AYA"
+                width={500}
+                height={500}
+                className="opacity-60"
+              />
             </div>
           </div>
         )}
