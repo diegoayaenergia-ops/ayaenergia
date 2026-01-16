@@ -668,7 +668,7 @@ export default function Home() {
               <div className="w-full max-w-6xl h-[560px]">
                 <BrazilTopoMap activeUFs={["SP", "MT", "GO", "PE", "RJ", "BA"]} height={560} />
               </div>
-
+{/* 
               <div className="flex justify-center">
                 <button
                   onClick={() => setActive("cursos")}
@@ -684,7 +684,7 @@ export default function Home() {
                 >
                   Acessar Conteúdos
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
         )}
