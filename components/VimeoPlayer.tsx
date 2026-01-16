@@ -12,94 +12,76 @@ type Props = {
 
 export default function VimeoPlayer({ videoId, onEnded, onReady, onError }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const playerRef = useRef<any>(null);
-
-  // trava para não disparar duas vezes
-  const endedOnceRef = useRef(false);
+  const playerRef = useRef<Player | null>(null);
+  const aliveRef = useRef(false);
 
   useEffect(() => {
+    aliveRef.current = true;
+
     if (!containerRef.current) return;
 
-    let alive = true; // ✅ impede callbacks após destroy/unmount
-    endedOnceRef.current = false;
-
-    // destrói anterior
-    if (playerRef.current) {
+    // ✅ mata player anterior (se existir)
+    const prev = playerRef.current;
+    if (prev) {
       try {
-        playerRef.current.destroy();
+        prev.unload().catch(() => {});
+        prev.destroy().catch(() => {});
       } catch {}
       playerRef.current = null;
     }
 
+    // ✅ cria player novo
     const player = new Player(containerRef.current, {
       id: Number(videoId),
       autoplay: true,
-      autopause: false,
+      autopause: true,
+      responsive: true,
+      title: false,
+      byline: false,
+      portrait: false,
     });
 
     playerRef.current = player;
 
-    const finish = () => {
-      if (!alive) return;
-      if (endedOnceRef.current) return;
-      endedOnceRef.current = true;
-      onEnded?.();
+    const safe = (fn?: () => void) => {
+      if (!aliveRef.current) return;
+      fn?.();
     };
 
-    const onTimeUpdate = (data: any) => {
-      if (!alive) return;
-      if (!data?.duration) return;
+    const handleEnded = () => safe(onEnded);
 
-      if (data.seconds >= data.duration - 0.5) {
-        finish();
-      }
-    };
+    player.on("ended", handleEnded);
 
-    const onLoaded = () => {
-      if (!alive) return;
-      onReady?.();
-    };
+    player.on("error", (e: any) => {
+      if (!aliveRef.current) return;
+      onError?.(e?.message || "Erro no player");
+    });
 
-    const onErr = (e: any) => {
-      if (!alive) return;
-      onError?.(e?.message || "Erro no player Vimeo");
-    };
-
-    // listeners
-    player.on("loaded", onLoaded);
-    player.on("ended", finish);
-    player.on("timeupdate", onTimeUpdate);
-    player.on("error", onErr);
-
-    // força iframe 100% (sem chamar métodos que podem falhar em versões antigas)
+    // ✅ NUNCA chame getVideoId aqui
     player
       .ready()
-      .then(() => {
-        if (!alive) return;
-        const iframe = containerRef.current?.querySelector("iframe");
-        if (iframe) {
-          const el = iframe as HTMLIFrameElement;
-          el.style.position = "absolute";
-          el.style.inset = "0";
-          el.style.width = "100%";
-          el.style.height = "100%";
-        }
-      })
-      .catch(() => {
-        // se já tiver sido destruído, ignore
+      .then(() => safe(onReady))
+      .catch((e) => {
+        if (!aliveRef.current) return;
+        onError?.(e?.message || "Falha ao inicializar player");
       });
 
     return () => {
-      alive = false;
+      aliveRef.current = false;
+
+      // ✅ remove listeners + destroy sem estourar
       try {
-        player.off("loaded", onLoaded);
-        player.off("ended", finish);
-        player.off("timeupdate", onTimeUpdate);
-        player.off("error", onErr);
-        player.destroy();
+        player.off("ended", handleEnded);
       } catch {}
+
+      try {
+        player.unload().catch(() => {});
+        player.destroy().catch(() => {});
+      } catch {}
+
+      if (playerRef.current === player) playerRef.current = null;
     };
   }, [videoId, onEnded, onReady, onError]);
 
-  return <div ref={containerRef} className="relative w-full h-full" />;
+  return <div ref={containerRef} className="w-full h-full" />;
 }

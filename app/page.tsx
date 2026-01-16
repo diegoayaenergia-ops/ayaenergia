@@ -22,16 +22,12 @@ import {
   Eye,
   EyeOff,
   KeyRound,
-
-  // Ícones usados na aba Serviços (layout enterprise)
   Activity,
   Droplets,
   ClipboardCheck,
   BriefcaseBusiness,
   TrendingUp,
   FileSearch,
-  MapPinned,
-  Timer,
 } from "lucide-react";
 
 /* =========================================================
@@ -59,7 +55,7 @@ type CourseItem = {
 const SERVICES_MENU: ReportItem = {
   id: "servicos",
   title: "Sobre Nós",
-  icon: Wrench, // pode trocar por outro ícone
+  icon: Wrench,
   src: "",
 };
 
@@ -78,6 +74,7 @@ const COURSES: CourseItem[] = [
     id: "modulo:inversor-2",
     title: "SKID",
     description: "Filtros, páginas e análises",
+    vimeoId: "1155023945",
     formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
   },
   {
@@ -182,12 +179,7 @@ const INTERNAL_REPORTS: ReportItem[] = [
   },
 ];
 
-const ALL_REPORTS: ReportItem[] = [
-  SERVICES_MENU,
-  COURSES_MENU,
-  ...PORTFOLIO_REPORTS,
-  ...INTERNAL_REPORTS,
-];
+const ALL_REPORTS: ReportItem[] = [SERVICES_MENU, COURSES_MENU, ...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
 
 /* =========================================================
    HELPERS
@@ -206,13 +198,13 @@ function normalizeStringArray(raw: any): string[] {
 function formatUrl(url: string) {
   if (!url) return url;
 
-  const params = [
-    "navContentPaneEnabled=false",
-    "filterPaneEnabled=false",
-    "pageView=fitToWidth",
-  ].join("&");
-
+  const params = ["navContentPaneEnabled=false", "filterPaneEnabled=false", "pageView=fitToWidth"].join("&");
   return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
+}
+
+function getCourseIndexFromStats(stats: string[]) {
+  const index = COURSES.findIndex((course) => !stats.includes(course.id));
+  return index === -1 ? COURSES.length - 1 : index;
 }
 
 /* =========================================================
@@ -250,19 +242,13 @@ export default function Home() {
   const [resetLoading, setResetLoading] = useState(false);
 
   /* ===== UI ===== */
-  const [focus, setFocus] = useState(false); // (mantido caso você use em outros lugares)
+  const [focus] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState("");
 
   /* ===== Preconnect Vimeo ===== */
   useEffect(() => {
-    const links = [
-      "https://player.vimeo.com",
-      "https://i.vimeocdn.com",
-      "https://f.vimeocdn.com",
-      "https://vimeo.com",
-    ];
-
+    const links = ["https://player.vimeo.com", "https://i.vimeocdn.com", "https://f.vimeocdn.com", "https://vimeo.com"];
     links.forEach((href) => {
       const l = document.createElement("link");
       l.rel = "preconnect";
@@ -272,71 +258,12 @@ export default function Home() {
     });
   }, []);
 
-  /* ===== Avança quando a aula atual entrar no stats ===== */
+  /* ===== Track course ref + loading ===== */
   useEffect(() => {
-    if (active !== "cursos") return;
-
-    const currentId = COURSES[currentCourse]?.id;
-    if (!currentId) return;
-    if (!stats.includes(currentId)) return;
-
-    setCurrentCourse((prev) => Math.min(prev + 1, COURSES.length - 1));
-  }, [stats, active, currentCourse]);
-
-  const progressPercent =
-    COURSES.length > 0 ? Math.round((stats.length / COURSES.length) * 100) : 0;
-
-  const canAccess = (index: number) => {
-    if (index === 0) return true;
-
-    const course = COURSES[index];
-    const prev = COURSES[index - 1];
-
-    // já concluído? pode reassistir
-    if (course?.id && stats.includes(course.id)) return true;
-
-    // se não tem vídeo ainda, não trava
-    if (!course?.vimeoId) return true;
-
-    // sequencial
-    return !!prev?.id && stats.includes(prev.id);
-  };
-
-  const isWatched = (id: string) => stats.includes(id);
-
-  function getCourseIndexFromStats(s: string[]) {
-    const index = COURSES.findIndex((course) => !s.includes(course.id));
-    return index === -1 ? COURSES.length - 1 : index;
-  }
-
-  const completeCourse = async (courseId: string) => {
-    if (!courseId) return;
-    if (stats.includes(courseId)) return;
-    if (completingRef.current) return;
-
-    completingRef.current = courseId;
-
-    try {
-      const res = await fetch("/api/user/stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: user.login, courseId }),
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const fixed = normalizeStringArray(data.stats);
-
-      setStats(fixed);
-
-      const updatedUser = { ...user, stats: fixed };
-      setUser(updatedUser);
-      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
-    } finally {
-      completingRef.current = null;
-    }
-  };
+    currentCourseId.current = COURSES[currentCourse]?.id || null;
+    setVideoLoading(true);
+    setVideoError("");
+  }, [currentCourse]);
 
   /* ===== Persist active tab ===== */
   useEffect(() => {
@@ -365,7 +292,7 @@ export default function Home() {
         if (savedTab) setActive(savedTab);
 
         if (savedTab === "cursos") {
-          if (savedCourse !== null) setCurrentCourse(Number(savedCourse));
+          if (savedCourse !== null && !Number.isNaN(Number(savedCourse))) setCurrentCourse(Number(savedCourse));
           else setCurrentCourse(getCourseIndexFromStats(fixedStats));
         }
       }
@@ -374,21 +301,57 @@ export default function Home() {
     }
   }, []);
 
-  /* ===== Track course ref + loading ===== */
-  useEffect(() => {
-    currentCourseId.current = COURSES[currentCourse]?.id || null;
-    setVideoLoading(true);
-    setVideoError("");
-  }, [currentCourse]);
+  const progressPercent = COURSES.length > 0 ? Math.round((stats.length / COURSES.length) * 100) : 0;
 
-  /* ===== Persist course index ===== */
-  useEffect(() => {
-    if (active === "cursos") {
-      localStorage.setItem("currentCourseIndex", String(currentCourse));
+  const canAccess = (index: number) => {
+    if (index === 0) return true;
+
+    const course = COURSES[index];
+    const prev = COURSES[index - 1];
+
+    // já concluído? pode reassistir
+    if (course?.id && stats.includes(course.id)) return true;
+
+    // se não tem vídeo ainda, não trava
+    if (!course?.vimeoId) return true;
+
+    // sequencial (precisa concluir a anterior)
+    return !!prev?.id && stats.includes(prev.id);
+  };
+
+  const isWatched = (id: string) => stats.includes(id);
+
+  const completeCourse = async (courseId: string) => {
+    if (!courseId) return;
+    if (!user?.login) return;
+    if (stats.includes(courseId)) return;
+    if (completingRef.current) return;
+
+    completingRef.current = courseId;
+
+    try {
+      const res = await fetch("/api/user/stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login: user.login, courseId }),
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const fixed = normalizeStringArray(data.stats);
+
+      setStats(fixed);
+
+      const updatedUser = { ...user, stats: fixed };
+      setUser(updatedUser);
+      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+
+      // ✅ avanço determinístico (não depende de prev+1)
+    } finally {
+      completingRef.current = null;
     }
-  }, [currentCourse, active]);
-
-  
+  };
 
   /* ===== LOGIN ===== */
   const handleLogin = async () => {
@@ -423,12 +386,14 @@ export default function Home() {
       const fixedUser = { ...data, stats: fixedStats, access: fixedAccess };
 
       localStorage.setItem("bi_user", JSON.stringify(fixedUser));
-
       setUser(fixedUser);
       setStats(fixedStats);
 
       const savedTab = localStorage.getItem("activeTab");
       setActive(savedTab || "home");
+
+      // se entrar direto em cursos, já posiciona no próximo não concluído
+      if ((savedTab || "home") === "cursos") setCurrentCourse(getCourseIndexFromStats(fixedStats));
     } catch {
       setError("Erro de conexão com o servidor");
     } finally {
@@ -589,9 +554,7 @@ export default function Home() {
             </div>
 
             {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">
-                {error}
-              </div>
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">{error}</div>
             )}
 
             <button
@@ -737,17 +700,21 @@ export default function Home() {
         {active === "cursos" && (
           <div className="absolute inset-0 bg-[#0b0f0d] flex">
             {/* SIDEBAR */}
-            <aside className="w-[320px] bg-[#0f1512] border-r border-white/10 flex flex-col">
+            <aside className="w-[360px] bg-[#0f1512] border-r border-white/10 flex flex-col">
               <div className="p-4 border-b border-white/10">
-                <h3 className="text-white font-semibold text-base">Conteúdo do Curso</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-semibold text-base">Conteúdo</h3>
+                  <span className="text-xs text-white/40">{stats.length}/{COURSES.length}</span>
+                </div>
 
-                <div className="mt-1">
+                <div className="mt-3">
                   <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div className="h-full bg-[#5CAE70] transition-all" style={{ width: `${progressPercent}%` }} />
                   </div>
                   <span className="text-xs text-white/40 mt-1 block">{progressPercent}% concluído</span>
                 </div>
               </div>
+
 
               <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 {COURSES.map((course, index) => {
@@ -760,104 +727,216 @@ export default function Home() {
                     <div
                       key={course.id}
                       className={`
-                        rounded-lg transition
-                        ${activeItem ? "bg-[#1f2e27] ring-1 ring-[#5CAE70]/40" : ""}
-                        ${locked ? "opacity-40" : ""}
-                      `}
+    group rounded-xl transition
+    ${activeItem ? "bg-white/5 ring-1 ring-[#5CAE70]/35" : "hover:bg-white/[0.04]"}
+    ${locked ? "opacity-45" : ""}
+  `}
                     >
-                      <button
-                        disabled={locked}
-                        onClick={() => {
-                          if (!canAccess(index)) return;
-                          setCurrentCourse(index);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5"
-                      >
-                        <span
-                          className={`
-                            w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shrink-0
-                            ${watched ? "bg-[#5CAE70] text-black" : ""}
-                            ${activeItem && !watched ? "border border-[#5CAE70] text-[#5CAE70]" : ""}
-                            ${locked ? "border border-white/20 text-white/30" : ""}
-                          `}
+                      <div className="flex items-center gap-3 px-3 py-3">
+                        {/* Clique para abrir */}
+                        <button
+                          type="button"
+                          disabled={locked}
+                          onClick={() => {
+                            if (!canAccess(index)) return;
+                            setCurrentCourse(index);
+                          }}
+                          className="flex-1 min-w-0 text-left"
                         >
-                          {watched ? "✓" : activeItem ? "▶" : locked ? "🔒" : hasVideo ? "•" : "⏳"}
-                        </span>
+                          <div className="flex items-center gap-2">
+                            <p className="text-white text-sm font-semibold truncate">
+                              {course.title}
+                            </p>
 
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-medium leading-tight">{course.title}</p>
-                          <span className="text-xs text-white/40">Aula {index + 1}</span>
-                        </div>
-                      </button>
+                            {/* Badges */}
+                            {watched && (
+                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-[#5CAE70]/20 text-[#9be6b0] border border-[#5CAE70]/20">
+                                Concluída
+                              </span>
+                            )}
 
+                            {!course.vimeoId && (
+                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">
+                                Em breve
+                              </span>
+                            )}
+
+                            {locked && (
+                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10">
+                                Bloqueada
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-1 flex items-center gap-2 text-xs text-white/45">
+                            <span>Aula {index + 1}</span>
+                            <span className="w-1 h-1 rounded-full bg-white/25" />
+                            <span>{course.description || "Conteúdo do módulo"}</span>
+                          </div>
+                        </button>
+
+                        {/* ✅ Concluir (somente se tiver vídeo) */}
+                        {course.vimeoId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (locked) return;
+                              if (watched) return;
+                              completeCourse(course.id);
+                            }}
+                            disabled={locked || watched || completingRef.current === course.id}
+                            className={`
+          shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition
+          border
+          ${watched
+                                ? "bg-white/5 text-white/35 border-white/10 cursor-not-allowed"
+                                : locked
+                                  ? "bg-white/5 text-white/25 border-white/10 cursor-not-allowed"
+                                  : "bg-[#5CAE70] text-black border-[#5CAE70]/30 hover:brightness-110 active:scale-[0.98]"}
+        `}
+                            title={watched ? "Já concluída" : "Marcar como concluída"}
+                          >
+                            {watched ? "✓" : completingRef.current === course.id ? "..." : "Concluir"}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Avaliação (só libera se concluída) */}
                       {course.formUrl && (
-                        <div className="px-14 pb-3">
+                        <div className="px-3 pb-3">
                           <a
                             href={course.formUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`
-                              inline-flex items-center gap-2 text-xs font-medium rounded-md px-3 py-1.5 transition
-                              ${watched ? "bg-white/10 text-white hover:bg-white/20" : "text-white/30 cursor-not-allowed pointer-events-none"}
-                            `}
+          inline-flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2 transition
+          border
+          ${watched
+                                ? "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                                : "bg-white/3 text-white/25 border-white/10 cursor-not-allowed pointer-events-none"}
+        `}
                           >
                             📄 Avaliação da Aula
                           </a>
                         </div>
                       )}
                     </div>
+
+
                   );
                 })}
               </div>
+              <button
+                onClick={async () => {
+                  const ok = window.confirm("Tem certeza que deseja recomeçar o curso? Isso vai remover seu progresso.");
+                  if (!ok) return;
+
+                  try {
+                    const res = await fetch("/api/user/reset-stats", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ login: user.login }),
+                    });
+
+                    if (!res.ok) return;
+
+                    // zera no front
+                    setStats([]);
+                    const updatedUser = { ...user, stats: [] };
+                    setUser(updatedUser);
+                    localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+
+                    // volta pra primeira aula
+                    setCurrentCourse(0);
+                  } catch { }
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border border-white/15 text-white/80 hover:bg-white/5 transition"
+                title="Zerar progresso do curso"
+              >
+                Recomeçar
+              </button>
+
             </aside>
 
             {/* PLAYER */}
-            <main className="flex-1 flex items-center justify-center bg-white">
-              <div className="w-full max-w-[1400px] px-6">
-                <div className="relative w-full pt-[56.25%] bg-white overflow-hidden rounded-xl border border-white/10">
-                  {COURSES[currentCourse]?.vimeoId ? (
-                    <div className="absolute inset-0">
-                      <VimeoPlayer
-                        key={COURSES[currentCourse].vimeoId}
-                        videoId={COURSES[currentCourse].vimeoId!}
-                        onReady={() => {
-                          setVideoLoading(false);
-                          setVideoError("");
-                        }}
-                        onError={(msg) => {
-                          setVideoLoading(false);
-                          setVideoError(msg);
-                        }}
-                        onEnded={() => {
-                          const id = currentCourseId.current;
-                          if (id) completeCourse(id);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-white/70">
-                      <p className="text-black font-semibold text-lg">Conteúdo em preparação</p>
-                      <p className="text-black/60 text-sm mt-2 max-w-md">
-                        Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
-                      </p>
-                    </div>
-                  )}
 
-                  {/* {videoLoading && COURSES[currentCourse]?.vimeoId && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black">
-                      <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )} */}
+            <main className="flex-1 bg-[#0b0f0d]">
+              <div className="h-full flex flex-col">
+                {/* player area */}
+                <div className="flex-1 flex items-center justify-center p-6">
+                  <div className="w-full max-w-[1200px]">
+                    {/* ✅ Card do player */}
+                    <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)]">
+                      {/* ✅ área 16:9 */}
+                      <div className="relative w-full aspect-video bg-black">
+                        {COURSES[currentCourse]?.vimeoId ? (
+                          <div className="absolute inset-0">
+                            <VimeoPlayer
+                              key={COURSES[currentCourse].vimeoId}
+                              videoId={COURSES[currentCourse].vimeoId}
+                              onReady={() => {
+                                setVideoLoading(false);
+                                setVideoError("");
+                              }}
+                              onError={(msg) => {
+                                setVideoLoading(false);
+                                setVideoError(msg);
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-white/5">
+                            <p className="text-white font-semibold text-lg">Conteúdo em preparação</p>
+                            <p className="text-white/60 text-sm mt-2 max-w-md">
+                              Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
+                            </p>
+                          </div>
+                        )}
 
-                  {videoError && !videoLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-                      <div className="max-w-md text-center">
-                        <p className="text-white font-semibold">Erro no player</p>
-                        <p className="text-white/70 text-sm mt-2">{videoError}</p>
+                        {/* opcional: loading */}
+                        {videoLoading && COURSES[currentCourse]?.vimeoId && !videoError && (
+                          <div className="absolute inset-0 grid place-items-center bg-black/60">
+                            <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                          </div>
+                        )}
+
+                        {videoError && !videoLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
+                            <div className="max-w-md text-center">
+                              <p className="text-white font-semibold">Erro no player</p>
+                              <p className="text-white/70 text-sm mt-2">{videoError}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ✅ faixa inferior estilo udemy (opcional) */}
+                      <div className="px-5 py-4 bg-[#0f1512] border-t border-white/10">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-white/50 text-xs">
+                              Aula {currentCourse + 1} de {COURSES.length}
+                            </p>
+                            <p className="text-white font-semibold truncate">
+                              {COURSES[currentCourse]?.title}
+                            </p>
+                          </div>
+
+                          {COURSES[currentCourse]?.vimeoId && (
+                            <button
+                              onClick={() => completeCourse(COURSES[currentCourse].id)}
+                              disabled={isWatched(COURSES[currentCourse].id)}
+                              className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5CAE70] text-black disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
+                            >
+                              {isWatched(COURSES[currentCourse].id) ? "Concluída ✓" : "Marcar como concluída"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
+
               </div>
             </main>
           </div>
@@ -865,12 +944,7 @@ export default function Home() {
 
         {/* RELATÓRIOS */}
         {report && active !== "home" && active !== "cursos" && active !== "servicos" && (
-          <iframe
-            key={active}
-            src={formatUrl(report.src)}
-            className="absolute inset-0 w-full h-full border-none"
-            allowFullScreen
-          />
+          <iframe key={active} src={formatUrl(report.src)} className="absolute inset-0 w-full h-full border-none" allowFullScreen />
         )}
       </div>
 
@@ -890,10 +964,7 @@ export default function Home() {
               <Linkedin size={18} /> LinkedIn
             </a>
 
-            <a
-              href="mailto:diego.sanchez@ayaenergia.com.br"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
-            >
+            <a href="mailto:diego.sanchez@ayaenergia.com.br" className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white">
               <Mail size={18} /> Email
             </a>
 
@@ -1001,7 +1072,6 @@ function ServicesContent() {
       <section className="border-b border-black/5">
         <div className="max-w-6xl mx-auto px-6 md:px-10 pt-4 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-
             {/* TEXTO */}
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-2 rounded-full border border-green-900/15 bg-green-900/[0.04] px-3 py-1 text-xs font-semibold text-green-950">
@@ -1014,20 +1084,18 @@ function ServicesContent() {
               </h1>
 
               <p className="mt-4 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                O <b className="text-black/85">Centro de Operação Integrado (COI)</b> em São Paulo – SP
-                concentra especialistas e processos para monitorar e acompanhar a geração das usinas
-                solares em tempo real.
+                O <b className="text-black/85">Centro de Operação Integrado (COI)</b> em São Paulo – SP concentra especialistas e processos
+                para monitorar e acompanhar a geração das usinas solares em tempo real.
               </p>
 
               <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                Contamos com bases regionais e <b className="text-black/85">equipes de campo</b> para
-                execução e coordenação da operação, estoque de materiais e atendimento conforme
-                <b className="text-black/85"> SLA (Service Level Agreement)</b>.
+                Contamos com bases regionais e <b className="text-black/85">equipes de campo</b> para execução e coordenação da operação,
+                estoque de materiais e atendimento conforme <b className="text-black/85">SLA (Service Level Agreement)</b>.
               </p>
 
               <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                Nossa equipe é composta por especialistas em usinas solares e engenheiros com
-                conhecimentos avançados, atuando no back office e em campo.
+                Nossa equipe é composta por especialistas em usinas solares e engenheiros com conhecimentos avançados, atuando no back office e
+                em campo.
               </p>
 
               {/* Pills */}
@@ -1043,88 +1111,70 @@ function ServicesContent() {
             <div className="lg:col-span-5 flex justify-center lg:justify-center">
               <div className="w-full max-w-[310px]">
                 <div className="rounded-2xl border border-black/10 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.35)] overflow-hidden bg-black/5">
-                  <div className="aspect-[10/16]">
-                    <img
-                      src="/chefes.png"
-                      alt="Centro de Operação Aya Energia"
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                  <div className="relative aspect-[10/16]">
+                    <Image src="/chefes.png" alt="Centro de Operação Aya Energia" fill className="object-cover" priority={false} />
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-black/50 text-center lg:text-center">
-                  COI • Monitoramento e coordenação operacional
-                </div>
+                <div className="mt-2 text-xs text-black/50 text-center lg:text-center">COI • Monitoramento e coordenação operacional</div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
+      <section className="bg-neutral-50 border-b border-black/5">
+        <div className="max-w-6xl mx-auto px-6 md:px-10 pt-4 pb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-12">
+              <h1 className="text-4xl md:text-4xl font-extrabold text-green-950 tracking-tight">Nosso Portfólio</h1>
+
+              <p className="mt-4 text-[15px] md:text-[16px] leading-relaxed text-black/70">
+                Nossos times regionais permitem uma resposta rápida a qualquer demanda e urgências, diminuindo o tempo de inatividade e
+                maximizando a eficiência da geração de energia. Frota e equipe dedicada e equipamentos de última geração, garantimos que todas
+                as intervenções sejam realizadas de forma eficiente e segura.
+              </p>
+
+              <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
+                Ampla atuação de O&M nos estados de São Paulo, Goiás e Rio de Janeiro, Pernambuco e Bahia.
+              </p>
+            </div>
+
+            <div className="lg:col-span-12 flex justify-center lg:justify-center">
+              <div className="w-full max-w-6xl h-[450px]">
+                <BrazilTopoMap activeUFs={["SP", "MT", "GO", "PE", "RJ", "BA"]} height={560} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* OPERAÇÃO & MANUTENÇÃO */}
       <section className="border-b border-black/5">
         <div className="max-w-6xl mx-auto px-6 md:px-10 pt-6 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             <div className="lg:col-span-12">
-              <h2 className="text-4xl md:text-4xl font-extrabold text-green-950 tracking-tight">
-                Operação & Manutenção
-              </h2>
+              <h2 className="text-4xl md:text-4xl font-extrabold text-green-950 tracking-tight">Operação & Manutenção</h2>
 
               <p className="mt-3 text-[15px] md:text-[16px] text-black/70 leading-relaxed">
-                Serviços integrados para maximizar disponibilidade, eficiência e segurança operacional —
-                com processos e indicadores para gestão executiva.
+                Serviços integrados para maximizar disponibilidade, eficiência e segurança operacional — com processos e indicadores para gestão
+                executiva.
               </p>
             </div>
 
-            {/* Bullets */}
             <div className="lg:col-span-6 space-y-6">
-              <Bullet
-                title="Monitoramento"
-                text="Acompanhamento em tempo real para identificar anomalias e quedas de produção com ação imediata."
-              />
-              <Bullet
-                title="Manutenção completa"
-                text="Corretiva, preditiva e preventiva, incluindo inspeções térmicas, limpeza de módulos e controle de vegetação."
-              />
-              <Bullet
-                title="Segurança avançada"
-                text="CFTV com IA, câmeras de alta resolução e análise de vídeo para resposta rápida e prevenção de incidentes."
-              />
-              <Bullet
-                title="Gestão operacional"
-                text="Acesso do cliente ao progresso das solicitações e relatórios detalhados de desempenho e intervenções."
-              />
-              <Bullet
-                title="Atendimento ágil"
-                text="Equipes em campo para demandas críticas, reduzindo tempo de inatividade."
-              />
+              <Bullet title="Monitoramento" text="Acompanhamento em tempo real para identificar anomalias e quedas de produção com ação imediata." />
+              <Bullet title="Manutenção completa" text="Corretiva, preditiva e preventiva, incluindo inspeções térmicas, limpeza de módulos e controle de vegetação." />
+              <Bullet title="Segurança avançada" text="CFTV com IA, câmeras de alta resolução e análise de vídeo para resposta rápida e prevenção de incidentes." />
+              <Bullet title="Gestão operacional" text="Acesso do cliente ao progresso das solicitações e relatórios detalhados de desempenho e intervenções." />
+              <Bullet title="Atendimento ágil" text="Equipes em campo para demandas críticas, reduzindo tempo de inatividade." />
             </div>
 
-            {/* Cards */}
             <div className="lg:col-span-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <EnterpriseCard
-                  icon={Activity}
-                  title="Operação"
-                  desc="Rotinas, supervisão e coordenação para continuidade operacional."
-                />
-                <EnterpriseCard
-                  icon={Wrench}
-                  title="Manutenção técnica"
-                  desc="Execução padronizada com foco em disponibilidade e confiabilidade."
-                />
-                <EnterpriseCard
-                  icon={Eye}
-                  title="Monitoramento"
-                  desc="Supervisório com inteligência para detectar falhas em tempo real."
-                />
-                <EnterpriseCard
-                  icon={Droplets}
-                  title="Limpeza e roçagem"
-                  desc="Controle de vegetação e limpeza para preservar eficiência e vida útil."
-                />
+                <EnterpriseCard icon={Activity} title="Operação" desc="Rotinas, supervisão e coordenação para continuidade operacional." />
+                <EnterpriseCard icon={Wrench} title="Manutenção técnica" desc="Execução padronizada com foco em disponibilidade e confiabilidade." />
+                <EnterpriseCard icon={Eye} title="Monitoramento" desc="Supervisório com inteligência para detectar falhas em tempo real." />
+                <EnterpriseCard icon={Droplets} title="Limpeza e roçagem" desc="Controle de vegetação e limpeza para preservar eficiência e vida útil." />
               </div>
 
               <div className="mt-4 rounded-2xl border border-black/10 bg-white p-5">
@@ -1143,9 +1193,7 @@ function ServicesContent() {
         <div className="max-w-6xl mx-auto px-6 md:px-10 py-14">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-              <h3 className="text-3xl md:text-4xl font-extrabold text-green-950 tracking-tight">
-                Outros Serviços
-              </h3>
+              <h3 className="text-3xl md:text-4xl font-extrabold text-green-950 tracking-tight">Outros Serviços</h3>
               <p className="mt-2 text-[15px] md:text-[16px] text-black/70 leading-relaxed max-w-1xl">
                 Serviços especializados para apoiar implantação, performance e segurança na aquisição de ativos solares.
               </p>
@@ -1190,8 +1238,6 @@ function ServicesContent() {
 /* =========================================================
    UI COMPONENTS (SERVIÇOS)
 ========================================================= */
-
-/** Pill (badge) - ícone opcional */
 function Pill({ label, icon: Icon }: { label: string; icon?: any }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs md:text-sm text-black/70">
@@ -1201,7 +1247,6 @@ function Pill({ label, icon: Icon }: { label: string; icon?: any }) {
   );
 }
 
-/** Bullet institucional */
 function Bullet({ title, text }: { title: string; text: string }) {
   return (
     <div className="flex gap-3">
@@ -1214,16 +1259,7 @@ function Bullet({ title, text }: { title: string; text: string }) {
   );
 }
 
-/** Card “enterprise” (pequeno) */
-function EnterpriseCard({
-  icon: Icon,
-  title,
-  desc,
-}: {
-  icon: any;
-  title: string;
-  desc: string;
-}) {
+function EnterpriseCard({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(0,0,0,0.25)]">
       <div className="flex items-start gap-3">
@@ -1239,18 +1275,7 @@ function EnterpriseCard({
   );
 }
 
-/** Card “enterprise” (grande) */
-function BigServiceCard({
-  icon: Icon,
-  title,
-  desc,
-  body,
-}: {
-  icon: any;
-  title: string;
-  desc: string;
-  body: string;
-}) {
+function BigServiceCard({ icon: Icon, title, desc, body }: { icon: any; title: string; desc: string; body: string }) {
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_10px_34px_-20px_rgba(0,0,0,0.25)]">
       <div className="flex items-start gap-4">
