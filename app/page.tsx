@@ -28,6 +28,8 @@ import {
   BriefcaseBusiness,
   TrendingUp,
   FileSearch,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 /* =========================================================
@@ -48,6 +50,8 @@ type CourseItem = {
   vimeoId?: string;
   formUrl?: string;
 };
+
+type Theme = "dark" | "light";
 
 /* =========================================================
    MENU: ABA "SERVIÇOS"
@@ -179,18 +183,27 @@ const INTERNAL_REPORTS: ReportItem[] = [
   },
 ];
 
-const ALL_REPORTS: ReportItem[] = [SERVICES_MENU, COURSES_MENU, ...PORTFOLIO_REPORTS, ...INTERNAL_REPORTS];
+const ALL_REPORTS: ReportItem[] = [
+  SERVICES_MENU,
+  COURSES_MENU,
+  ...PORTFOLIO_REPORTS,
+  ...INTERNAL_REPORTS,
+];
 
 /* =========================================================
    HELPERS
 ========================================================= */
+const cx = (...parts: Array<string | false | null | undefined>) =>
+  parts.filter(Boolean).join(" ");
+
 function normalizeStringArray(raw: any): string[] {
   if (Array.isArray(raw)) return raw.filter((x) => typeof x === "string");
   if (typeof raw === "string") {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string");
-    } catch { }
+      if (Array.isArray(parsed))
+        return parsed.filter((x) => typeof x === "string");
+    } catch {}
   }
   return [];
 }
@@ -198,7 +211,11 @@ function normalizeStringArray(raw: any): string[] {
 function formatUrl(url: string) {
   if (!url) return url;
 
-  const params = ["navContentPaneEnabled=false", "filterPaneEnabled=false", "pageView=fitToWidth"].join("&");
+  const params = [
+    "navContentPaneEnabled=false",
+    "filterPaneEnabled=false",
+    "pageView=fitToWidth",
+  ].join("&");
   return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
 }
 
@@ -245,10 +262,39 @@ export default function Home() {
   const [focus] = useState(false);
   const [videoLoading, setVideoLoading] = useState(true);
   const [videoError, setVideoError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  /* ===== Theme (light/dark) ===== */
+  const [theme, setTheme] = useState<Theme>("dark");
+  const isDark = theme === "dark";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   /* ===== Preconnect Vimeo ===== */
   useEffect(() => {
-    const links = ["https://player.vimeo.com", "https://i.vimeocdn.com", "https://f.vimeocdn.com", "https://vimeo.com"];
+    const links = [
+      "https://player.vimeo.com",
+      "https://i.vimeocdn.com",
+      "https://f.vimeocdn.com",
+      "https://vimeo.com",
+    ];
     links.forEach((href) => {
       const l = document.createElement("link");
       l.rel = "preconnect";
@@ -292,7 +338,8 @@ export default function Home() {
         if (savedTab) setActive(savedTab);
 
         if (savedTab === "cursos") {
-          if (savedCourse !== null && !Number.isNaN(Number(savedCourse))) setCurrentCourse(Number(savedCourse));
+          if (savedCourse !== null && !Number.isNaN(Number(savedCourse)))
+            setCurrentCourse(Number(savedCourse));
           else setCurrentCourse(getCourseIndexFromStats(fixedStats));
         }
       }
@@ -301,7 +348,8 @@ export default function Home() {
     }
   }, []);
 
-  const progressPercent = COURSES.length > 0 ? Math.round((stats.length / COURSES.length) * 100) : 0;
+  const progressPercent =
+    COURSES.length > 0 ? Math.round((stats.length / COURSES.length) * 100) : 0;
 
   const canAccess = (index: number) => {
     if (index === 0) return true;
@@ -346,8 +394,6 @@ export default function Home() {
       const updatedUser = { ...user, stats: fixed };
       setUser(updatedUser);
       localStorage.setItem("bi_user", JSON.stringify(updatedUser));
-
-      // ✅ avanço determinístico (não depende de prev+1)
     } finally {
       completingRef.current = null;
     }
@@ -392,8 +438,8 @@ export default function Home() {
       const savedTab = localStorage.getItem("activeTab");
       setActive(savedTab || "home");
 
-      // se entrar direto em cursos, já posiciona no próximo não concluído
-      if ((savedTab || "home") === "cursos") setCurrentCourse(getCourseIndexFromStats(fixedStats));
+      if ((savedTab || "home") === "cursos")
+        setCurrentCourse(getCourseIndexFromStats(fixedStats));
     } catch {
       setError("Erro de conexão com o servidor");
     } finally {
@@ -468,10 +514,25 @@ export default function Home() {
   /* =========================================================
      LOGIN PAGE
   ========================================================= */
+
+  if (!mounted) {
+    return (
+      <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
+        <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (booting) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
           <source src="/video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
@@ -483,10 +544,17 @@ export default function Home() {
     );
   }
 
+  // Login mantém visual “brand” (escuro) — tema começa após logado
   if (!user) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
           <source src="/video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50" />
@@ -508,7 +576,9 @@ export default function Home() {
 
           <div className="p-6 flex flex-col justify-center items-center text-center text-white">
             <Image src="/logo-aya.png" alt="AYA" width={150} height={150} />
-            <span className="mt-2 text-xs text-white/50">Portal • AYA Energia</span>
+            <span className="mt-2 text-xs text-white/50">
+              Portal • AYA Energia
+            </span>
           </div>
 
           <form
@@ -520,7 +590,9 @@ export default function Home() {
               handleLogin();
             }}
           >
-            <h2 className="text-center text-white font-semibold text-sm mb-1">Login</h2>
+            <h2 className="text-center text-white font-semibold text-sm mb-1">
+              Login
+            </h2>
 
             <input
               id="username"
@@ -530,7 +602,7 @@ export default function Home() {
               placeholder="Login"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              className="w-full px-3 py-2 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57]"
+              className="w-full px-3 py-2 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57] bg-transparent"
             />
 
             <div className="relative">
@@ -542,7 +614,7 @@ export default function Home() {
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="w-full px-3 py-2 pr-10 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57]"
+                className="w-full px-3 py-2 pr-10 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57] bg-transparent"
               />
               <button
                 type="button"
@@ -554,7 +626,9 @@ export default function Home() {
             </div>
 
             {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">{error}</div>
+              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">
+                {error}
+              </div>
             )}
 
             <button
@@ -578,15 +652,25 @@ export default function Home() {
   const report = allowedReports.find((r) => r.id === active);
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
+    <div
+      className={cx(
+        "flex flex-col h-screen w-full overflow-hidden",
+        isDark ? "bg-black text-white" : "bg-b text-black"
+      )}
+    >
       {/* ===== HEADER ===== */}
       {!focus && (
         <header
-          className="h-16 w-full flex items-center justify-between px-4
-          bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
-          border-b border-white/10 shadow-xl"
+          className="
+            h-16 w-full flex items-center justify-between px-4
+            bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
+            border-b border-white/10 shadow-xl
+          "
         >
-          <button onClick={() => setActive("home")} className="flex items-center gap-3">
+          <button
+            onClick={() => setActive("home")}
+            className="flex items-center gap-3"
+          >
             <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
             <div className="leading-tight text-left">
               <p className="text-white font-semibold text-sm">Aya Energia</p>
@@ -611,8 +695,12 @@ export default function Home() {
 
                     setActive(r.id);
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition
-                    ${isActive ? "bg-white/15 text-white border-b-2 border-[#5CAE70]" : "text-white/70 hover:bg-white/10"}`}
+                  className={cx(
+                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition",
+                    isActive
+                      ? "bg-white/15 text-white border-b-2 border-[#5CAE70]"
+                      : "text-white/70 hover:bg-white/10"
+                  )}
                 >
                   <span>{r.title}</span>
                 </button>
@@ -621,6 +709,17 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className={cx(
+                "p-2 rounded transition",
+                "text-white/70 hover:text-white hover:bg-white/10"
+              )}
+              title={isDark ? "Tema claro" : "Tema escuro"}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             <button
               onClick={() => {
                 setResetMsg("");
@@ -654,11 +753,17 @@ export default function Home() {
       )}
 
       {/* ===== CONTEÚDO ===== */}
-      <div className="flex-1 relative bg-black">
+      <div className={cx("flex-1 relative", isDark ? "bg-black" : "bg-white")}>
         {/* HOME */}
         {active === "home" && (
           <div className="absolute inset-0 overflow-hidden">
-            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            >
               <source src="/video.mp4" type="video/mp4" />
             </video>
 
@@ -676,51 +781,75 @@ export default function Home() {
           </div>
         )}
 
-        {/* SERVIÇOS (Sobre Nós) */}
+        {/* SERVIÇOS */}
         {active === "servicos" && (
-          <div className="absolute inset-0 overflow-y-auto bg-white">
-            <ServicesContent />
+          <div
+            className={cx(
+              "absolute inset-0 overflow-y-auto",
+              isDark ? "bg-[#0b0f0d]" : "bg-white"
+            )}
+          >
+            <ServicesContent theme={theme} />
           </div>
         )}
 
         {/* CURSOS */}
         {active === "cursos" && (
-          <div className="absolute inset-0 bg-[#0b0f0d] flex">
+          <div className={cx("absolute inset-0 flex", isDark ? "bg-[#0b0f0d]" : "bg-[#f6f7f8]")}>
             {/* SIDEBAR */}
-            <aside className="w-[360px] bg-[#0f1512] border-r border-white/10 flex flex-col">
-              <div className="p-4 border-b border-white/10">
+            <aside
+              className={cx(
+                "w-[360px] border-r flex flex-col",
+                isDark
+                  ? "bg-[#0f1512] border-white/10"
+                  : "bg-white border-black/10"
+              )}
+            >
+              <div className={cx("p-4 border-b", isDark ? "border-white/10" : "border-black/10")}>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-white font-semibold text-base">Conteúdo</h3>
-                  <span className="text-xs text-white/40">{stats.length}/{COURSES.length}</span>
+                  <h3 className={cx("font-semibold text-base", isDark ? "text-white" : "text-black")}>
+                    Conteúdo
+                  </h3>
+                  <span className={cx("text-xs", isDark ? "text-white/40" : "text-black/50")}>
+                    {stats.length}/{COURSES.length}
+                  </span>
                 </div>
 
                 <div className="mt-3">
-                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#5CAE70] transition-all" style={{ width: `${progressPercent}%` }} />
+                  <div className={cx("w-full h-2 rounded-full overflow-hidden", isDark ? "bg-white/10" : "bg-black/10")}>
+                    <div
+                      className="h-full bg-[#5CAE70] transition-all"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
-                  <span className="text-xs text-white/40 mt-1 block">{progressPercent}% concluído</span>
+                  <span className={cx("text-xs mt-1 block", isDark ? "text-white/40" : "text-black/50")}>
+                    {progressPercent}% concluído
+                  </span>
                 </div>
               </div>
-
 
               <div className="flex-1 overflow-y-auto p-3 space-y-1">
                 {COURSES.map((course, index) => {
                   const watched = isWatched(course.id);
                   const activeItem = index === currentCourse;
                   const locked = !canAccess(index);
-                  const hasVideo = !!course.vimeoId;
 
                   return (
                     <div
                       key={course.id}
-                      className={`
-    group rounded-xl transition
-    ${activeItem ? "bg-white/5 ring-1 ring-[#5CAE70]/35" : "hover:bg-white/[0.04]"}
-    ${locked ? "opacity-45" : ""}
-  `}
+                      className={cx(
+                        "group rounded-xl transition",
+                        activeItem
+                          ? isDark
+                            ? "bg-black/30 ring-1 ring-[#5CAE70]/35"
+                            : "bg-black/[0.03] ring-1 ring-[#5CAE70]/25"
+                          : isDark
+                            ? "hover:bg-white/[0.04]"
+                            : "hover:bg-black/[0.04]",
+                        locked && "opacity-45"
+                      )}
                     >
                       <div className="flex items-center gap-3 px-3 py-3">
-                        {/* Clique para abrir */}
                         <button
                           type="button"
                           disabled={locked}
@@ -731,38 +860,50 @@ export default function Home() {
                           className="flex-1 min-w-0 text-left"
                         >
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm font-semibold truncate">
+                            <p className={cx("text-sm font-semibold truncate", isDark ? "text-white" : "text-black")}>
                               {course.title}
                             </p>
 
-                            {/* Badges */}
                             {watched && (
-                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-[#5CAE70]/20 text-[#9be6b0] border border-[#5CAE70]/20">
+                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-[#5CAE70]/20 text-[#2a6a3a] border border-[#5CAE70]/20">
                                 Concluída
                               </span>
                             )}
 
                             {!course.vimeoId && (
-                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 border border-white/10">
+                              <span
+                                className={cx(
+                                  "shrink-0 text-[10px] px-2 py-0.5 rounded-full border",
+                                  isDark
+                                    ? "bg-white/5 text-white/50 border-white/10"
+                                    : "bg-black/[0.03] text-black/55 border-black/10"
+                                )}
+                              >
                                 Em breve
                               </span>
                             )}
 
                             {locked && (
-                              <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10">
+                              <span
+                                className={cx(
+                                  "shrink-0 text-[10px] px-2 py-0.5 rounded-full border",
+                                  isDark
+                                    ? "bg-white/5 text-white/40 border-white/10"
+                                    : "bg-black/[0.03] text-black/45 border-black/10"
+                                )}
+                              >
                                 Bloqueada
                               </span>
                             )}
                           </div>
 
-                          <div className="mt-1 flex items-center gap-2 text-xs text-white/45">
+                          <div className={cx("mt-1 flex items-center gap-2 text-xs", isDark ? "text-white/45" : "text-black/55")}>
                             <span>Aula {index + 1}</span>
-                            <span className="w-1 h-1 rounded-full bg-white/25" />
+                            <span className={cx("w-1 h-1 rounded-full", isDark ? "bg-white/25" : "bg-black/25")} />
                             <span>{course.description || "Conteúdo do módulo"}</span>
                           </div>
                         </button>
 
-                        {/* ✅ Concluir (somente se tiver vídeo) */}
                         {course.vimeoId && (
                           <button
                             type="button"
@@ -772,15 +913,18 @@ export default function Home() {
                               completeCourse(course.id);
                             }}
                             disabled={locked || watched || completingRef.current === course.id}
-                            className={`
-          shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition
-          border
-          ${watched
-                                ? "bg-white/5 text-white/35 border-white/10 cursor-not-allowed"
+                            className={cx(
+                              "shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition border",
+                              watched
+                                ? isDark
+                                  ? "bg-white/5 text-white/35 border-white/10 cursor-not-allowed"
+                                  : "bg-black/[0.03] text-black/40 border-black/10 cursor-not-allowed"
                                 : locked
-                                  ? "bg-white/5 text-white/25 border-white/10 cursor-not-allowed"
-                                  : "bg-[#5CAE70] text-black border-[#5CAE70]/30 hover:brightness-110 active:scale-[0.98]"}
-        `}
+                                  ? isDark
+                                    ? "bg-white/5 text-white/25 border-white/10 cursor-not-allowed"
+                                    : "bg-black/[0.03] text-black/30 border-black/10 cursor-not-allowed"
+                                  : "bg-[#5CAE70] text-black border-[#5CAE70]/30 hover:brightness-110 active:scale-[0.98]"
+                            )}
                             title={watched ? "Já concluída" : "Marcar como concluída"}
                           >
                             {watched ? "✓" : completingRef.current === course.id ? "..." : "Concluir"}
@@ -788,74 +932,81 @@ export default function Home() {
                         )}
                       </div>
 
-                      {/* Avaliação (só libera se concluída) */}
                       {course.formUrl && (
                         <div className="px-3 pb-3">
                           <a
                             href={course.formUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`
-          inline-flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2 transition
-          border
-          ${watched
-                                ? "bg-white/5 text-white border-white/10 hover:bg-white/10"
-                                : "bg-white/3 text-white/25 border-white/10 cursor-not-allowed pointer-events-none"}
-        `}
+                            className={cx(
+                              "inline-flex items-center gap-2 text-xs font-medium rounded-lg px-3 py-2 transition border",
+                              watched
+                                ? isDark
+                                  ? "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                                  : "bg-black/[0.03] text-black border-black/10 hover:bg-black/[0.06]"
+                                : "bg-black/0 text-black/30 border-black/10 cursor-not-allowed pointer-events-none"
+                            )}
                           >
                             📄 Avaliação da Aula
                           </a>
                         </div>
                       )}
                     </div>
-
-
                   );
                 })}
               </div>
-              <button
-                onClick={async () => {
-                  const ok = window.confirm("Tem certeza que deseja recomeçar o curso? Isso vai remover seu progresso.");
-                  if (!ok) return;
 
-                  try {
-                    const res = await fetch("/api/user/reset-stats", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ login: user.login }),
-                    });
+              <div className={cx("p-3 border-t", isDark ? "border-white/10" : "border-black/10")}>
+                <button
+                  onClick={async () => {
+                    const ok = window.confirm(
+                      "Tem certeza que deseja recomeçar o curso? Isso vai remover seu progresso."
+                    );
+                    if (!ok) return;
 
-                    if (!res.ok) return;
+                    try {
+                      const res = await fetch("/api/user/reset-stats", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ login: user.login }),
+                      });
 
-                    // zera no front
-                    setStats([]);
-                    const updatedUser = { ...user, stats: [] };
-                    setUser(updatedUser);
-                    localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+                      if (!res.ok) return;
 
-                    // volta pra primeira aula
-                    setCurrentCourse(0);
-                  } catch { }
-                }}
-                className="px-4 py-2 rounded-lg text-sm font-semibold border border-white/15 text-white/80 hover:bg-white/5 transition"
-                title="Zerar progresso do curso"
-              >
-                Recomeçar
-              </button>
-
+                      setStats([]);
+                      const updatedUser = { ...user, stats: [] };
+                      setUser(updatedUser);
+                      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+                      setCurrentCourse(0);
+                    } catch {}
+                  }}
+                  className={cx(
+                    "w-full px-4 py-2 rounded-lg text-sm font-semibold border transition",
+                    isDark
+                      ? "border-white/15 text-white/80 hover:bg-white/5"
+                      : "border-black/15 text-black/70 hover:bg-black/[0.04]"
+                  )}
+                  title="Zerar progresso do curso"
+                >
+                  Recomeçar
+                </button>
+              </div>
             </aside>
 
             {/* PLAYER */}
-
-            <main className="flex-1 bg-[#0b0f0d]">
+            <main className={cx("flex-1", isDark ? "bg-[#0b0f0d]" : "bg-[#f6f7f8]")}>
               <div className="h-full flex flex-col">
-                {/* player area */}
                 <div className="flex-1 flex items-center justify-center p-6">
                   <div className="w-full max-w-[1200px]">
-                    {/* ✅ Card do player */}
-                    <div className="rounded-2xl border border-white/10 bg-black overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)]">
-                      {/* ✅ área 16:9 */}
-                      <div className="relative w-full aspect-video bg-black">
+                    <div
+                      className={cx(
+                        "rounded-2xl border overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)]",
+                        isDark
+                          ? "border-white/10 bg-black"
+                          : "border-black/10 bg-white"
+                      )}
+                    >
+                      <div className={cx("relative w-full aspect-video", isDark ? "bg-black" : "bg-black")}>
                         {COURSES[currentCourse]?.vimeoId ? (
                           <div className="absolute inset-0">
                             <VimeoPlayer
@@ -872,15 +1023,21 @@ export default function Home() {
                             />
                           </div>
                         ) : (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-white/5">
-                            <p className="text-white font-semibold text-lg">Conteúdo em preparação</p>
-                            <p className="text-white/60 text-sm mt-2 max-w-md">
+                          <div
+                            className={cx(
+                              "absolute inset-0 flex flex-col items-center justify-center text-center px-6",
+                              isDark ? "bg-white/5" : "bg-black/[0.04]"
+                            )}
+                          >
+                            <p className={cx("font-semibold text-lg", isDark ? "text-white" : "text-black")}>
+                              Conteúdo em preparação
+                            </p>
+                            <p className={cx("text-sm mt-2 max-w-md", isDark ? "text-white/60" : "text-black/60")}>
                               Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
                             </p>
                           </div>
                         )}
 
-                        {/* opcional: loading */}
                         {videoLoading && COURSES[currentCourse]?.vimeoId && !videoError && (
                           <div className="absolute inset-0 grid place-items-center bg-black/60">
                             <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
@@ -897,14 +1054,20 @@ export default function Home() {
                         )}
                       </div>
 
-                      {/* ✅ faixa inferior estilo udemy (opcional) */}
-                      <div className="px-5 py-4 bg-[#0f1512] border-t border-white/10">
+                      <div
+                        className={cx(
+                          "px-5 py-4 border-t",
+                          isDark
+                            ? "bg-[#0f1512] border-white/10"
+                            : "bg-white border-black/10"
+                        )}
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="text-white/50 text-xs">
+                            <p className={cx("text-xs", isDark ? "text-white/50" : "text-black/50")}>
                               Aula {currentCourse + 1} de {COURSES.length}
                             </p>
-                            <p className="text-white font-semibold truncate">
+                            <p className={cx("font-semibold truncate", isDark ? "text-white" : "text-black")}>
                               {COURSES[currentCourse]?.title}
                             </p>
                           </div>
@@ -915,7 +1078,9 @@ export default function Home() {
                               disabled={isWatched(COURSES[currentCourse].id)}
                               className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5CAE70] text-black disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
                             >
-                              {isWatched(COURSES[currentCourse].id) ? "Concluída ✓" : "Marcar como concluída"}
+                              {isWatched(COURSES[currentCourse].id)
+                                ? "Concluída ✓"
+                                : "Marcar como concluída"}
                             </button>
                           )}
                         </div>
@@ -923,7 +1088,6 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-
               </div>
             </main>
           </div>
@@ -931,27 +1095,49 @@ export default function Home() {
 
         {/* RELATÓRIOS */}
         {report && active !== "home" && active !== "cursos" && active !== "servicos" && (
-          <iframe key={active} src={formatUrl(report.src)} className="absolute inset-0 w-full h-full border-none" allowFullScreen />
+          <iframe
+            key={active}
+            src={formatUrl(report.src)}
+            className="absolute inset-0 w-full h-full border-none"
+            allowFullScreen
+          />
         )}
       </div>
 
       {/* ===== MODAL SUPORTE ===== */}
       {showSupport && (
-        <Modal onClose={() => setShowSupport(false)}>
-          <h3 className="text-white text-lg font-semibold mb-2">Suporte Técnico</h3>
-          <p className="text-white/70 text-sm mb-4">Entre em contato com o desenvolvedor</p>
+        <Modal theme={theme} onClose={() => setShowSupport(false)}>
+          <h3 className={cx("text-lg font-semibold mb-2", isDark ? "text-white" : "text-black")}>
+            Suporte Técnico
+          </h3>
+          <p className={cx("text-sm mb-4", isDark ? "text-white/70" : "text-black/65")}>
+            Entre em contato com o desenvolvedor
+          </p>
 
           <div className="space-y-3 text-sm">
             <a
               href="https://www.linkedin.com/in/diegodamaro/"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+              className={cx(
+                "flex items-center gap-3 px-4 py-2 rounded-lg border transition",
+                isDark
+                  ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
+                  : "bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              )}
             >
               <Linkedin size={18} /> LinkedIn
             </a>
 
-            <a href="mailto:diego.sanchez@ayaenergia.com.br" className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white">
+            <a
+              href="mailto:diego.sanchez@ayaenergia.com.br"
+              className={cx(
+                "flex items-center gap-3 px-4 py-2 rounded-lg border transition",
+                isDark
+                  ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
+                  : "bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              )}
+            >
               <Mail size={18} /> Email
             </a>
 
@@ -959,7 +1145,12 @@ export default function Home() {
               href="https://wa.me/5511961995900"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white"
+              className={cx(
+                "flex items-center gap-3 px-4 py-2 rounded-lg border transition",
+                isDark
+                  ? "bg-white/5 hover:bg-white/10 text-white border-white/10"
+                  : "bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              )}
             >
               <Phone size={18} /> WhatsApp
             </a>
@@ -969,8 +1160,10 @@ export default function Home() {
 
       {/* ===== MODAL RESET SENHA ===== */}
       {showReset && (
-        <Modal onClose={() => setShowReset(false)}>
-          <h3 className="text-white text-lg font-semibold mb-4">Redefinir Senha</h3>
+        <Modal theme={theme} onClose={() => setShowReset(false)}>
+          <h3 className={cx("text-lg font-semibold mb-4", isDark ? "text-white" : "text-black")}>
+            Redefinir Senha
+          </h3>
 
           <div className="relative mb-3">
             <input
@@ -978,13 +1171,20 @@ export default function Home() {
               placeholder="Senha atual"
               value={oldPass}
               onChange={(e) => setOldPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
+              className={cx(
+                "w-full p-3 pr-10 rounded border focus:outline-none focus:ring-1",
+                isDark
+                  ? "bg-black/30 text-white border-white/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+                  : "bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+              )}
             />
             <button
               type="button"
               onClick={() => setShowOldPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+              className={cx(
+                "absolute right-3 top-1/2 -translate-y-1/2",
+                isDark ? "text-white/60 hover:text-white" : "text-black/50 hover:text-black"
+              )}
             >
               {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -996,13 +1196,20 @@ export default function Home() {
               placeholder="Nova senha"
               value={newPass}
               onChange={(e) => setNewPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded bg-[#145a36] text-white border border-white/20
-                focus:outline-none focus:border-[#2E7B57] focus:ring-1 focus:ring-[#2E7B57]"
+              className={cx(
+                "w-full p-3 pr-10 rounded border focus:outline-none focus:ring-1",
+                isDark
+                  ? "bg-black/30 text-white border-white/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+                  : "bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+              )}
             />
             <button
               type="button"
               onClick={() => setShowNewPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white"
+              className={cx(
+                "absolute right-3 top-1/2 -translate-y-1/2",
+                isDark ? "text-white/60 hover:text-white" : "text-black/50 hover:text-black"
+              )}
             >
               {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -1010,10 +1217,12 @@ export default function Home() {
 
           {resetMsg && (
             <div
-              className={`text-sm mb-3 px-3 py-2 rounded border ${resetMsg.includes("sucesso")
-                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                : "bg-red-500/10 text-red-400 border-red-500/20"
-                }`}
+              className={cx(
+                "text-sm mb-3 px-3 py-2 rounded border",
+                resetMsg.includes("sucesso")
+                  ? "bg-green-500/10 text-green-600 border-green-500/20"
+                  : "bg-red-500/10 text-red-600 border-red-500/20"
+              )}
             >
               {resetMsg}
             </div>
@@ -1022,8 +1231,7 @@ export default function Home() {
           <button
             onClick={handleChangePassword}
             disabled={resetLoading || !oldPass || !newPass}
-            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#256947]
-              disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#256947] disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {resetLoading ? "Alterando..." : "Alterar Senha"}
           </button>
@@ -1036,11 +1244,33 @@ export default function Home() {
 /* =========================================================
    MODAL BASE
 ========================================================= */
-function Modal({ children, onClose }: any) {
+function Modal({
+  children,
+  onClose,
+  theme,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  theme: Theme;
+}) {
+  const isDark = theme === "dark";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-[#145a36] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white">
+      <div
+        className={cx(
+          "border rounded-2xl w-full max-w-md p-6 shadow-2xl relative",
+          isDark
+            ? "bg-[#0f1512] border-white/10"
+            : "bg-white border-black/10"
+        )}
+      >
+        <button
+          onClick={onClose}
+          className={cx(
+            "absolute top-4 right-4",
+            isDark ? "text-white/60 hover:text-white" : "text-black/50 hover:text-black"
+          )}
+        >
           <X size={18} />
         </button>
         {children}
@@ -1052,83 +1282,126 @@ function Modal({ children, onClose }: any) {
 /* =========================================================
    ABA SERVIÇOS (LAYOUT ENTERPRISE)
 ========================================================= */
-function ServicesContent() {
+function ServicesContent({ theme }: { theme: Theme }) {
+  const isDark = theme === "dark";
+
+  const pageBg = isDark ? "bg-[#0b0f0d] text-white" : "bg-white text-black";
+
+  const sectionBorder = isDark ? "border-white/10" : "border-black/5";
+  const sectionAlt = isDark ? "bg-[#0f1512]" : "bg-neutral-50";
+
+  const heading = isDark ? "text-white" : "text-green-950";
+  const body = isDark ? "text-white/70" : "text-black/70";
+  const bodyStrong = isDark ? "text-white/85" : "text-black/85";
+
   return (
-    <div className="w-full bg-white">
+    <div className={cx("w-full", pageBg)}>
       {/* HERO */}
-      <section className="border-b border-black/5">
+      <section className={cx("border-b", sectionBorder)}>
         <div className="max-w-6xl mx-auto px-6 md:px-10 pt-4 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             {/* TEXTO */}
             <div className="lg:col-span-7">
-              <div className="inline-flex items-center gap-2 rounded-full border border-green-900/15 bg-green-900/[0.04] px-3 py-1 text-xs font-semibold text-green-950">
-                <span className="w-2 h-2 rounded-full bg-green-700" />
+              <div
+                className={cx(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+                  isDark
+                    ? "border-white/10 bg-white/5 text-white"
+                    : "border-green-900/15 bg-green-900/[0.04] text-green-950"
+                )}
+              >
+                <span className={cx("w-2 h-2 rounded-full", isDark ? "bg-[#5CAE70]" : "bg-green-700")} />
                 AYA ENERGIA • Centro de Operação Integrado (COI)
               </div>
 
-              <h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-green-950 leading-tight">
+              <h1
+                className={cx(
+                  "mt-4 text-4xl md:text-5xl font-extrabold tracking-tight leading-tight",
+                  heading
+                )}
+              >
                 Operação, manutenção e performance
               </h1>
 
-              <p className="mt-4 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                O <b className="text-black/85">Centro de Operação Integrado (COI)</b> em São Paulo – SP concentra especialistas e processos
-                para monitorar e acompanhar a geração das usinas solares em tempo real.
+              <p className={cx("mt-4 text-[15px] md:text-[16px] leading-relaxed", body)}>
+                O <b className={bodyStrong}>Centro de Operação Integrado (COI)</b> em São Paulo – SP concentra
+                especialistas e processos para monitorar e acompanhar a geração das usinas solares em tempo real.
               </p>
 
-              <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                Contamos com bases regionais e <b className="text-black/85">equipes de campo</b> para execução e coordenação da operação,
-                estoque de materiais e atendimento conforme <b className="text-black/85">SLA (Service Level Agreement)</b>.
+              <p className={cx("mt-3 text-[15px] md:text-[16px] leading-relaxed", body)}>
+                Contamos com bases regionais e <b className={bodyStrong}>equipes de campo</b> para execução e coordenação
+                da operação, estoque de materiais e atendimento conforme{" "}
+                <b className={bodyStrong}>SLA (Service Level Agreement)</b>.
               </p>
 
-              <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                Nossa equipe é composta por especialistas em usinas solares e engenheiros com conhecimentos avançados, atuando no back office e
-                em campo.
+              <p className={cx("mt-3 text-[15px] md:text-[16px] leading-relaxed", body)}>
+                Nossa equipe é composta por especialistas em usinas solares e engenheiros com conhecimentos avançados,
+                atuando no back office e em campo.
               </p>
 
               {/* Pills */}
               <div className="mt-5 flex flex-wrap gap-2">
-                <Pill label="Monitoramento contínuo" />
-                <Pill label="Resposta rápida (SLA)" />
-                <Pill label="Bases regionais" />
-                <Pill label="Rastreabilidade e relatórios" />
+                <Pill theme={theme} label="Monitoramento contínuo" />
+                <Pill theme={theme} label="Resposta rápida (SLA)" />
+                <Pill theme={theme} label="Bases regionais" />
+                <Pill theme={theme} label="Rastreabilidade e relatórios" />
               </div>
             </div>
 
             {/* IMAGEM */}
             <div className="lg:col-span-5 flex justify-center lg:justify-center">
               <div className="w-full max-w-[310px]">
-                <div className="rounded-2xl border border-black/10 shadow-[0_20px_60px_-30px_rgba(0,0,0,0.35)] overflow-hidden bg-black/5">
+                <div
+                  className={cx(
+                    "rounded-2xl border shadow-[0_20px_60px_-30px_rgba(0,0,0,0.35)] overflow-hidden",
+                    isDark ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"
+                  )}
+                >
                   <div className="relative aspect-[10/16]">
-                    <Image src="/chefes.png" alt="Centro de Operação Aya Energia" fill className="object-cover" priority={false} />
+                    <Image
+                      src="/chefes.png"
+                      alt="Centro de Operação Aya Energia"
+                      fill
+                      className="object-cover"
+                      priority={false}
+                    />
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-black/50 text-center lg:text-center">COI • Monitoramento e coordenação operacional</div>
+                <div className={cx("mt-2 text-xs text-center", isDark ? "text-white/55" : "text-black/50")}>
+                  COI • Monitoramento e coordenação operacional
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-neutral-50 border-b border-black/5">
+      {/* PORTFÓLIO */}
+      <section className={cx(sectionAlt, "border-b", sectionBorder)}>
         <div className="max-w-6xl mx-auto px-6 md:px-10 pt-4 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-12">
-              <h1 className="text-4xl md:text-4xl font-extrabold text-green-950 tracking-tight">Nosso Portfólio</h1>
+              <h1 className={cx("text-4xl md:text-4xl font-extrabold tracking-tight", heading)}>
+                Nosso Portfólio
+              </h1>
 
-              <p className="mt-4 text-[15px] md:text-[16px] leading-relaxed text-black/70">
-                Nossos times regionais permitem uma resposta rápida a qualquer demanda e urgências, diminuindo o tempo de inatividade e
-                maximizando a eficiência da geração de energia. Frota e equipe dedicada e equipamentos de última geração, garantimos que todas
-                as intervenções sejam realizadas de forma eficiente e segura.
+              <p className={cx("mt-4 text-[15px] md:text-[16px] leading-relaxed", body)}>
+                Nossos times regionais permitem uma resposta rápida a qualquer demanda e urgências, diminuindo o tempo
+                de inatividade e maximizando a eficiência da geração de energia. Frota e equipe dedicada e equipamentos
+                de última geração, garantimos que todas as intervenções sejam realizadas de forma eficiente e segura.
               </p>
 
-              <p className="mt-3 text-[15px] md:text-[16px] leading-relaxed text-black/70">
+              <p className={cx("mt-3 text-[15px] md:text-[16px] leading-relaxed", body)}>
                 Ampla atuação de O&M nos estados de São Paulo, Goiás e Rio de Janeiro, Pernambuco e Bahia.
               </p>
             </div>
 
             <div className="lg:col-span-12 flex justify-center lg:justify-center">
               <div className="w-full max-w-6xl h-[450px]">
-                <BrazilTopoMap activeUFs={["SP", "MT", "GO", "PE", "RJ", "BA"]} height={560} />
+                <BrazilTopoMap
+                  activeUFs={["SP", "MT", "GO", "PE", "RJ", "BA"]}
+                  height={560}
+                />
               </div>
             </div>
           </div>
@@ -1136,37 +1409,86 @@ function ServicesContent() {
       </section>
 
       {/* OPERAÇÃO & MANUTENÇÃO */}
-      <section className="border-b border-black/5">
+      <section className={cx("border-b", sectionBorder)}>
         <div className="max-w-6xl mx-auto px-6 md:px-10 pt-6 pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
             <div className="lg:col-span-12">
-              <h2 className="text-4xl md:text-4xl font-extrabold text-green-950 tracking-tight">Operação & Manutenção</h2>
+              <h2 className={cx("text-4xl md:text-4xl font-extrabold tracking-tight", heading)}>
+                Operação &amp; Manutenção
+              </h2>
 
-              <p className="mt-3 text-[15px] md:text-[16px] text-black/70 leading-relaxed">
-                Serviços integrados para maximizar disponibilidade, eficiência e segurança operacional — com processos e indicadores para gestão
-                executiva.
+              <p className={cx("mt-3 text-[15px] md:text-[16px] leading-relaxed", body)}>
+                Serviços integrados para maximizar disponibilidade, eficiência e segurança operacional — com processos e
+                indicadores para gestão executiva.
               </p>
             </div>
 
             <div className="lg:col-span-6 space-y-6">
-              <Bullet title="Monitoramento" text="Acompanhamento em tempo real para identificar anomalias e quedas de produção com ação imediata." />
-              <Bullet title="Manutenção completa" text="Corretiva, preditiva e preventiva, incluindo inspeções térmicas, limpeza de módulos e controle de vegetação." />
-              <Bullet title="Segurança avançada" text="CFTV com IA, câmeras de alta resolução e análise de vídeo para resposta rápida e prevenção de incidentes." />
-              <Bullet title="Gestão operacional" text="Acesso do cliente ao progresso das solicitações e relatórios detalhados de desempenho e intervenções." />
-              <Bullet title="Atendimento ágil" text="Equipes em campo para demandas críticas, reduzindo tempo de inatividade." />
+              <Bullet
+                theme={theme}
+                title="Monitoramento"
+                text="Acompanhamento em tempo real para identificar anomalias e quedas de produção com ação imediata."
+              />
+              <Bullet
+                theme={theme}
+                title="Manutenção completa"
+                text="Corretiva, preditiva e preventiva, incluindo inspeções térmicas, limpeza de módulos e controle de vegetação."
+              />
+              <Bullet
+                theme={theme}
+                title="Segurança avançada"
+                text="CFTV com IA, câmeras de alta resolução e análise de vídeo para resposta rápida e prevenção de incidentes."
+              />
+              <Bullet
+                theme={theme}
+                title="Gestão operacional"
+                text="Acesso do cliente ao progresso das solicitações e relatórios detalhados de desempenho e intervenções."
+              />
+              <Bullet
+                theme={theme}
+                title="Atendimento ágil"
+                text="Equipes em campo para demandas críticas, reduzindo tempo de inatividade."
+              />
             </div>
 
             <div className="lg:col-span-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <EnterpriseCard icon={Activity} title="Operação" desc="Rotinas, supervisão e coordenação para continuidade operacional." />
-                <EnterpriseCard icon={Wrench} title="Manutenção técnica" desc="Execução padronizada com foco em disponibilidade e confiabilidade." />
-                <EnterpriseCard icon={Eye} title="Monitoramento" desc="Supervisório com inteligência para detectar falhas em tempo real." />
-                <EnterpriseCard icon={Droplets} title="Limpeza e roçagem" desc="Controle de vegetação e limpeza para preservar eficiência e vida útil." />
+                <EnterpriseCard
+                  theme={theme}
+                  icon={Activity}
+                  title="Operação"
+                  desc="Rotinas, supervisão e coordenação para continuidade operacional."
+                />
+                <EnterpriseCard
+                  theme={theme}
+                  icon={Wrench}
+                  title="Manutenção técnica"
+                  desc="Execução padronizada com foco em disponibilidade e confiabilidade."
+                />
+                <EnterpriseCard
+                  theme={theme}
+                  icon={Eye}
+                  title="Monitoramento"
+                  desc="Supervisório com inteligência para detectar falhas em tempo real."
+                />
+                <EnterpriseCard
+                  theme={theme}
+                  icon={Droplets}
+                  title="Limpeza e roçagem"
+                  desc="Controle de vegetação e limpeza para preservar eficiência e vida útil."
+                />
               </div>
 
-              <div className="mt-4 rounded-2xl border border-black/10 bg-white p-5">
-                <div className="text-md font-semibold text-green-950">Governança e transparência</div>
-                <p className="mt-2 text-sm text-black/65 leading-relaxed">
+              <div
+                className={cx(
+                  "mt-4 rounded-2xl border p-5",
+                  isDark ? "border-white/10 bg-black/30" : "border-black/10 bg-white"
+                )}
+              >
+                <div className={cx("text-md font-semibold", heading)}>
+                  Governança e transparência
+                </div>
+                <p className={cx("mt-2 text-sm leading-relaxed", isDark ? "text-white/65" : "text-black/65")}>
                   Relatórios, evidências e histórico de intervenções para auditoria e tomada de decisão.
                 </p>
               </div>
@@ -1176,12 +1498,14 @@ function ServicesContent() {
       </section>
 
       {/* OUTROS SERVIÇOS */}
-      <section className="bg-neutral-50 border-t border-black/5">
+      <section className={cx(sectionAlt, "border-t", sectionBorder)}>
         <div className="max-w-6xl mx-auto px-6 md:px-10 py-14">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-              <h3 className="text-3xl md:text-4xl font-extrabold text-green-950 tracking-tight">Outros Serviços</h3>
-              <p className="mt-2 text-[15px] md:text-[16px] text-black/70 leading-relaxed max-w-1xl">
+              <h3 className={cx("text-3xl md:text-4xl font-extrabold tracking-tight", heading)}>
+                Outros Serviços
+              </h3>
+              <p className={cx("mt-2 text-[15px] md:text-[16px] leading-relaxed max-w-1xl", body)}>
                 Serviços especializados para apoiar implantação, performance e segurança na aquisição de ativos solares.
               </p>
             </div>
@@ -1189,6 +1513,7 @@ function ServicesContent() {
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5">
             <BigServiceCard
+              theme={theme}
               icon={ClipboardCheck}
               title="Comissionamento"
               desc="Atendimento técnico especializado em comissionamento, garantindo funcionamento adequado das usinas."
@@ -1196,6 +1521,7 @@ function ServicesContent() {
             />
 
             <BigServiceCard
+              theme={theme}
               icon={BriefcaseBusiness}
               title="Engenharia do proprietário"
               desc="Engenheiros especializados acompanham a construção de usinas solares em todas as etapas."
@@ -1203,6 +1529,7 @@ function ServicesContent() {
             />
 
             <BigServiceCard
+              theme={theme}
               icon={TrendingUp}
               title="Otimização de geração"
               desc="Análise de estudos iniciais e dados reais para corrigir falhas e elevar a performance."
@@ -1210,6 +1537,7 @@ function ServicesContent() {
             />
 
             <BigServiceCard
+              theme={theme}
               icon={FileSearch}
               title="Diligência técnica"
               desc="Avaliação técnica para dar segurança ao investidor e confiabilidade ao ativo."
@@ -1225,58 +1553,148 @@ function ServicesContent() {
 /* =========================================================
    UI COMPONENTS (SERVIÇOS)
 ========================================================= */
-function Pill({ label, icon: Icon }: { label: string; icon?: any }) {
+function Pill({
+  label,
+  icon: Icon,
+  theme,
+}: {
+  label: string;
+  icon?: any;
+  theme: Theme;
+}) {
+  const isDark = theme === "dark";
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs md:text-sm text-black/70">
-      {Icon ? <Icon size={14} className="text-green-800" /> : null}
+    <span
+      className={cx(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs md:text-sm",
+        isDark
+          ? "border-white/10 bg-white/5 text-white/70"
+          : "border-black/10 bg-white text-black/70"
+      )}
+    >
+      {Icon ? (
+        <Icon size={14} className={isDark ? "text-[#9be6b0]" : "text-green-800"} />
+      ) : null}
       {label}
     </span>
   );
 }
 
-function Bullet({ title, text }: { title: string; text: string }) {
+function Bullet({
+  title,
+  text,
+  theme,
+}: {
+  title: string;
+  text: string;
+  theme: Theme;
+}) {
+  const isDark = theme === "dark";
   return (
     <div className="flex gap-3">
-      <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-green-700 shrink-0" />
+      <span
+        className={cx(
+          "mt-1.5 w-2.5 h-2.5 rounded-full shrink-0",
+          isDark ? "bg-[#5CAE70]" : "bg-green-700"
+        )}
+      />
       <div>
-        <div className="text-md font-semibold text-black/85">{title}</div>
-        <div className="text-sm text-black/65 leading-relaxed">{text}</div>
+        <div className={cx("text-md font-semibold", isDark ? "text-white/90" : "text-black/85")}>
+          {title}
+        </div>
+        <div className={cx("text-sm leading-relaxed", isDark ? "text-white/65" : "text-black/65")}>
+          {text}
+        </div>
       </div>
     </div>
   );
 }
 
-function EnterpriseCard({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
+function EnterpriseCard({
+  icon: Icon,
+  title,
+  desc,
+  theme,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  theme: Theme;
+}) {
+  const isDark = theme === "dark";
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_30px_-18px_rgba(0,0,0,0.25)]">
+    <div
+      className={cx(
+        "rounded-2xl border p-5 shadow-[0_8px_30px_-18px_rgba(0,0,0,0.25)]",
+        isDark ? "border-white/10 bg-black/30" : "border-black/10 bg-white"
+      )}
+    >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-green-900/[0.06] border border-green-900/10 flex items-center justify-center">
-          <Icon size={20} className="text-green-800" />
+        <div
+          className={cx(
+            "w-10 h-10 rounded-xl border flex items-center justify-center",
+            isDark ? "bg-white/5 border-white/10" : "bg-green-900/[0.06] border-green-900/10"
+          )}
+        >
+          <Icon size={20} className={isDark ? "text-[#9be6b0]" : "text-green-800"} />
         </div>
         <div>
-          <div className="text-base font-bold text-green-950">{title}</div>
-          <p className="mt-1 text-sm text-black/65 leading-relaxed">{desc}</p>
+          <div className={cx("text-base font-bold", isDark ? "text-white" : "text-green-950")}>
+            {title}
+          </div>
+          <p className={cx("mt-1 text-sm leading-relaxed", isDark ? "text-white/65" : "text-black/65")}>
+            {desc}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
-function BigServiceCard({ icon: Icon, title, desc, body }: { icon: any; title: string; desc: string; body: string }) {
+function BigServiceCard({
+  icon: Icon,
+  title,
+  desc,
+  body,
+  theme,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  body: string;
+  theme: Theme;
+}) {
+  const isDark = theme === "dark";
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-[0_10px_34px_-20px_rgba(0,0,0,0.25)]">
+    <div
+      className={cx(
+        "rounded-2xl border p-6 shadow-[0_10px_34px_-20px_rgba(0,0,0,0.25)]",
+        isDark ? "border-white/10 bg-black/30" : "border-black/10 bg-white"
+      )}
+    >
       <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-xl bg-green-900/[0.06] border border-green-900/10 flex items-center justify-center">
-          <Icon size={22} className="text-green-800" />
+        <div
+          className={cx(
+            "w-11 h-11 rounded-xl border flex items-center justify-center",
+            isDark ? "bg-white/5 border-white/10" : "bg-green-900/[0.06] border-green-900/10"
+          )}
+        >
+          <Icon size={22} className={isDark ? "text-[#9be6b0]" : "text-green-800"} />
         </div>
 
         <div className="min-w-0">
-          <div className="text-lg font-extrabold text-green-950">{title}</div>
-          <p className="mt-1 text-sm text-black/65 leading-relaxed">{desc}</p>
+          <div className={cx("text-lg font-extrabold", isDark ? "text-white" : "text-green-950")}>
+            {title}
+          </div>
+          <p className={cx("mt-1 text-sm leading-relaxed", isDark ? "text-white/65" : "text-black/65")}>
+            {desc}
+          </p>
         </div>
       </div>
 
-      <div className="mt-4 text-sm text-black/70 leading-relaxed">{body}</div>
+      <div className={cx("mt-4 text-sm leading-relaxed", isDark ? "text-white/70" : "text-black/70")}>
+        {body}
+      </div>
     </div>
   );
 }
