@@ -54,6 +54,15 @@ type CourseItem = {
 type Theme = "dark" | "light";
 
 /* =========================================================
+   MENU: ABA "EXTRAÇÃO"
+========================================================= */
+const EXTRACTION_MENU: ReportItem = {
+  id: "extracao",
+  title: "Extração",
+  icon: FileSearch, // ou outro ícone
+  src: "",
+};
+/* =========================================================
    MENU: ABA "SERVIÇOS"
 ========================================================= */
 const SERVICES_MENU: ReportItem = {
@@ -186,6 +195,7 @@ const INTERNAL_REPORTS: ReportItem[] = [
 const ALL_REPORTS: ReportItem[] = [
   SERVICES_MENU,
   COURSES_MENU,
+  EXTRACTION_MENU,
   ...PORTFOLIO_REPORTS,
   ...INTERNAL_REPORTS,
 ];
@@ -203,7 +213,7 @@ function normalizeStringArray(raw: any): string[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed))
         return parsed.filter((x) => typeof x === "string");
-    } catch {}
+    } catch { }
   }
   return [];
 }
@@ -265,7 +275,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   /* ===== Theme (light/dark) ===== */
-  const [theme, setTheme] = useState<Theme>("dark");
+  const [theme, setTheme] = useState<Theme>("light");
   const isDark = theme === "dark";
 
   useEffect(() => {
@@ -276,13 +286,13 @@ export default function Home() {
     try {
       const savedTheme = localStorage.getItem("theme");
       if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem("theme", theme);
-    } catch {}
+    } catch { }
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
@@ -978,7 +988,7 @@ export default function Home() {
                       setUser(updatedUser);
                       localStorage.setItem("bi_user", JSON.stringify(updatedUser));
                       setCurrentCourse(0);
-                    } catch {}
+                    } catch { }
                   }}
                   className={cx(
                     "w-full px-4 py-2 rounded-lg text-sm font-semibold border transition",
@@ -1093,8 +1103,15 @@ export default function Home() {
           </div>
         )}
 
+        {/* EXTRAÇÃO */}
+        {active === "extracao" && (
+          <div className={cx("absolute inset-0 overflow-y-auto", isDark ? "bg-[#0b0f0d]" : "bg-[#f6f7f8]")}>
+            <ExtractionContent theme={theme} />
+          </div>
+        )}
+
         {/* RELATÓRIOS */}
-        {report && active !== "home" && active !== "cursos" && active !== "servicos" && (
+        {report && active !== "home" && active !== "cursos" && active !== "servicos" && active !== "extracao" && (
           <iframe
             key={active}
             src={formatUrl(report.src)}
@@ -1549,6 +1566,256 @@ function ServicesContent({ theme }: { theme: Theme }) {
     </div>
   );
 }
+
+function ExtractionContent({ theme }: { theme: Theme }) {
+  const isDark = theme === "dark";
+
+  const [start, setStart] = useState("2026-01-01");
+  const [end, setEnd] = useState("2026-01-31");
+  const [loading, setLoading] = useState(false);
+
+  const [msg, setMsg] = useState<{ type: "ok" | "err" | "info"; text: string } | null>(null);
+
+  const startDate = start ? new Date(`${start}T00:00:00`) : null;
+  const endDate = end ? new Date(`${end}T00:00:00`) : null;
+
+  const invalidRange =
+    !!startDate && !!endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())
+      ? startDate.getTime() > endDate.getTime()
+      : false;
+
+  const setPreset = (preset: "thisMonth" | "lastMonth" | "last7") => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    if (preset === "last7") {
+      const d2 = new Date(now);
+      const d1 = new Date(now);
+      d1.setDate(d1.getDate() - 6);
+      setStart(fmt(d1));
+      setEnd(fmt(d2));
+      return;
+    }
+
+    if (preset === "thisMonth") {
+      const d1 = new Date(now.getFullYear(), now.getMonth(), 1);
+      const d2 = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setStart(fmt(d1));
+      setEnd(fmt(d2));
+      return;
+    }
+
+    // lastMonth
+    const d1 = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const d2 = new Date(now.getFullYear(), now.getMonth(), 0);
+    setStart(fmt(d1));
+    setEnd(fmt(d2));
+  };
+
+  const download = async () => {
+    setMsg(null);
+
+    if (!start || !end) {
+      setMsg({ type: "err", text: "Preencha as datas inicial e final." });
+      return;
+    }
+    if (invalidRange) {
+      setMsg({ type: "err", text: "A data inicial não pode ser maior que a data final." });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`/api/extracao?start_date=${start}&end_date=${end}`);
+      if (!res.ok) {
+        const t = await res.text();
+        setMsg({ type: "err", text: t || "Erro ao gerar Excel." });
+        return;
+      }
+
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition");
+      const fileName =
+        cd?.match(/filename="(.+)"/)?.[1] || `geracao_mensal_${start}_a_${end}.xlsx`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      setMsg({ type: "ok", text: "Download iniciado ✅" });
+    } catch {
+      setMsg({ type: "err", text: "Erro de conexão." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div
+      className={cx(
+        "rounded-2xl border shadow-[0_18px_60px_-30px_rgba(0,0,0,0.45)]",
+        isDark ? "border-white/10 bg-black/30" : "border-black/10 bg-white"
+      )}
+    >
+      {children}
+    </div>
+  );
+
+  const muted = isDark ? "text-white/55" : "text-black/55";
+
+  return (
+    <div className={cx("w-full min-h-full", isDark ? "bg-[#0b0f0d] text-white" : "bg-[#f6f7f8] text-black")}>
+      <div className="max-w-6xl mx-auto px-6 md:px-10 py-10">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className={cx("text-3xl md:text-4xl font-extrabold tracking-tight", isDark ? "text-white" : "text-green-950")}>
+              Extração de Geração
+            </h2>
+            <p className={cx("mt-2 text-sm md:text-base", muted)}>
+              Selecione o período e baixe o Excel consolidado (mensal por UC).
+            </p>
+          </div>
+
+          {/* Presets */}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setPreset("last7")}
+              className={cx(
+                "px-3 py-2 rounded-xl text-sm font-semibold border transition",
+                isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-black/10 bg-white hover:bg-black/[0.03]"
+              )}
+            >
+              Últimos 7 dias
+            </button>
+            <button
+              onClick={() => setPreset("thisMonth")}
+              className={cx(
+                "px-3 py-2 rounded-xl text-sm font-semibold border transition",
+                isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-black/10 bg-white hover:bg-black/[0.03]"
+              )}
+            >
+              Mês atual
+            </button>
+            <button
+              onClick={() => setPreset("lastMonth")}
+              className={cx(
+                "px-3 py-2 rounded-xl text-sm font-semibold border transition",
+                isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-black/10 bg-white hover:bg-black/[0.03]"
+              )}
+            >
+              Mês anterior
+            </button>
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Form */}
+          <div className="lg:col-span-12">
+            <Card>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={cx("text-xs", muted)}>Data inicial</label>
+                    <input
+                      type="date"
+                      value={start}
+                      onChange={(e) => setStart(e.target.value)}
+                      className={cx(
+                        "mt-1 w-full rounded-xl px-3 py-2 outline-none border transition",
+                        invalidRange ? "ring-1 ring-red-500/60" : "",
+                        isDark
+                          ? "bg-black/40 text-white border-white/15 focus:ring-1 focus:ring-[#5CAE70]"
+                          : "bg-white text-black border-black/15 focus:ring-1 focus:ring-[#2E7B57]"
+                      )}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={cx("text-xs", muted)}>Data final</label>
+                    <input
+                      type="date"
+                      value={end}
+                      onChange={(e) => setEnd(e.target.value)}
+                      className={cx(
+                        "mt-1 w-full rounded-xl px-3 py-2 outline-none border transition",
+                        invalidRange ? "ring-1 ring-red-500/60" : "",
+                        isDark
+                          ? "bg-black/40 text-white border-white/15 focus:ring-1 focus:ring-[#5CAE70]"
+                          : "bg-white text-black border-black/15 focus:ring-1 focus:ring-[#2E7B57]"
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Range warning */}
+                {invalidRange && (
+                  <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/10 text-red-200 px-3 py-2 text-sm">
+                    A data inicial não pode ser maior que a data final.
+                  </div>
+                )}
+
+                {/* Action */}
+                <button
+                  onClick={download}
+                  disabled={loading || !start || !end || invalidRange}
+                  className={cx(
+                    "mt-5 w-full rounded-xl font-extrabold py-3 transition flex items-center justify-center gap-2",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    isDark ? "bg-[#5CAE70] text-black hover:brightness-110" : "bg-[#2E7B57] text-white hover:brightness-110"
+                  )}
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      Gerando…
+                    </>
+                  ) : (
+                    <>
+                      <FileSearch size={18} />
+                      Baixar Excel
+                    </>
+                  )}
+                </button>
+
+                {/* Message */}
+                {msg && (
+                  <div
+                    className={cx(
+                      "mt-4 text-sm rounded-xl px-3 py-2 border",
+                      msg.type === "ok"
+                        ? isDark
+                          ? "bg-emerald-500/10 text-emerald-200 border-emerald-500/20"
+                          : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
+                        : msg.type === "err"
+                          ? isDark
+                            ? "bg-red-500/10 text-red-200 border-red-500/20"
+                            : "bg-red-500/10 text-red-700 border-red-500/20"
+                          : isDark
+                            ? "bg-white/5 text-white/70 border-white/10"
+                            : "bg-black/[0.03] text-black/70 border-black/10"
+                    )}
+                  >
+                    {msg.text}
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* =========================================================
    UI COMPONENTS (SERVIÇOS)
