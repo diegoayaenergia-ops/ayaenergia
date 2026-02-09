@@ -242,6 +242,26 @@ export async function GET(req) {
     return ufvSortKey(a["UFV"]) - ufvSortKey(b["UFV"]);
   });
 
+  const format = searchParams.get("format"); // "json" ou null
+
+  if (format === "json") {
+    return NextResponse.json(
+      {
+        start_date,
+        end_date,
+        rows: monthly.map((r) => ({
+          mes: r["Mês"],
+          usina: r["USINA"],
+          uc: r["UC"] ?? null,
+          ufv: r["UFV"],
+          geracao: r["Geração"],
+        })),
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+
   // ===================== GERA XLSX =====================
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Mensal por UC");
