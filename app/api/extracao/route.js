@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs"; // ✅ necessário p/ exceljs
 
 // ===================== CONFIG (ENV) =====================
-const BASE_URL = process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/";
-const API_KEY = process.env.TECSCI_API_KEY;
+const BASE_URL = (process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/").trim();
+const API_KEY = (process.env.TECSCI_API_KEY || "").trim();
 
 // ===================== MAPAS ======================
 const inverter_id_mapping = {
@@ -181,7 +181,7 @@ function ufvSortKey(ufv) {
 export async function GET(req) {
   if (!API_KEY) {
     return NextResponse.json(
-      { error: "Faltou TECSCI_API_KEY no .env.local" },
+      { error: "Faltou TECSCI_API_KEY nas Environment Variables (Vercel) ou .env.local (local)" },
       { status: 500 }
     );
   }

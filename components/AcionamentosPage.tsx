@@ -69,7 +69,7 @@ function Badge({
   return (
     <span
       className={cx(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold border",
+        "inline-flex items-center  px-2.5 py-1 text-[11px] font-bold border",
         tone === "neutral" && "border-black/10 bg-black/[0.03] text-black/60",
         tone === "green" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-700",
         tone === "amber" && "border-amber-500/25 bg-amber-500/10 text-amber-800",
@@ -487,7 +487,7 @@ export function AcionamentosPage() {
       sidebar={
         <aside className="w-[360px] border-r flex flex-col border-black/10 bg-white">
           <div className="p-4 border-b border-black/10">
-            <div className="font-extrabold text-lg">Perdas e Acionamentos</div>
+            <div className="font-extrabold text-lg text-[#5cae70]">Perdas e Acionamentos</div>
             <p className={cx("text-xs mt-1", muted)}>Escolha uma aba e visualize no painel.</p>
 
             <div className="mt-3">

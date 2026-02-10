@@ -675,7 +675,7 @@ export default function Home() {
         <header
           className="
             h-16 w-full flex items-center justify-between px-4
-            bg-gradient-to-r from-[#1f7a55]/90 via-[#2E7B57]/80 to-[#145a36]/90 backdrop-blur
+            bg-[#1C4D28]
             border-b border-white/10 shadow-xl
           "
         >
