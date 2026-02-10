@@ -2000,7 +2000,7 @@ function BancoDeDadosLoss({ view }: { view: "perdas" }) {
     if (invalidRange) return;
     const t = window.setTimeout(() => loadTable(0), 0);
     return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps"
   }, [view, start, end, invalidRange, usina]);
 
   const exportCsvLoss = () => {
