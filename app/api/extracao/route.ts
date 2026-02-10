@@ -1,14 +1,16 @@
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs"; // ✅ necessário p/ exceljs
+export const runtime = "nodejs"; // necessário p/ exceljs
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 // ===================== CONFIG (ENV) =====================
 const BASE_URL = (process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/").trim();
 const API_KEY = (process.env.TECSCI_API_KEY || "").trim();
 
 // ===================== MAPAS ======================
-const inverter_id_mapping = {
+const inverter_id_mapping: Record<number, string> = {
   1: "111", 2: "112", 3: "113", 4: "114", 5: "115", 6: "116", 7: "117", 8: "118",
   9: "121", 10: "122", 11: "123", 12: "124", 13: "125", 14: "126", 15: "127", 16: "128",
   17: "131", 18: "132", 19: "133", 20: "134", 21: "135", 22: "136", 23: "137", 24: "138",
@@ -44,7 +46,7 @@ const inverter_id_mapping = {
   733: "111", 734: "112", 735: "113", 736: "121", 737: "122", 738: "123",
 };
 
-const power_station_mapping = {
+const power_station_mapping: Record<number, string> = {
   1: "RBB", 7: "BLH", 8: "BES", 9: "SB3", 10: "RGN", 11: "MAP",
   12: "LRJ", 13: "GAR", 14: "MNR", 15: "PRG", 42: "RIN", 43: "PPL",
   44: "SB6", 45: "GUA", 46: "ITU", 50: "BLH", 65: "CON", 68: "PIR",
@@ -52,7 +54,7 @@ const power_station_mapping = {
 
 const power_station_ids = [1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 42, 43, 44, 45, 46, 50, 65, 68];
 
-const UC_MAP = {
+const UC_MAP: Record<string, number> = {
   "BES|UFV 1": 271, "BES|UFV 2": 272, "BES|UFV 3": 270, "BES|UFV 4": 269,
   "BLH|UFV 1": 279, "BLH|UFV 2": 280, "BLH|UFV 3": 278,
   "RGN|UFV 1": 266, "RGN|UFV 2": 268, "RGN|UFV 3": 265, "RGN|UFV 4": 267,
@@ -72,11 +74,11 @@ const UC_MAP = {
   "CON|UFV 1": 307, "CON|UFV 2": 306, "CON|UFV 3": 308,
 };
 
-function uc_lookup(usina, ufv) {
+function uc_lookup(usina: string, ufv: string) {
   return UC_MAP[`${usina}|${ufv}`] ?? null;
 }
 
-function get_inverter_group(inv_name) {
+function get_inverter_group(inv_name: string) {
   const n = Number(inv_name);
   if (!Number.isFinite(n)) return "Outros Grupos";
   if (n >= 111 && n <= 118) return "UFV 1";
@@ -87,11 +89,11 @@ function get_inverter_group(inv_name) {
   return "Outros Grupos";
 }
 
-function robust_group_for_rbb(raw_inv_id, inv_name_mapped) {
+function robust_group_for_rbb(raw_inv_id: any, inv_name_mapped: string) {
   const g = get_inverter_group(inv_name_mapped);
   if (g !== "Outros Grupos") return g;
 
-  let base = null;
+  let base: number | null = null;
 
   const n = Number(inv_name_mapped);
   if (Number.isFinite(n)) base = Math.floor(n / 10) * 10;
@@ -101,84 +103,139 @@ function robust_group_for_rbb(raw_inv_id, inv_name_mapped) {
     if (Number.isFinite(rid)) base = Math.floor(rid / 10) * 10;
   }
 
-  const centena_to_group = { 110: "UFV 1", 120: "UFV 2", 130: "UFV 3", 140: "UFV 4", 150: "UFV 5" };
-  return centena_to_group[base] ?? "UFV 5";
+  const centena_to_group: Record<number, string> = { 110: "UFV 1", 120: "UFV 2", 130: "UFV 3", 140: "UFV 4", 150: "UFV 5" };
+  return centena_to_group[base ?? -1] ?? "UFV 5";
 }
 
-function parseMonth(dateStr) {
-  // espera YYYY-MM-DD
+function parseMonth(dateStr: any) {
   if (!dateStr || typeof dateStr !== "string" || dateStr.length < 7) return null;
-  return dateStr.slice(0, 7); // "YYYY-MM"
+  return dateStr.slice(0, 7);
 }
 
-async function process_power_station_data(power_station_id, start_date, end_date) {
-  const usina = power_station_mapping[power_station_id] ?? "Usina Desconhecida";
-  const url = `${BASE_URL}${power_station_id}/inverters/generation?start_date=${start_date}&end_date=${end_date}`;
-
-  const headers = {
-    "Accept": "application/json",
-    "X-API-KEY": API_KEY,
-  };
-
-  let res;
-  try {
-    res = await fetch(url, { headers, cache: "no-store" });
-  } catch {
-    return [];
-  }
-  if (!res.ok) return [];
-
-  let payload;
-  try {
-    payload = await res.json();
-  } catch {
-    return [];
-  }
-
-  const data = payload?.data ?? [];
-  const out = [];
-
-  const ufv_override = (power_station_id === 50) ? "UFV 2" : null;
-  const kwh_keys = ["power_yields_kwh", "power_yield_kwh", "generation_kwh", "yield_kwh", "kwh", "energy_kwh", "energy"];
-
-  for (const day of data) {
-    const date = day?.date;
-    const inverters = day?.inverters ?? [];
-    for (const inv of inverters) {
-      const inv_id = inv?.id;
-
-      let kwh = 0;
-      for (const k of kwh_keys) {
-        if (inv?.[k] != null) {
-          const v = Number(inv[k]);
-          kwh = Number.isFinite(v) ? v : 0;
-          break;
-        }
-      }
-
-      const inv_name = inverter_id_mapping[inv_id] ?? String(inv_id ?? "");
-      let ufv;
-
-      if (usina === "RBB") {
-        ufv = robust_group_for_rbb(inv_id, inv_name);
-      } else {
-        const ufv_base = get_inverter_group(inv_name);
-        ufv = ufv_override ?? ufv_base;
-      }
-
-      out.push({ USINA: usina, DATA: date, UFV: ufv, KWH: kwh });
-    }
-  }
-
-  return out;
-}
-
-function ufvSortKey(ufv) {
+function ufvSortKey(ufv: any) {
   const m = /^UFV\s+(\d+)$/.exec(String(ufv || ""));
   return m ? Number(m[1]) : 999;
 }
 
-export async function GET(req) {
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 15000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+async function process_power_station_data(
+  power_station_id: number,
+  start_date: string,
+  end_date: string,
+  debug = false
+): Promise<{ rows: any[]; meta: any | null }> {
+  const usina = power_station_mapping[power_station_id] ?? "Usina Desconhecida";
+  const url = `${BASE_URL}${power_station_id}/inverters/generation?start_date=${start_date}&end_date=${end_date}`;
+
+  try {
+    const res = await fetchWithTimeout(
+      url,
+      {
+        headers: {
+          Accept: "application/json",
+          "X-API-KEY": API_KEY,
+        },
+        cache: "no-store",
+      },
+      20000
+    );
+
+    const contentType = res.headers.get("content-type") || "";
+    const text = await res.text();
+
+    if (!res.ok) {
+      return {
+        rows: [],
+        meta: debug
+          ? {
+              power_station_id,
+              usina,
+              ok: false,
+              status: res.status,
+              contentType,
+              bodyPreview: text.slice(0, 400),
+              hint:
+                res.status === 401
+                  ? "401: API key inválida/ausente ou header errado"
+                  : res.status === 403
+                  ? "403: sem permissão / bloqueio (WAF/IP) / escopo da key"
+                  : res.status === 404
+                  ? "404: endpoint/ID incorreto"
+                  : "Erro HTTP no TecSci",
+            }
+          : null,
+      };
+    }
+
+    let payload: any = null;
+    try {
+      payload = contentType.includes("application/json") ? JSON.parse(text) : null;
+    } catch {
+      payload = null;
+    }
+
+    const data = payload?.data ?? [];
+    const out: any[] = [];
+
+    const ufv_override = power_station_id === 50 ? "UFV 2" : null;
+    const kwh_keys = ["power_yields_kwh", "power_yield_kwh", "generation_kwh", "yield_kwh", "kwh", "energy_kwh", "energy"];
+
+    for (const day of data) {
+      const date = day?.date;
+      const inverters = day?.inverters ?? [];
+      for (const inv of inverters) {
+        const inv_id = inv?.id;
+
+        let kwh = 0;
+        for (const k of kwh_keys) {
+          if (inv?.[k] != null) {
+            const v = Number(inv[k]);
+            kwh = Number.isFinite(v) ? v : 0;
+            break;
+          }
+        }
+
+        const inv_name = inverter_id_mapping[inv_id] ?? String(inv_id ?? "");
+        let ufv: string;
+
+        if (usina === "RBB") ufv = robust_group_for_rbb(inv_id, inv_name);
+        else ufv = ufv_override ?? get_inverter_group(inv_name);
+
+        out.push({ USINA: usina, DATA: date, UFV: ufv, KWH: kwh });
+      }
+    }
+
+    return {
+      rows: out,
+      meta: debug ? { power_station_id, usina, ok: true, status: 200, count: out.length } : null,
+    };
+  } catch (e: any) {
+    return {
+      rows: [],
+      meta: debug
+        ? {
+            power_station_id,
+            usina,
+            ok: false,
+            status: "FETCH_ERROR",
+            error: String(e?.message || e),
+            hint: "FETCH_ERROR: rede/DNS/TLS/WAF/timeout no ambiente Vercel",
+          }
+        : null,
+    };
+  }
+}
+
+export async function GET(req: Request) {
   if (!API_KEY) {
     return NextResponse.json(
       { error: "Faltou TECSCI_API_KEY nas Environment Variables (Vercel) ou .env.local (local)" },
@@ -187,16 +244,35 @@ export async function GET(req) {
   }
 
   const { searchParams } = new URL(req.url);
+  const debug = searchParams.get("debug") === "1";
+  const psOnly = searchParams.get("ps"); // ex: 1
 
-  // Permite passar por querystring: ?start_date=2026-01-01&end_date=2026-01-31
   const start_date = searchParams.get("start_date") || "2026-01-01";
   const end_date = searchParams.get("end_date") || "2026-01-31";
 
-  // ===================== COLETA =====================
-  const rows = [];
-  for (const ps of power_station_ids) {
-    const part = await process_power_station_data(ps, start_date, end_date);
-    rows.push(...part);
+  const targetStations = psOnly ? [Number(psOnly)] : power_station_ids;
+
+  const rows: any[] = [];
+  const diagnostics: any[] = [];
+
+  for (const ps of targetStations) {
+    const part = await process_power_station_data(ps, start_date, end_date, debug);
+    rows.push(...part.rows);
+    if (debug && part.meta) diagnostics.push(part.meta);
+  }
+
+  if (debug) {
+    return NextResponse.json(
+      {
+        env: { hasKey: !!API_KEY, keyLen: API_KEY.length, base: BASE_URL },
+        start_date,
+        end_date,
+        stations: targetStations,
+        diagnostics,
+        total_rows: rows.length,
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   if (rows.length === 0) {
@@ -207,7 +283,7 @@ export async function GET(req) {
   }
 
   // ===================== AGREGA (Mês, USINA, UFV) =====================
-  const agg = new Map(); // key: "YYYY-MM|USINA|UFV"
+  const agg = new Map<string, number>();
   for (const r of rows) {
     const mes = parseMonth(r.DATA);
     if (!mes) continue;
@@ -218,28 +294,27 @@ export async function GET(req) {
     agg.set(key, cur + (Number(r.KWH) || 0));
   }
 
-  const monthly = [];
+  const monthly: Array<{ [k: string]: any }> = [];
   for (const [key, geracao] of agg.entries()) {
     const [mes, usina, ufv] = key.split("|");
     monthly.push({
       "Mês": mes,
-      "USINA": usina,
-      "UFV": ufv,
+      USINA: usina,
+      UFV: ufv,
       "Geração": geracao,
-      "UC": uc_lookup(usina, ufv),
+      UC: uc_lookup(usina, ufv),
     });
   }
 
   monthly.sort((a, b) => {
-    // Mês -> USINA -> UC -> UFV
     if (a["Mês"] !== b["Mês"]) return a["Mês"] < b["Mês"] ? -1 : 1;
     if (a["USINA"] !== b["USINA"]) return a["USINA"] < b["USINA"] ? -1 : 1;
 
-    const auc = (a["UC"] ?? 999999);
-    const buc = (b["UC"] ?? 999999);
+    const auc = a.UC ?? 999999;
+    const buc = b.UC ?? 999999;
     if (auc !== buc) return auc - buc;
 
-    return ufvSortKey(a["UFV"]) - ufvSortKey(b["UFV"]);
+    return ufvSortKey(a.UFV) - ufvSortKey(b.UFV);
   });
 
   const format = searchParams.get("format"); // "json" ou null
@@ -251,16 +326,15 @@ export async function GET(req) {
         end_date,
         rows: monthly.map((r) => ({
           mes: r["Mês"],
-          usina: r["USINA"],
-          uc: r["UC"] ?? null,
-          ufv: r["UFV"],
+          usina: r.USINA,
+          uc: r.UC ?? null,
+          ufv: r.UFV,
           geracao: r["Geração"],
         })),
       },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   }
-
 
   // ===================== GERA XLSX =====================
   const wb = new ExcelJS.Workbook();
@@ -279,18 +353,16 @@ export async function GET(req) {
   for (const r of monthly) {
     ws.addRow({
       "Mês": r["Mês"],
-      "USINA": r["USINA"],
-      "UC": r["UC"] ?? "",
-      "UFV": r["UFV"],
+      USINA: r.USINA,
+      UC: r.UC ?? "",
+      UFV: r.UFV,
       "Geração": r["Geração"],
     });
   }
 
-  // Formata "Geração" como número com 2 casas
   ws.getColumn("Geração").numFmt = "#,##0.00";
 
   const buffer = await wb.xlsx.writeBuffer();
-
   const fileName = `geracao_mensal_${start_date}_a_${end_date}.xlsx`;
 
   return new NextResponse(buffer, {
