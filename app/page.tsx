@@ -35,6 +35,7 @@ import { AcionamentosCadastroPage } from "@/components/CadastroPage";
 import { AcionamentosBasePage } from "@/components/BaseAcionamentosPage";
 import { PerdasBasePage } from "@/components/BasePerdasPage";
 import ServicesContent from "@/components/ServicesPage";
+import{  UsinasContent }from "@/components/UsinasPage";
 
 /* =========================================================
    TYPES
@@ -61,6 +62,7 @@ type CourseItem = {
 const SERVICES_MENU: ReportItem = { id: "servicos", title: "Sobre Nós", icon: Users };
 const EXTRACTION_MENU: ReportItem = { id: "extracao", title: "Extração por UC", icon: FileSearch };
 const COURSES_MENU: ReportItem = { id: "cursos", title: "Cursos", icon: GraduationCap };
+const USINAS_MENU: ReportItem = { id: "usinas", title: "Usinas", icon: SolarPanel };
 
 const CADASTROS_ITEMS: ReportItem[] = [
   { id: "acionamentos_cadastro", title: "Cadastro", icon: PlusCircle },
@@ -70,8 +72,8 @@ const CADASTROS_ITEMS: ReportItem[] = [
 
 // cursos
 const COURSES: CourseItem[] = [
-  { id: "modulo:inversor-1", title: "Inversores Fotovoltaicos", description: "Introdução", vimeoId: "1155013136" },
-  { id: "modulo:inversor-2", title: "SKID", description: "Filtros, páginas e análises", vimeoId: "1155023945" },
+  { id: "modulo:inversor-1", title: "Inversores Fotovoltaicos", description: "Introdução", vimeoId: "1164064064" },
+  { id: "modulo:inversor-2", title: "SKID", description: "Em breve" },
   { id: "modulo:inversor-3", title: "CMP (Cabine Medição Primária)", description: "Em breve" },
   { id: "modulo:inversor-4", title: "Estruturas Mecânicas", description: "Em breve" },
   { id: "modulo:inversor-5", title: "Estruturas Automação", description: "Em breve" },
@@ -122,7 +124,7 @@ const REPORTS: ReportItem[] = [
   },
 ];
 
-const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, EXTRACTION_MENU, COURSES_MENU];
+const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU];
 
 /* =========================================================
    HELPERS
@@ -135,7 +137,7 @@ function normalizeStringArray(raw: any): string[] {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string");
-    } catch {}
+    } catch { }
   }
   return [];
 }
@@ -547,9 +549,9 @@ export default function Home() {
             </div>
 
             {!collapsed && (
-              <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">AYA Energia</div>
-                <div className="text-[11px] text-white/55">Portal</div>
+              <div className="min-w-0 flex flex-col items-start text-left">
+                <div className="text-sm font-semibold truncate w-full">AYA Energia</div>
+                <div className="text-[11px] text-white/55 w-full">Portal</div>
               </div>
             )}
           </button>
@@ -609,22 +611,7 @@ export default function Home() {
                 collapsed={collapsed}
               />
 
-              {allowedPages.map((p) => {
-                const Icon = p.icon;
-                return (
-                  <SideItem
-                    key={p.id}
-                    title={p.title}
-                    icon={Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4" />}
-                    active={active === p.id}
-                    onClick={() => {
-                      if (p.id === "cursos") setCurrentCourse(getCourseIndexFromStats(stats));
-                      setActive(p.id);
-                    }}
-                    collapsed={collapsed}
-                  />
-                );
-              })}
+
 
               {/* ✅ “grupos” como itens (entra no modo filhos) */}
               {allowedReports.length > 0 && (
@@ -646,6 +633,23 @@ export default function Home() {
                   right={!collapsed ? "▸" : null}
                 />
               )}
+
+              {allowedPages.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <SideItem
+                    key={p.id}
+                    title={p.title}
+                    icon={Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4" />}
+                    active={active === p.id}
+                    onClick={() => {
+                      if (p.id === "cursos") setCurrentCourse(getCourseIndexFromStats(stats));
+                      setActive(p.id);
+                    }}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -737,6 +741,13 @@ export default function Home() {
         {active === "servicos" && (
           <div className="absolute inset-0 overflow-y-auto bg-white">
             <ServicesContent />
+          </div>
+        )}
+
+        {/* Usinas */}
+        {active === "usinas" && (
+          <div className="absolute inset-0 overflow-y-auto bg-white">
+            <UsinasContent />
           </div>
         )}
 

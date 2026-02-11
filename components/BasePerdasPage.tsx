@@ -839,7 +839,7 @@ function PerdasBase() {
                                 </div>
 
                                 <div className="mt-2 text-xs" style={{ color: T.text3 }}>
-                                  Clique para abrir detalhes (ou use o chevron).
+                                  Clique para abrir detalhes.
                                 </div>
                               </div>
 
