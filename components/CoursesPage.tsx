@@ -107,8 +107,83 @@ export function CoursesPage({
 
   return (
     <div className="absolute inset-0 flex bg-[#f6f7f8]">
+      {/* PLAYER */}
+      <main className="flex-1 bg-[#f6f7f8]">
+        <div className="h-full flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="w-full max-w-[1200px]">
+              <div className="rounded-2xl border overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)] border-black/10 bg-white">
+                <div className="relative w-full aspect-video bg-black">
+                  {courses[currentCourse]?.vimeoId ? (
+                    <div className="absolute inset-0">
+                      <VimeoPlayer
+                        key={courses[currentCourse].vimeoId}
+                        videoId={courses[currentCourse].vimeoId!}
+                        onReady={() => {
+                          setVideoLoading(false);
+                          setVideoError("");
+                        }}
+                        onError={(msg) => {
+                          setVideoLoading(false);
+                          setVideoError(msg);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-black/[0.04]">
+                      <p className="font-semibold text-lg text-black">Conteúdo em preparação</p>
+                      <p className="text-sm mt-2 max-w-md text-black/60">
+                        Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
+                      </p>
+                    </div>
+                  )}
+
+                  {videoLoading && courses[currentCourse]?.vimeoId && !videoError && (
+                    <div className="absolute inset-0 grid place-items-center bg-black/60">
+                      <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+
+                  {videoError && !videoLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
+                      <div className="max-w-md text-center">
+                        <p className="text-white font-semibold">Erro no player</p>
+                        <p className="text-white/70 text-sm mt-2">{videoError}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-5 py-4 border-t bg-white border-black/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-black/50">
+                        Aula {currentCourse + 1} de {courses.length}
+                      </p>
+                      <p className="font-semibold truncate text-black">
+                        {courses[currentCourse]?.title}
+                      </p>
+                    </div>
+
+                    {courses[currentCourse]?.vimeoId && (
+                      <button
+                        onClick={() => completeCourse(courses[currentCourse].id)}
+                        disabled={isWatched(courses[currentCourse].id)}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5CAE70] text-black disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
+                      >
+                        {isWatched(courses[currentCourse].id) ? "Concluída ✓" : "Marcar como concluída"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
       {/* SIDEBAR */}
-      <aside className="w-[360px] border-r flex flex-col bg-white border-black/10">
+      <aside className="w-[360px] border-r flex flex-col bg-white border-black/10 ">
         <div className="p-4 border-b border-black/10">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-base text-black">Conteúdo</h3>
@@ -254,81 +329,7 @@ export function CoursesPage({
         </div>
       </aside>
 
-      {/* PLAYER */}
-      <main className="flex-1 bg-[#f6f7f8]">
-        <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="w-full max-w-[1200px]">
-              <div className="rounded-2xl border overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)] border-black/10 bg-white">
-                <div className="relative w-full aspect-video bg-black">
-                  {courses[currentCourse]?.vimeoId ? (
-                    <div className="absolute inset-0">
-                      <VimeoPlayer
-                        key={courses[currentCourse].vimeoId}
-                        videoId={courses[currentCourse].vimeoId!}
-                        onReady={() => {
-                          setVideoLoading(false);
-                          setVideoError("");
-                        }}
-                        onError={(msg) => {
-                          setVideoLoading(false);
-                          setVideoError(msg);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-black/[0.04]">
-                      <p className="font-semibold text-lg text-black">Conteúdo em preparação</p>
-                      <p className="text-sm mt-2 max-w-md text-black/60">
-                        Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
-                      </p>
-                    </div>
-                  )}
-
-                  {videoLoading && courses[currentCourse]?.vimeoId && !videoError && (
-                    <div className="absolute inset-0 grid place-items-center bg-black/60">
-                      <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-
-                  {videoError && !videoLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-                      <div className="max-w-md text-center">
-                        <p className="text-white font-semibold">Erro no player</p>
-                        <p className="text-white/70 text-sm mt-2">{videoError}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="px-5 py-4 border-t bg-white border-black/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs text-black/50">
-                        Aula {currentCourse + 1} de {courses.length}
-                      </p>
-                      <p className="font-semibold truncate text-black">
-                        {courses[currentCourse]?.title}
-                      </p>
-                    </div>
-
-                    {courses[currentCourse]?.vimeoId && (
-                      <button
-                        onClick={() => completeCourse(courses[currentCourse].id)}
-                        disabled={isWatched(courses[currentCourse].id)}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5CAE70] text-black disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
-                      >
-                        {isWatched(courses[currentCourse].id) ? "Concluída ✓" : "Marcar como concluída"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+      
     </div>
   );
 }

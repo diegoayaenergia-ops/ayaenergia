@@ -3,39 +3,38 @@
 /* =========================================================
    IMPORTS
 ========================================================= */
-import BrazilTopoMap from "@/components/BrazilTopoMap";
-import VimeoPlayer from "@/components/VimeoPlayer";
 import Image from "next/image";
-import { useEffect, useRef, useState, useMemo, type ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { downloadText, toCsv, toReportText, type DriveRow } from "@/lib/exporters";
-import { AcionamentosPage } from "@/components/AcionamentosPage";
-import { ExtractionPage } from "@/components/ExtractionPage";
-import ServicesPage from "@/components/ServicesPage";
-import { CoursesPage } from "@/components/CoursesPage";
-import ReportsPage from "@/components/ReportsPage";
-
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Wrench,
-  ShoppingCart,
-  ClipboardList,
-  LogOut,
-  HelpCircle,
+  Menu,
   X,
-  Linkedin,
-  Mail,
-  Phone,
+  Pin,
+  PinOff,
+  LayoutDashboard,
+  Wrench,
+  FileSearch,
+  ClipboardList,
+  KeyRound,
+  HelpCircle,
+  LogOut,
   Eye,
   EyeOff,
-  KeyRound,
-  Activity,
-  Droplets,
-  ClipboardCheck,
-  BriefcaseBusiness,
+  SolarPanel,
   TrendingUp,
-  FileSearch,
-  SolarPanel
+  GraduationCap,
+  Users,
+  PlusCircle,
+  TrendingDown,
+  ArrowLeft,
+  ShoppingCart,
 } from "lucide-react";
+
+import { CoursesPage } from "@/components/CoursesPage";
+import { ExtractionPage } from "@/components/ExtractionPage";
+import { AcionamentosCadastroPage } from "@/components/CadastroPage";
+import { AcionamentosBasePage } from "@/components/BaseAcionamentosPage";
+import { PerdasBasePage } from "@/components/BasePerdasPage";
+import ServicesContent from "@/components/ServicesPage";
 
 /* =========================================================
    TYPES
@@ -44,8 +43,7 @@ type ReportItem = {
   id: string;
   title: string;
   src?: string;
-  image?: string;
-  icon?: LucideIcon;
+  icon?: any;
 };
 
 type CourseItem = {
@@ -57,110 +55,35 @@ type CourseItem = {
 };
 
 /* =========================================================
-   MENU: ABA "Acionamentos"
+   MENU / DADOS
 ========================================================= */
-const ACIONAMENTOS_INPUT_MENU: ReportItem = {
-  id: "acionamentos_input",
-  title: "Acionamentos",
-  icon: Wrench,
-};
+// abas “página”
+const SERVICES_MENU: ReportItem = { id: "servicos", title: "Sobre Nós", icon: Users };
+const EXTRACTION_MENU: ReportItem = { id: "extracao", title: "Extração por UC", icon: FileSearch };
+const COURSES_MENU: ReportItem = { id: "cursos", title: "Cursos", icon: GraduationCap };
 
-/* =========================================================
-   MENU: ABA "EXTRAÇÃO"
-========================================================= */
-const EXTRACTION_MENU: ReportItem = {
-  id: "extracao",
-  title: "Extração por UC",
-  icon: FileSearch,
-};
-
-/* =========================================================
-   MENU: ABA "SERVIÇOS"
-========================================================= */
-const SERVICES_MENU: ReportItem = {
-  id: "servicos",
-  title: "Sobre Nós",
-  icon: Wrench,
-};
-
-/* =========================================================
-   CURSOS (VIMEO)
-========================================================= */
-const COURSES: CourseItem[] = [
-  {
-    id: "modulo:inversor-1",
-    title: "Inversores Fotovoltaicos",
-    description: "Introdução e",
-    vimeoId: "1155013136",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-2",
-    title: "SKID",
-    description: "Filtros, páginas e análises",
-    vimeoId: "1155023945",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-3",
-    title: "CMP (Cabine Medição Primária)",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-4",
-    title: "Estruturas Mecânicas",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-5",
-    title: "Estruturas Automação",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-6",
-    title: "Redes e Informática",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-7",
-    title: "CFTV (Circuito Fechado de TV)",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-8",
-    title: "Nobreak",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-9",
-    title: "Indicadores Técnicos de Eficiência",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
-  {
-    id: "modulo:inversor-10",
-    title: "Eletricidade Básica",
-    description: "Filtros, páginas e análises",
-    formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=XXXX",
-  },
+const CADASTROS_ITEMS: ReportItem[] = [
+  { id: "acionamentos_cadastro", title: "Cadastro", icon: PlusCircle },
+  { id: "acionamentos_base", title: "Base Acionamentos", icon: ClipboardList },
+  { id: "perdas_base", title: "Base Perdas", icon: TrendingDown },
 ];
 
-const COURSES_MENU: ReportItem = {
-  id: "cursos",
-  title: "Cursos",
-  icon: ClipboardList,
-};
+// cursos
+const COURSES: CourseItem[] = [
+  { id: "modulo:inversor-1", title: "Inversores Fotovoltaicos", description: "Introdução", vimeoId: "1155013136" },
+  { id: "modulo:inversor-2", title: "SKID", description: "Filtros, páginas e análises", vimeoId: "1155023945" },
+  { id: "modulo:inversor-3", title: "CMP (Cabine Medição Primária)", description: "Em breve" },
+  { id: "modulo:inversor-4", title: "Estruturas Mecânicas", description: "Em breve" },
+  { id: "modulo:inversor-5", title: "Estruturas Automação", description: "Em breve" },
+  { id: "modulo:inversor-6", title: "Redes e Informática", description: "Em breve" },
+  { id: "modulo:inversor-7", title: "CFTV (Circuito Fechado de TV)", description: "Em breve" },
+  { id: "modulo:inversor-8", title: "Nobreak", description: "Em breve" },
+  { id: "modulo:inversor-9", title: "Indicadores Técnicos de Eficiência", description: "Em breve" },
+  { id: "modulo:inversor-10", title: "Eletricidade Básica", description: "Em breve" },
+];
 
-/* =========================================================
-   RELATÓRIOS
-========================================================= */
-const PORTFOLIO_REPORTS: ReportItem[] = [
+// relatórios (iframe)
+const REPORTS: ReportItem[] = [
   {
     id: "ineer",
     title: "Ineer Energia",
@@ -179,9 +102,6 @@ const PORTFOLIO_REPORTS: ReportItem[] = [
     icon: SolarPanel,
     src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
-];
-
-const INTERNAL_REPORTS: ReportItem[] = [
   {
     id: "os",
     title: "Ordens de Serviço",
@@ -202,90 +122,118 @@ const INTERNAL_REPORTS: ReportItem[] = [
   },
 ];
 
-const REPORTS_MENU: ReportItem = {
-  id: "relatorios",
-  title: "Relatórios",
-  icon: ClipboardList,
-};
-
-const ALL_REPORTS: ReportItem[] = [
-  SERVICES_MENU,
-  REPORTS_MENU,
-  ACIONAMENTOS_INPUT_MENU,
-  EXTRACTION_MENU,
-  COURSES_MENU,
-];
-
-const REPORT_GROUPS = [
-  { id: "portfolio", title: "Portfólio", items: PORTFOLIO_REPORTS },
-  { id: "internos", title: "Internos", items: INTERNAL_REPORTS },
-] as const;
+const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, EXTRACTION_MENU, COURSES_MENU];
 
 /* =========================================================
    HELPERS
 ========================================================= */
-function safeSrc(src?: string | null) {
-  const s = (src ?? "").trim();
-  return s.length ? s : null;
-}
-
-const cx = (...parts: Array<string | false | null | undefined>) =>
-  parts.filter(Boolean).join(" ");
+const cx = (...parts: Array<string | false | null | undefined>) => parts.filter(Boolean).join(" ");
 
 function normalizeStringArray(raw: any): string[] {
   if (Array.isArray(raw)) return raw.filter((x) => typeof x === "string");
   if (typeof raw === "string") {
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed))
-        return parsed.filter((x) => typeof x === "string");
-    } catch { }
+      if (Array.isArray(parsed)) return parsed.filter((x) => typeof x === "string");
+    } catch {}
   }
   return [];
 }
 
+function safeSrc(src?: string | null) {
+  const s = (src ?? "").trim();
+  return s.length ? s : null;
+}
+
 function formatUrl(url: string) {
   if (!url) return url;
-
-  const params = [
-    "navContentPaneEnabled=false",
-    "filterPaneEnabled=false",
-    "pageView=fitToWidth",
-  ].join("&");
+  const params = ["navContentPaneEnabled=false", "filterPaneEnabled=false", "pageView=fitToWidth"].join("&");
   return url.includes("?") ? `${url}&${params}` : `${url}?${params}`;
 }
 
 function getCourseIndexFromStats(stats: string[]) {
-  const index = COURSES.findIndex((course) => !stats.includes(course.id));
-  return index === -1 ? COURSES.length - 1 : index;
+  const index = COURSES.findIndex((course) => course?.id && !stats.includes(course.id));
+  return index === -1 ? Math.max(0, COURSES.length - 1) : index;
+}
+
+/* =========================================================
+   SIDEBAR UI (PRO)
+========================================================= */
+function SideItem({
+  title,
+  icon,
+  active,
+  onClick,
+  collapsed,
+  indent = false,
+  right,
+}: {
+  title: string;
+  icon: ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  collapsed: boolean;
+  indent?: boolean;
+  right?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        "w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition",
+        "text-white/80 hover:text-white",
+        "hover:bg-white/6",
+        active && "bg-white/10 ring-1 ring-white/10 text-white",
+        collapsed && "justify-center px-0",
+        indent && !collapsed && "pl-6"
+      )}
+      title={collapsed ? title : undefined}
+    >
+      <span className={cx("w-5 h-5 grid place-items-center", active ? "text-white" : "text-white/70")}>{icon}</span>
+      {!collapsed && (
+        <>
+          <span className="text-[14px] font-medium truncate">{title}</span>
+          {right ? <span className="ml-auto text-white/60">{right}</span> : null}
+        </>
+      )}
+    </button>
+  );
+}
+
+function Modal({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="border rounded-2xl w-full max-w-md p-6 shadow-2xl relative bg-white border-black/10">
+        <button onClick={onClose} className="absolute top-4 right-4 text-black/50 hover:text-black" type="button">
+          <X size={18} />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
 }
 
 /* =========================================================
    PAGE
 ========================================================= */
 export default function Home() {
-  /* ===== Sessão / login ===== */
   const [booting, setBooting] = useState(true);
   const [user, setUser] = useState<any>(null);
 
-  /* ===== Cursos ===== */
   const [stats, setStats] = useState<string[]>([]);
   const [currentCourse, setCurrentCourse] = useState(0);
   const currentCourseId = useRef<string | null>(null);
-  const completingRef = useRef<string | null>(null);
 
-  /* ===== Login form ===== */
   const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  /* ===== Navegação ===== */
   const [active, setActive] = useState<string>("home");
-  const [showSupport, setShowSupport] = useState(false);
 
-  /* ===== Reset senha ===== */
+  const [showSupport, setShowSupport] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -294,47 +242,26 @@ export default function Home() {
   const [showNewPass, setShowNewPass] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  /* ===== UI ===== */
-  const [focus] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(true);
-  const [videoError, setVideoError] = useState("");
+  // ✅ padrão: sidebar FIXADA
+  const [pinned, setPinned] = useState(true);
+  const [hovering, setHovering] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ✅ modo hierárquico
+  const [navMode, setNavMode] = useState<"root" | "reports" | "cadastros">("root");
+
   const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  /* ===== Preconnect Vimeo ===== */
-  useEffect(() => {
-    const links = [
-      "https://player.vimeo.com",
-      "https://i.vimeocdn.com",
-      "https://f.vimeocdn.com",
-      "https://vimeo.com",
-    ];
-    links.forEach((href) => {
-      const l = document.createElement("link");
-      l.rel = "preconnect";
-      l.href = href;
-      l.crossOrigin = "anonymous";
-      document.head.appendChild(l);
-    });
-  }, []);
-
-  /* ===== Track course ref + loading ===== */
   useEffect(() => {
     currentCourseId.current = COURSES[currentCourse]?.id || null;
-    setVideoLoading(true);
-    setVideoError("");
   }, [currentCourse]);
 
-  /* ===== Persist active tab ===== */
   useEffect(() => {
     if (booting) return;
     localStorage.setItem("activeTab", active);
   }, [active, booting]);
 
-  /* ===== Carrega sessão ===== */
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("bi_user");
@@ -343,7 +270,6 @@ export default function Home() {
 
       if (savedUser) {
         const u = JSON.parse(savedUser);
-
         const fixedStats = normalizeStringArray(u.stats);
         const fixedAccess = normalizeStringArray(u.access);
         const fixedUser = { ...u, stats: fixedStats, access: fixedAccess };
@@ -355,8 +281,7 @@ export default function Home() {
         if (savedTab) setActive(savedTab);
 
         if (savedTab === "cursos") {
-          if (savedCourse !== null && !Number.isNaN(Number(savedCourse)))
-            setCurrentCourse(Number(savedCourse));
+          if (savedCourse !== null && !Number.isNaN(Number(savedCourse))) setCurrentCourse(Number(savedCourse));
           else setCurrentCourse(getCourseIndexFromStats(fixedStats));
         }
       }
@@ -365,53 +290,6 @@ export default function Home() {
     }
   }, []);
 
-  const progressPercent =
-    COURSES.length > 0 ? Math.round((stats.length / COURSES.length) * 100) : 0;
-
-  const canAccess = (index: number) => {
-    if (index === 0) return true;
-
-    const course = COURSES[index];
-    const prev = COURSES[index - 1];
-
-    if (course?.id && stats.includes(course.id)) return true;
-    if (!course?.vimeoId) return true;
-    return !!prev?.id && stats.includes(prev.id);
-  };
-
-  const isWatched = (id: string) => stats.includes(id);
-
-  const completeCourse = async (courseId: string) => {
-    if (!courseId) return;
-    if (!user?.login) return;
-    if (stats.includes(courseId)) return;
-    if (completingRef.current) return;
-
-    completingRef.current = courseId;
-
-    try {
-      const res = await fetch("/api/user/stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: user.login, courseId }),
-      });
-
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const fixed = normalizeStringArray(data.stats);
-
-      setStats(fixed);
-
-      const updatedUser = { ...user, stats: fixed };
-      setUser(updatedUser);
-      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
-    } finally {
-      completingRef.current = null;
-    }
-  };
-
-  /* ===== LOGIN ===== */
   const handleLogin = async () => {
     if (!login || !senha) {
       setError("Informe login e senha");
@@ -425,14 +303,10 @@ export default function Home() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          login: login.trim(),
-          password: senha.trim(),
-        }),
+        body: JSON.stringify({ login: login.trim(), password: senha.trim() }),
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.error || "Erro ao fazer login");
         return;
@@ -440,7 +314,6 @@ export default function Home() {
 
       const fixedStats = normalizeStringArray(data.stats);
       const fixedAccess = normalizeStringArray(data.access);
-
       const fixedUser = { ...data, stats: fixedStats, access: fixedAccess };
 
       localStorage.setItem("bi_user", JSON.stringify(fixedUser));
@@ -450,8 +323,7 @@ export default function Home() {
       const savedTab = localStorage.getItem("activeTab");
       setActive(savedTab || "home");
 
-      if ((savedTab || "home") === "cursos")
-        setCurrentCourse(getCourseIndexFromStats(fixedStats));
+      if ((savedTab || "home") === "cursos") setCurrentCourse(getCourseIndexFromStats(fixedStats));
     } catch {
       setError("Erro de conexão com o servidor");
     } finally {
@@ -459,7 +331,6 @@ export default function Home() {
     }
   };
 
-  /* ===== LOGOUT ===== */
   const handleLogout = () => {
     localStorage.removeItem("bi_user");
     localStorage.removeItem("currentCourseIndex");
@@ -472,9 +343,10 @@ export default function Home() {
 
     setLogin("");
     setSenha("");
+
+    setNavMode("root");
   };
 
-  /* ===== ALTERAR SENHA ===== */
   const handleChangePassword = async () => {
     setResetMsg("");
 
@@ -502,14 +374,12 @@ export default function Home() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setResetMsg(data.error || "Erro ao alterar senha");
         return;
       }
 
       setResetMsg("Senha alterada com sucesso ✅");
-
       setTimeout(() => {
         setShowReset(false);
         setOldPass("");
@@ -523,9 +393,6 @@ export default function Home() {
     }
   };
 
-  /* =========================================================
-     LOGIN PAGE
-  ========================================================= */
   if (!mounted) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-black">
@@ -534,16 +401,36 @@ export default function Home() {
     );
   }
 
+  // ====== SIDEBAR behavior
+  const isExpandedDesktop = pinned || hovering;
+  const collapsed = !isExpandedDesktop;
+
+  // ====== access
+  const access = normalizeStringArray(user?.access);
+
+  const allowedPages = PAGE_MENUS.filter((r) => access.includes(r.id));
+  const allowedReports = REPORTS.filter((r) => access.includes(r.id));
+  const allowedCadastros = CADASTROS_ITEMS.filter((r) => access.includes(r.id));
+
+  const activeReport = allowedReports.find((r) => r.id === active);
+  const iframeSrc = safeSrc(activeReport?.src);
+
+  const isNonIframePage =
+    active === "home" ||
+    active === "servicos" ||
+    active === "cursos" ||
+    active === "extracao" ||
+    active === "acionamentos_cadastro" ||
+    active === "acionamentos_base" ||
+    active === "perdas_base";
+
+  /* =========================================================
+     LOGIN/BOOTING
+  ========================================================= */
   if (booting) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-between overflow-hidden">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
           <source src="/video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/60" />
@@ -555,77 +442,47 @@ export default function Home() {
     );
   }
 
-  // Login mantém visual “brand”
   if (!user) {
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
           <source src="/video.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-black/50" />
 
-        <div
-          className="
-            relative z-10
-            w-[510px] h-[250px]
-            bg-[#1C4D28]
-            rounded-xl
-            shadow-2xl
-            border border-white/10
-            grid grid-cols-2
-            overflow-hidden
-            backdrop-blur-sm
-          "
-        >
-          <div className="absolute left-1/2 top-6 bottom-6 w-px bg-white/40" />
+        <div className="relative z-10 w-[540px] max-w-[92vw] bg-[#1C4D28] rounded-2xl shadow-2xl border border-white/10 grid grid-cols-2 overflow-hidden">
+          <div className="absolute left-1/2 top-6 bottom-6 w-px bg-white/25" />
 
-          <div className="p-6 flex flex-col justify-center items-center text-center text-white">
-            <Image src="/logo-aya.png" alt="AYA" width={150} height={150} />
-            <span className="mt-2 text-xs text-white/50">
-              Portal • AYA Energia
-            </span>
+          <div className="p-7 flex flex-col justify-center items-center text-center text-white">
+            <Image src="/logo-aya.png" alt="AYA" width={160} height={160} />
+            <span className="mt-2 text-xs text-white/55">Portal • AYA Energia</span>
           </div>
 
           <form
-            method="post"
-            action="/login"
-            className="p-6 flex flex-col justify-center gap-3"
+            className="p-7 flex flex-col justify-center gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               handleLogin();
             }}
           >
-            <h2 className="text-center text-white font-semibold text-sm mb-1">
-              Login
-            </h2>
+            <h2 className="text-center text-white font-semibold text-sm mb-1">Acesso</h2>
 
             <input
-              id="username"
-              name="username"
-              type="text"
               autoComplete="username"
               placeholder="Login"
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              className="w-full px-3 py-2 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57] bg-transparent"
+              className="w-full px-3 py-2 rounded-lg text-white text-sm border border-white/30 focus:outline-none focus:border-[#5CAE70] bg-white/5"
             />
 
             <div className="relative">
               <input
-                id="current-password"
                 type={showPassword ? "text" : "password"}
-                name="password"
                 autoComplete="current-password"
                 placeholder="Senha"
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
-                className="w-full px-3 py-2 pr-10 rounded text-white text-sm border border-white/40 focus:outline-none focus:border-[#2E7B57] bg-transparent"
+                className="w-full px-3 py-2 pr-10 rounded-lg text-white text-sm border border-white/30 focus:outline-none focus:border-[#5CAE70] bg-white/5"
               />
               <button
                 type="button"
@@ -636,16 +493,12 @@ export default function Home() {
               </button>
             </div>
 
-            {error && (
-              <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-2 py-1">
-                {error}
-              </div>
-            )}
+            {error && <div className="text-xs text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</div>}
 
             <button
               type="submit"
               disabled={loginLoading}
-              className="mt-1 w-full py-2 rounded bg-[#2E7B45] hover:bg-[#5CAE70] text-white text-sm font-semibold transition disabled:opacity-50"
+              className="mt-1 w-full py-2.5 rounded-lg bg-[#2E7B45] hover:bg-[#5CAE70] text-white text-sm font-semibold transition disabled:opacity-50"
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
@@ -658,126 +511,224 @@ export default function Home() {
   /* =========================================================
      PORTAL
   ========================================================= */
-  const access = normalizeStringArray(user.access);
-  const allowedReports = ALL_REPORTS.filter((r) => access.includes(r.id));
-  const report = allowedReports.find((r) => r.id === active);
-  const iframeSrc = safeSrc(report?.src);
-
   return (
-    <div
-      className={cx(
-        "flex flex-col h-screen w-full overflow-hidden",
-        "bg-white text-black"
-      )}
-    >
-      {/* ===== HEADER ===== */}
-      {!focus && (
-        <header
-          className="
-            h-16 w-full flex items-center justify-between px-4
-            bg-[#1C4D28]
-            border-b border-white/10 shadow-xl
-          "
-        >
+    <div className="h-screen w-full overflow-hidden bg-white text-black flex">
+      {/* Mobile overlay */}
+      {mobileOpen && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onMouseDown={() => setMobileOpen(false)} />}
+
+      {/* Sidebar */}
+      <aside
+        className={cx(
+          "relative z-50 h-full flex flex-col",
+          "bg-gradient-to-b from-[#183f24] to-[#0f2f1a] text-white border-r border-white/10",
+          "shadow-[10px_0_40px_-30px_rgba(0,0,0,0.55)]",
+          "transition-[width,transform] duration-200 ease-out",
+          isExpandedDesktop ? "w-[288px]" : "w-[54px]",
+          "md:static md:translate-x-0",
+          mobileOpen ? "fixed left-0 top-0 translate-x-0" : "fixed left-0 top-0 -translate-x-full md:translate-x-0"
+        )}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
+        {/* header */}
+        <div className="px-3 py-3 border-b border-white/10 flex items-center justify-between gap-2">
           <button
-            onClick={() => setActive("home")}
-            className="flex items-center gap-3"
+            type="button"
+            onClick={() => {
+              setActive("home");
+              setNavMode("root");
+            }}
+            className={cx("flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/5 transition", collapsed && "justify-center w-full")}
+            title={collapsed ? "Home" : undefined}
           >
-            <Image src="/logo-aya.png" alt="Logo" width={42} height={42} />
-            <div className="leading-tight text-left">
-              <p className="text-white font-semibold text-sm">Aya Energia</p>
-              <p className="text-white/40 text-xs">Portal</p>
+            {/* ✅ logo melhor na sidebar recolhida */}
+            <div className={cx("grid place-items-center", collapsed ? "w-full" : "")}>
+              <Image src="/logo-aya.png" alt="AYA" width={collapsed ? 28 : 44} height={collapsed ? 28 : 44} />
             </div>
+
+            {!collapsed && (
+              <div className="min-w-0">
+                <div className="text-sm font-semibold truncate">AYA Energia</div>
+                <div className="text-[11px] text-white/55">Portal</div>
+              </div>
+            )}
           </button>
 
-          <nav className="flex items-center gap-2 overflow-x-auto">
-            {allowedReports.map((r) => {
-              const isActive = active === r.id;
-
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    if (r.id === active) return;
-
-                    if (r.id === "cursos") {
-                      const courseIndex = getCourseIndexFromStats(stats);
-                      setCurrentCourse(courseIndex);
-                    }
-
-                    setActive(r.id);
-                  }}
-                  className={cx(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition",
-                    isActive
-                      ? "bg-white/15 text-white border-b-2 border-[#5CAE70]"
-                      : "text-white/70 hover:bg-white/10"
-                  )}
-                >
-                  <span>{r.title}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2">
+          {!collapsed && (
             <button
-              onClick={() => {
-                setResetMsg("");
-                setOldPass("");
-                setNewPass("");
-                setShowReset(true);
-              }}
-              className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
-              title="Redefinir Senha"
+              type="button"
+              className={cx(
+                "hidden md:inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10",
+                "text-white/70 hover:text-white hover:bg-white/5 transition"
+              )}
+              onClick={() => setPinned((v) => !v)}
+              title={pinned ? "Desafixar" : "Fixar"}
             >
-              <KeyRound size={18} />
+              {pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
             </button>
+          )}
 
-            <button
-              onClick={() => setShowSupport(true)}
-              className="p-2 rounded hover:bg-white/10 text-white/70 hover:text-white"
-              title="Suporte"
-            >
-              <HelpCircle size={18} />
-            </button>
+          <button
+            type="button"
+            className="md:hidden h-9 w-9 inline-flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/5"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Fechar menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded hover:bg-red-500/20 text-white/70 hover:text-red-400"
-              title="Sair"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </header>
-      )}
+        {/* nav */}
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 bg-transparent">
+          {/* ======= CHILD VIEW HEADER ======= */}
+          {navMode !== "root" && !collapsed && (
+            <div className="px-1">
+              <button
+                type="button"
+                onClick={() => setNavMode("root")}
+                className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-white/80 hover:text-white hover:bg-white/6 transition"
+              >
+                <ArrowLeft className="w-4 h-4" /> {/* ✅ */}
+                <span className="text-[14px] font-medium">Voltar</span>
+              </button>
 
-      {/* ===== CONTEÚDO ===== */}
-      <div className={cx("flex-1 relative", "bg-white")}>
+              <div className="mt-2 px-3 text-[11px] uppercase tracking-wider text-white/50">
+                {navMode === "reports" ? "Relatórios" : "Acionamentos"}
+              </div>
+            </div>
+          )}
+
+          {/* ======= ROOT VIEW (mostra tudo) ======= */}
+          {navMode === "root" && (
+            <div className="space-y-1">
+              <SideItem
+                title="Home"
+                icon={<LayoutDashboard className="w-4 h-4" />}
+                active={active === "home"}
+                onClick={() => setActive("home")}
+                collapsed={collapsed}
+              />
+
+              {allowedPages.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <SideItem
+                    key={p.id}
+                    title={p.title}
+                    icon={Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4" />}
+                    active={active === p.id}
+                    onClick={() => {
+                      if (p.id === "cursos") setCurrentCourse(getCourseIndexFromStats(stats));
+                      setActive(p.id);
+                    }}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
+
+              {/* ✅ “grupos” como itens (entra no modo filhos) */}
+              {allowedReports.length > 0 && (
+                <SideItem
+                  title="Relatórios"
+                  icon={<ClipboardList className="w-4 h-4" />}
+                  collapsed={collapsed}
+                  onClick={() => setNavMode("reports")}
+                  right={!collapsed ? "▸" : null}
+                />
+              )}
+
+              {allowedCadastros.length > 0 && (
+                <SideItem
+                  title="Acionamentos"
+                  icon={<Wrench className="w-4 h-4" />}
+                  collapsed={collapsed}
+                  onClick={() => setNavMode("cadastros")}
+                  right={!collapsed ? "▸" : null}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ======= CHILD VIEW: REPORTS ======= */}
+          {navMode === "reports" && (
+            <div className="space-y-1">
+              {allowedReports.map((r) => {
+                const Icon = r.icon || SolarPanel;
+                return (
+                  <SideItem
+                    key={r.id}
+                    title={r.title}
+                    icon={<Icon className="w-4 h-4" />}
+                    active={active === r.id}
+                    onClick={() => setActive(r.id)}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* ======= CHILD VIEW: CADASTROS ======= */}
+          {navMode === "cadastros" && (
+            <div className="space-y-1">
+              {allowedCadastros.map((it) => {
+                const Icon = it.icon;
+                return (
+                  <SideItem
+                    key={it.id}
+                    title={it.title}
+                    icon={Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4" />}
+                    active={active === it.id}
+                    onClick={() => setActive(it.id)}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* footer */}
+        <div className="px-2 py-3 border-t border-white/10 space-y-1">
+          <SideItem
+            title="Redefinir senha"
+            icon={<KeyRound className="w-4 h-4" />}
+            onClick={() => {
+              setResetMsg("");
+              setOldPass("");
+              setNewPass("");
+              setShowReset(true);
+            }}
+            collapsed={collapsed}
+          />
+          <SideItem title="Suporte" icon={<HelpCircle className="w-4 h-4" />} onClick={() => setShowSupport(true)} collapsed={collapsed} />
+          <SideItem title="Sair" icon={<LogOut className="w-4 h-4" />} onClick={handleLogout} collapsed={collapsed} />
+        </div>
+      </aside>
+
+      {/* Content */}
+      <main className="flex-1 min-w-0 h-full relative bg-white">
+        {/* Mobile top bar */}
+        <div className="md:hidden h-12 border-b border-black/10 flex items-center px-3 gap-2 bg-white">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="h-9 w-9 rounded-xl border border-black/10 grid place-items-center text-black/70 hover:bg-black/[0.03]"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="text-sm font-semibold text-black/80 truncate">Portal</div>
+        </div>
+
         {/* HOME */}
         {active === "home" && (
           <div className="absolute inset-0 overflow-hidden">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-            >
+            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
               <source src="/video.mp4" type="video/mp4" />
             </video>
-
             <div className="absolute inset-0 bg-black/35" />
-
             <div className="relative z-10 w-full h-full flex items-center justify-center px-6">
-              <Image
-                src="/logo-aya.png"
-                alt="AYA"
-                width={500}
-                height={500}
-                className="opacity-60"
-              />
+              <Image src="/logo-aya.png" alt="AYA" width={500} height={500} className="opacity-60" />
             </div>
           </div>
         )}
@@ -785,21 +736,16 @@ export default function Home() {
         {/* SERVIÇOS */}
         {active === "servicos" && (
           <div className="absolute inset-0 overflow-y-auto bg-white">
-            <ServicesPage />
-
+            <ServicesContent />
           </div>
         )}
 
         {/* CURSOS */}
         {active === "cursos" && (
-          <CoursesPage
-            user={user}
-            courses={COURSES}
-            stats={stats}
-            setStats={setStats}
-          />
+          <div className="absolute inset-0 overflow-y-auto bg-white">
+            <CoursesPage user={user} courses={COURSES} stats={stats} setStats={setStats} />
+          </div>
         )}
-
 
         {/* EXTRAÇÃO */}
         {active === "extracao" && (
@@ -808,49 +754,34 @@ export default function Home() {
           </div>
         )}
 
-        {/* ACIONAMENTOS (INPUT) */}
-        {active === "acionamentos_input" && (
+        {/* ACIONAMENTOS */}
+        {active === "acionamentos_cadastro" && (
           <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
-            <AcionamentosPage />
+            <AcionamentosCadastroPage />
+          </div>
+        )}
+        {active === "acionamentos_base" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <AcionamentosBasePage />
+          </div>
+        )}
+        {active === "perdas_base" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <PerdasBasePage />
           </div>
         )}
 
-        {active === "relatorios" && (
-          <div className="absolute inset-0 bg-[#f6f7f8] overflow-hidden">
-            <ReportsPage
-              access={access}
-              portfolioReports={PORTFOLIO_REPORTS}
-              internalReports={INTERNAL_REPORTS}
-            />
-          </div>
+        {/* RELATÓRIOS (iframe) */}
+        {iframeSrc && !isNonIframePage && (
+          <iframe key={active} src={formatUrl(iframeSrc)} className="absolute inset-0 w-full h-full border-none" allowFullScreen />
         )}
+      </main>
 
-        {/* RELATÓRIOS (se algum menu tiver src direto) */}
-        {iframeSrc &&
-          active !== "home" &&
-          active !== "cursos" &&
-          active !== "servicos" &&
-          active !== "extracao" &&
-          active !== "acionamentos_input" &&
-          active !== "relatorios" && (
-            <iframe
-              key={active}
-              src={formatUrl(iframeSrc)}
-              className="absolute inset-0 w-full h-full border-none"
-              allowFullScreen
-            />
-          )}
-      </div>
-
-      {/* ===== MODAL SUPORTE ===== */}
+      {/* MODAL SUPORTE */}
       {showSupport && (
         <Modal onClose={() => setShowSupport(false)}>
-          <h3 className="text-lg font-semibold mb-2 text-black">
-            Suporte Técnico
-          </h3>
-          <p className="text-sm mb-4 text-black/65">
-            Entre em contato com o desenvolvedor
-          </p>
+          <h3 className="text-lg font-semibold mb-2 text-black">Suporte Técnico</h3>
+          <p className="text-sm mb-4 text-black/65">Entre em contato com o desenvolvedor</p>
 
           <div className="space-y-3 text-sm">
             <a
@@ -859,14 +790,14 @@ export default function Home() {
               rel="noreferrer"
               className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
             >
-              <Linkedin size={18} /> LinkedIn
+              LinkedIn
             </a>
 
             <a
               href="mailto:diego.sanchez@ayaenergia.com.br"
               className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
             >
-              <Mail size={18} /> Email
+              Email
             </a>
 
             <a
@@ -875,18 +806,16 @@ export default function Home() {
               rel="noreferrer"
               className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
             >
-              <Phone size={18} /> WhatsApp
+              WhatsApp
             </a>
           </div>
         </Modal>
       )}
 
-      {/* ===== MODAL RESET SENHA ===== */}
+      {/* MODAL RESET */}
       {showReset && (
         <Modal onClose={() => setShowReset(false)}>
-          <h3 className="text-lg font-semibold mb-4 text-black">
-            Redefinir Senha
-          </h3>
+          <h3 className="text-lg font-semibold mb-4 text-black">Redefinir Senha</h3>
 
           <div className="relative mb-3">
             <input
@@ -894,7 +823,7 @@ export default function Home() {
               placeholder="Senha atual"
               value={oldPass}
               onChange={(e) => setOldPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded border focus:outline-none focus:ring-1 bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+              className="w-full p-3 pr-10 rounded-lg border focus:outline-none focus:ring-1 bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
             />
             <button
               type="button"
@@ -911,7 +840,7 @@ export default function Home() {
               placeholder="Nova senha"
               value={newPass}
               onChange={(e) => setNewPass(e.target.value)}
-              className="w-full p-3 pr-10 rounded border focus:outline-none focus:ring-1 bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
+              className="w-full p-3 pr-10 rounded-lg border focus:outline-none focus:ring-1 bg-white text-black border-black/20 focus:border-[#2E7B57] focus:ring-[#2E7B57]"
             />
             <button
               type="button"
@@ -925,10 +854,8 @@ export default function Home() {
           {resetMsg && (
             <div
               className={cx(
-                "text-sm mb-3 px-3 py-2 rounded border",
-                resetMsg.includes("sucesso")
-                  ? "bg-green-500/10 text-green-600 border-green-500/20"
-                  : "bg-red-500/10 text-red-600 border-red-500/20"
+                "text-sm mb-3 px-3 py-2 rounded-lg border",
+                resetMsg.includes("sucesso") ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-red-500/10 text-red-700 border-red-500/20"
               )}
             >
               {resetMsg}
@@ -938,38 +865,12 @@ export default function Home() {
           <button
             onClick={handleChangePassword}
             disabled={resetLoading || !oldPass || !newPass}
-            className="w-full bg-[#2E7B57] py-2 rounded text-white hover:bg-[#256947] disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-[#2E7B57] py-2.5 rounded-lg text-white hover:bg-[#256947] disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {resetLoading ? "Alterando..." : "Alterar Senha"}
           </button>
         </Modal>
       )}
-    </div>
-  );
-}
-
-/* =========================================================
-   MODAL BASE
-========================================================= */
-function Modal({
-  children,
-  onClose,
-}: {
-  children: ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="border rounded-2xl w-full max-w-md p-6 shadow-2xl relative bg-white border-black/10">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-black/50 hover:text-black"
-        >
-          <X size={18} />
-        </button>
-
-        {children}
-      </div>
     </div>
   );
 }
