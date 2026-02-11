@@ -595,7 +595,12 @@ function CopyIconBtn({ text, title }: { text: string; title: string }) {
 /* =========================================================
    PAGE
 ========================================================= */
-
+function mapsEmbed(url?: string) {
+    if (!url) return "";
+    // transforma maps.app.goo.gl ou google maps normal em embed
+    const q = encodeURIComponent(url);
+    return `https://www.google.com/maps?q=${q}&output=embed`;
+}
 export function UsinasContent() {
     return <UsinasBase />;
 }
@@ -901,205 +906,215 @@ function UsinasBase() {
 
                                                     {/* details */}
                                                     {opened && (
-  <div className="px-4 pb-4">
-    <div
-      className="border rounded-lg p-4"
-      style={{ borderColor: T.border, background: T.mutedBg }}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CNPJ */}
-        <div
-          className="border rounded-lg p-3"
-          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-        >
-          <div className="flex items-start gap-2">
-            <IdCard className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
-            <div className="min-w-0 w-full">
-              <div className={UI.label} style={{ color: T.text2 }}>
-                CNPJ
-              </div>
+                                                        <div className="px-4 pb-4">
+                                                            <div
+                                                                className="border rounded-lg p-4"
+                                                                style={{ borderColor: T.border, background: T.mutedBg }}
+                                                            >
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                    {/* CNPJ */}
+                                                                    <div
+                                                                        className="border rounded-lg p-3"
+                                                                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                                                                    >
+                                                                        <div className="flex items-start gap-2">
+                                                                            <IdCard className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
+                                                                            <div className="min-w-0 w-full">
+                                                                                <div className={UI.label} style={{ color: T.text2 }}>
+                                                                                    CNPJ
+                                                                                </div>
 
-              <div className="mt-1 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
-                  {u.cnpj || "—"}
-                </div>
-                <CopyIconBtn text={u.cnpj || ""} title="Copiar CNPJ" />
-              </div>
-            </div>
-          </div>
-        </div>
+                                                                                <div className="mt-1 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
+                                                                                        {u.cnpj || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.cnpj || ""} title="Copiar CNPJ" />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
 
-        {/* Endereço + Maps */}
-        <div
-          className="border rounded-lg p-3"
-          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-        >
-          <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
-            <div className="min-w-0 w-full">
-              <div className={UI.label} style={{ color: T.text2 }}>
-                Endereço
-              </div>
+                                                                    {/* Endereço + Maps */}
+                                                                    <div
+                                                                        className="border rounded-lg p-3"
+                                                                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                                                                    >
+                                                                        <div className="flex items-start gap-2">
+                                                                            <MapPin className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
+                                                                            <div className="min-w-0 w-full">
+                                                                                <div className={UI.label} style={{ color: T.text2 }}>
+                                                                                    Endereço
+                                                                                </div>
 
-              <div className="mt-1 flex items-start gap-2">
-                <div className="min-w-0 flex-1 text-sm leading-relaxed" style={{ color: T.text }}>
-                  {u.endereco || "—"}
-                </div>
+                                                                                <div className="mt-1 flex items-start gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm leading-relaxed" style={{ color: T.text }}>
+                                                                                        {u.endereco || "—"}
+                                                                                    </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <CopyIconBtn text={u.endereco || ""} title="Copiar endereço" />
+                                                                                    <div className="flex items-center gap-2 shrink-0">
+                                                                                        <CopyIconBtn
+                                                                                            text={[
+                                                                                                u.nome || "",
+                                                                                                u.endereco || "",
+                                                                                                u.mapsUrl || "",
+                                                                                            ]
+                                                                                                .filter(Boolean)
+                                                                                                .join("\n")}
+                                                                                            title="Copiar endereço"
+                                                                                        />
 
-                  {(() => {
-                    const link = u.mapsUrl || (u.endereco ? mapsHref(u.endereco) : "");
-                    if (!link) return null;
 
-                    return (
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="h-9 px-3 border rounded-md inline-flex items-center gap-2 text-sm font-semibold"
-                        style={{ borderColor: T.border, background: T.card, color: T.text }}
-                        title="Abrir no Maps"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Maps
-                      </a>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+                                                                                        {(() => {
+                                                                                            const link = u.mapsUrl || (u.endereco ? mapsHref(u.endereco) : "");
+                                                                                            if (!link) return null;
 
-        {/* AnyDesk + Senhas */}
-        <div
-          className="border rounded-lg p-3"
-          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-        >
-          <div className="flex items-start gap-2">
-            <Laptop className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
-            <div className="min-w-0 w-full">
-              <div className={UI.label} style={{ color: T.text2 }}>
-                AnyDesk / Acesso
-              </div>
+                                                                                            return (
+                                                                                                <a
+                                                                                                    href={link}
+                                                                                                    target="_blank"
+                                                                                                    rel="noreferrer"
+                                                                                                    className="h-9 px-3 border rounded-md inline-flex items-center gap-2 text-sm font-semibold"
+                                                                                                    style={{ borderColor: T.border, background: T.card, color: T.text }}
+                                                                                                    title="Abrir no Maps"
+                                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                                >
+                                                                                                    <ExternalLink className="w-4 h-4" />
+                                                                                                    Maps
+                                                                                                </a>
+                                                                                            );
+                                                                                        })()}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
 
-              {/* ID */}
-              <div className="mt-1 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
-                  ID: {u.id_anydesk || "—"}
-                </div>
-                <CopyIconBtn text={u.id_anydesk || ""} title="Copiar AnyDesk ID" />
-              </div>
+                                                                    {/* AnyDesk + Senhas */}
+                                                                    <div
+                                                                        className="border rounded-lg p-3"
+                                                                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                                                                    >
+                                                                        <div className="flex items-start gap-2">
+                                                                            <Laptop className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
+                                                                            <div className="min-w-0 w-full">
+                                                                                <div className={UI.label} style={{ color: T.text2 }}>
+                                                                                    AnyDesk / Acesso
+                                                                                </div>
 
-              {/* Senha AnyDesk */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
-                  Senha: {maskedValue(u.senha_anydesk, !showSecrets) || "—"}
-                </div>
-                <CopyIconBtn text={u.senha_anydesk || ""} title="Copiar Senha AnyDesk" />
-              </div>
+                                                                                {/* ID */}
+                                                                                <div className="mt-1 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
+                                                                                        ID: {u.id_anydesk || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.id_anydesk || ""} title="Copiar AnyDesk ID" />
+                                                                                </div>
 
-              {/* Senha do PC */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
-                  Senha do PC: {maskedValue(u.senha_computador, !showSecrets) || "—"}
-                </div>
-                <CopyIconBtn text={u.senha_computador || ""} title="Copiar senha computador" />
-              </div>
-            </div>
-          </div>
-        </div>
+                                                                                {/* Senha AnyDesk */}
+                                                                                <div className="mt-2 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
+                                                                                        Senha: {maskedValue(u.senha_anydesk, !showSecrets) || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.senha_anydesk || ""} title="Copiar Senha AnyDesk" />
+                                                                                </div>
 
-        {/* Internet */}
-        <div
-          className="border rounded-lg p-3"
-          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-        >
-          <div className="flex items-start gap-2">
-            <PlugZap className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
-            <div className="min-w-0 w-full">
-              <div className={UI.label} style={{ color: T.text2 }}>
-                Internet
-              </div>
+                                                                                {/* Senha do PC */}
+                                                                                <div className="mt-2 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
+                                                                                        Senha do PC: {maskedValue(u.senha_computador, !showSecrets) || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.senha_computador || ""} title="Copiar senha computador" />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
 
-              {/* Provedor */}
-              <div className="mt-1 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
-                  {u.provedorInternet || "—"}
-                </div>
-                <CopyIconBtn text={u.provedorInternet || ""} title="Copiar provedor" />
-              </div>
+                                                                    {/* Internet */}
+                                                                    <div
+                                                                        className="border rounded-lg p-3"
+                                                                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                                                                    >
+                                                                        <div className="flex items-start gap-2">
+                                                                            <PlugZap className="w-4 h-4 mt-0.5" style={{ color: T.text3 }} />
+                                                                            <div className="min-w-0 w-full">
+                                                                                <div className={UI.label} style={{ color: T.text2 }}>
+                                                                                    Internet
+                                                                                </div>
 
-              {/* CNPJ Internet */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
-                  CNPJ: {u.CNPJ_internet || "—"}
-                </div>
-                <CopyIconBtn text={u.CNPJ_internet || ""} title="Copiar CNPJ internet" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+                                                                                {/* Provedor */}
+                                                                                <div className="mt-1 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text }}>
+                                                                                        {u.provedorInternet || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.provedorInternet || ""} title="Copiar provedor" />
+                                                                                </div>
 
-      {/* UCs */}
-      <div className="mt-4">
-        <div className={UI.label} style={{ color: T.text2 }}>
-          Usinas / UCs (clique para copiar)
-        </div>
+                                                                                {/* CNPJ Internet */}
+                                                                                <div className="mt-2 flex items-center gap-2">
+                                                                                    <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
+                                                                                        CNPJ: {u.CNPJ_internet || "—"}
+                                                                                    </div>
+                                                                                    <CopyIconBtn text={u.CNPJ_internet || ""} title="Copiar CNPJ internet" />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
 
-        <div className="mt-2 grid gap-2">
-          {(u.usinas || []).map((x) => {
-            const subtitle = [x.uc ? `UC ${x.uc}` : "", x.concessionaria || ""]
-              .filter(Boolean)
-              .join(" • ");
+                                                                {/* UCs */}
+                                                                <div className="mt-4">
+                                                                    <div className={UI.label} style={{ color: T.text2 }}>
+                                                                        Usinas / UCs (clique para copiar)
+                                                                    </div>
 
-            const toCopy = joinClean([
-              `UFV: ${u.nome}`,
-              `Usina: ${x.codigo || "-"}`,
-              x.uc ? `UC: ${x.uc}` : "",
-              x.concessionaria ? `Concessionária: ${x.concessionaria}` : "",
-            ]);
+                                                                    <div className="mt-2 grid gap-2">
+                                                                        {(u.usinas || []).map((x) => {
+                                                                            const subtitle = [x.uc ? `UC ${x.uc}` : "", x.concessionaria || ""]
+                                                                                .filter(Boolean)
+                                                                                .join(" • ");
 
-            return (
-              <button
-                key={x.codigo + x.uc}
-                type="button"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  const ok = await copyToClipboard(toCopy);
-                  setMsg(ok ? { type: "ok", text: "Copiado ✅" } : { type: "err", text: "Falha ao copiar." });
-                  window.setTimeout(() => setMsg(null), 900);
-                }}
-                className="w-full text-left rounded-md border px-3 py-2 flex items-start justify-between gap-3 transition"
-                style={{ borderColor: "rgba(17,24,39,0.10)", background: T.card }}
-                title="Copiar"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate" style={{ color: T.text }}>
-                    {x.codigo}
-                  </div>
-                  <div className="text-xs truncate" style={{ color: T.text3 }}>
-                    {subtitle || "—"}
-                  </div>
-                </div>
+                                                                            const toCopy = joinClean([
+                                                                                `UFV: ${u.nome}`,
+                                                                                `Usina: ${x.codigo || "-"}`,
+                                                                                x.uc ? `UC: ${x.uc}` : "",
+                                                                                x.concessionaria ? `Concessionária: ${x.concessionaria}` : "",
+                                                                            ]);
 
-                <span className="h-8 w-8 grid place-items-center rounded-md border"
-                  style={{ borderColor: "rgba(17,24,39,0.10)", background: "transparent" }}
-                >
-                  <Copy className="w-4 h-4" style={{ color: T.text3 }} />
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+                                                                            return (
+                                                                                <button
+                                                                                    key={x.codigo + x.uc}
+                                                                                    type="button"
+                                                                                    onClick={async (e) => {
+                                                                                        e.stopPropagation();
+                                                                                        const ok = await copyToClipboard(toCopy);
+                                                                                        setMsg(ok ? { type: "ok", text: "Copiado ✅" } : { type: "err", text: "Falha ao copiar." });
+                                                                                        window.setTimeout(() => setMsg(null), 900);
+                                                                                    }}
+                                                                                    className="w-full text-left rounded-md border px-3 py-2 flex items-start justify-between gap-3 transition"
+                                                                                    style={{ borderColor: "rgba(17,24,39,0.10)", background: T.card }}
+                                                                                    title="Copiar"
+                                                                                >
+                                                                                    <div className="min-w-0">
+                                                                                        <div className="text-sm font-semibold truncate" style={{ color: T.text }}>
+                                                                                            {x.codigo}
+                                                                                        </div>
+                                                                                        <div className="text-xs truncate" style={{ color: T.text3 }}>
+                                                                                            {subtitle || "—"}
+                                                                                        </div>
+                                                                                    </div>
+
+                                                                                    <span className="h-8 w-8 grid place-items-center rounded-md border"
+                                                                                        style={{ borderColor: "rgba(17,24,39,0.10)", background: "transparent" }}
+                                                                                    >
+                                                                                        <Copy className="w-4 h-4" style={{ color: T.text3 }} />
+                                                                                    </span>
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
 
 
                                                 </div>
