@@ -86,8 +86,8 @@ function Btn({
     tone === "primary"
       ? "text-white"
       : tone === "danger"
-      ? "text-white"
-      : "bg-white";
+        ? "text-white"
+        : "bg-white";
 
   return (
     <button
@@ -96,15 +96,15 @@ function Btn({
       style={
         tone === "primary"
           ? {
-              background: T.accent,
-              borderColor: "rgba(17, 89, 35, 0.45)",
-            }
+            background: T.accent,
+            borderColor: "rgba(17, 89, 35, 0.45)",
+          }
           : tone === "danger"
-          ? {
+            ? {
               background: "#DC2626",
               borderColor: "rgba(220, 38, 38, 0.55)",
             }
-          : {
+            : {
               background: T.card,
               borderColor: T.border,
               color: T.text,
@@ -393,7 +393,7 @@ function AcionamentosCadastro() {
     "51": "Sobrecorrente temporizada",
     PROGRAMADO: "Desligamento programado",
     COMUNICAÇÃO: "Falha de comunicação / internet",
-    GERAL: "Falta de energia / eventos externos",
+    GERAL: "Falta de energia / eventos externos", "46": "Corrente de sequência negativa", "81": "Proteção de frequência", "50/51N": "Falta à terra", "32": "Potência direcional", "49": "Sobrecarga térmica", "78": "Falha de sincronismo", "52": "Disjuntor aberto/fechado", "78VS": "Proteção por variação brusca de ângulo de tensão", "86": "Bloqueio", "67": "Direcional de sobrecorrente de fase", "TRACKER": "Tracker sem comunicação", "SOBRE-TEMPERATURA": "Sobretemperatura do SKID", "SS_INCOMPLETA": "SS sem informações sobre a ocorrência", "47/59": "Sequência de fase inversa / Sobretensão", "V_AUXILIAR": "Defeito na alimentação auxiliar", "CONEXÃO_FÍSICA": "Defeito nos conectores (MC4) ou cabeamento CC", "TROCA_EQUIPAMENTO": "Troca de fonte, caixa de aterramento, módulo, etc.", "BATERIA": "TCU com bateria crítica", "FONTE_NCU": "Intermitência de fonte", "RELE": "Parâmetro do relé desatualizado", "RELIGAMENTO_PC": "PC de O&M desligado", "ISOLAMENTO": "Baixa resistência de isolamento", "ALARME_INVERSOR": "Atuação de alarme de inversor", "FAULT": "Problema do VTR ou do controlador de temperatura"
   };
 
   const toNumOrNull = (v: string) => {
@@ -630,7 +630,7 @@ function AcionamentosCadastro() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className={UI.headerTitle} style={{ color: T.text }}>
-                Cadastro de Acionamentos e Perdas 
+                Cadastro de Acionamentos e Perdas
               </div>
               <div className={cx(UI.headerSub, "mt-1")} style={{ color: T.text3 }}>
                 Defina <span style={{ color: T.text2, fontWeight: 600 }}>Data</span> e{" "}
