@@ -288,7 +288,7 @@ const UFVS: UfvItem[] = [
         nomeSocial: "CONSORCIO LIMOEIRO ENERGIAS RENOVAVEIS",
         endereco: "Fazenda Boa Vista das Caldas",
         concessionaria: "Equatorial - GO",
-        mapsUrl: "https://www.google.com/maps/place/UFV+-+Leopoldo+de+Bulhoes/@-19.9355945,-55.0322168,7z/data=!4m10!1m3!11m2!2shodH8m0-QSWmuCzhDTcGCg!3e3!3m5!1s0x935ec97ad9556251:0x14b31eadc40b4584!8m2!3d-16.5547547!4d-48.8469399!16s%2Fg%2F11vhq9dkgp?entry=ttu&g_ep=EgoyMDI2MDIwOC4wIKXMDSoASAFQAw%3D%3D",
+        mapsUrl: "https://maps.app.goo.gl/rNuRvnMGTPdYQy8A6",
         provedorInternet: "Tecnet",
         CNPJ_internet: "45.655.452/0001-40",
         id_anydesk: "1074487459",

@@ -31,11 +31,14 @@ import {
 
 import { CoursesPage } from "@/components/CoursesPage";
 import { ExtractionPage } from "@/components/ExtractionPage";
-import { AcionamentosCadastroPage } from "@/components/CadastroPage";
+import { AcionamentosCadastroPage } from "@/components/CadastroAcionamentosPage";
 import { AcionamentosBasePage } from "@/components/BaseAcionamentosPage";
 import { PerdasBasePage } from "@/components/BasePerdasPage";
 import ServicesContent from "@/components/ServicesPage";
-import{  UsinasContent }from "@/components/UsinasPage";
+import { UsinasContent } from "@/components/UsinasPage";
+import { ComprasCadastroPage } from "@/components/CadastroComprasPage";
+import { ComprasBasePage } from "@/components/BaseComprasPage";
+import { ComprasDashPage } from "@/components/DashComprasPage";
 
 /* =========================================================
    TYPES
@@ -64,10 +67,17 @@ const EXTRACTION_MENU: ReportItem = { id: "extracao", title: "Extração por UC"
 const COURSES_MENU: ReportItem = { id: "cursos", title: "Cursos", icon: GraduationCap };
 const USINAS_MENU: ReportItem = { id: "usinas", title: "Usinas", icon: SolarPanel };
 
-const CADASTROS_ITEMS: ReportItem[] = [
+const ACIONAMENTOS_ITEMS: ReportItem[] = [
   { id: "acionamentos_cadastro", title: "Cadastro", icon: PlusCircle },
   { id: "acionamentos_base", title: "Base Acionamentos", icon: ClipboardList },
   { id: "perdas_base", title: "Base Perdas", icon: TrendingDown },
+];
+
+const COMPRAS_ITEMS: ReportItem[] = [
+  { id: "compras_dash", title: "Visualização", icon: LayoutDashboard },
+  { id: "compras_cadastro", title: "Cadastro", icon: PlusCircle },
+  { id: "compras_base", title: "Aprovações", icon: ClipboardList },
+  
 ];
 
 // cursos
@@ -250,7 +260,7 @@ export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // ✅ modo hierárquico
-  const [navMode, setNavMode] = useState<"root" | "reports" | "cadastros">("root");
+  const [navMode, setNavMode] = useState<"root" | "reports" | "acionamentos" | "compras">("root");
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -412,7 +422,9 @@ export default function Home() {
 
   const allowedPages = PAGE_MENUS.filter((r) => access.includes(r.id));
   const allowedReports = REPORTS.filter((r) => access.includes(r.id));
-  const allowedCadastros = CADASTROS_ITEMS.filter((r) => access.includes(r.id));
+  const allowedAcionamentos = ACIONAMENTOS_ITEMS.filter((r) => access.includes(r.id));
+  const allowedCompras = COMPRAS_ITEMS.filter((r) => access.includes(r.id));
+
 
   const activeReport = allowedReports.find((r) => r.id === active);
   const iframeSrc = safeSrc(activeReport?.src);
@@ -425,6 +437,10 @@ export default function Home() {
     active === "acionamentos_cadastro" ||
     active === "acionamentos_base" ||
     active === "perdas_base";
+    active === "compras_cadastro" ||
+    active === "compras_base";
+    active === "compras_dash";
+
 
   /* =========================================================
      LOGIN/BOOTING
@@ -519,6 +535,7 @@ export default function Home() {
       {mobileOpen && <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onMouseDown={() => setMobileOpen(false)} />}
 
       {/* Sidebar */}
+      {/* Sidebar */}
       <aside
         className={cx(
           "relative z-50 h-full flex flex-col",
@@ -543,7 +560,6 @@ export default function Home() {
             className={cx("flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/5 transition", collapsed && "justify-center w-full")}
             title={collapsed ? "Home" : undefined}
           >
-            {/* ✅ logo melhor na sidebar recolhida */}
             <div className={cx("grid place-items-center", collapsed ? "w-full" : "")}>
               <Image src="/logo-aya.png" alt="AYA" width={collapsed ? 28 : 44} height={collapsed ? 28 : 44} />
             </div>
@@ -590,17 +606,17 @@ export default function Home() {
                 onClick={() => setNavMode("root")}
                 className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-white/80 hover:text-white hover:bg-white/6 transition"
               >
-                <ArrowLeft className="w-4 h-4" /> {/* ✅ */}
+                <ArrowLeft className="w-4 h-4" />
                 <span className="text-[14px] font-medium">Voltar</span>
               </button>
 
               <div className="mt-2 px-3 text-[11px] uppercase tracking-wider text-white/50">
-                {navMode === "reports" ? "Relatórios" : "Acionamentos"}
+                {navMode === "reports" ? "Relatórios" : navMode === "acionamentos" ? "Acionamentos" : "Compras"}
               </div>
             </div>
           )}
 
-          {/* ======= ROOT VIEW (mostra tudo) ======= */}
+          {/* ======= ROOT VIEW ======= */}
           {navMode === "root" && (
             <div className="space-y-1">
               <SideItem
@@ -611,9 +627,6 @@ export default function Home() {
                 collapsed={collapsed}
               />
 
-
-
-              {/* ✅ “grupos” como itens (entra no modo filhos) */}
               {allowedReports.length > 0 && (
                 <SideItem
                   title="Relatórios"
@@ -624,12 +637,22 @@ export default function Home() {
                 />
               )}
 
-              {allowedCadastros.length > 0 && (
+              {allowedCompras.length > 0 && (
+                <SideItem
+                  title="Compras"
+                  icon={<ShoppingCart className="w-4 h-4" />}
+                  collapsed={collapsed}
+                  onClick={() => setNavMode("compras")}
+                  right={!collapsed ? "▸" : null}
+                />
+              )}
+
+              {allowedAcionamentos.length > 0 && (
                 <SideItem
                   title="Acionamentos"
                   icon={<Wrench className="w-4 h-4" />}
                   collapsed={collapsed}
-                  onClick={() => setNavMode("cadastros")}
+                  onClick={() => setNavMode("acionamentos")}
                   right={!collapsed ? "▸" : null}
                 />
               )}
@@ -672,10 +695,29 @@ export default function Home() {
             </div>
           )}
 
-          {/* ======= CHILD VIEW: CADASTROS ======= */}
-          {navMode === "cadastros" && (
+          {/* ======= CHILD VIEW: ACIONAMENTOS ======= */}
+          {navMode === "acionamentos" && (
             <div className="space-y-1">
-              {allowedCadastros.map((it) => {
+              {allowedAcionamentos.map((it) => {
+                const Icon = it.icon;
+                return (
+                  <SideItem
+                    key={it.id}
+                    title={it.title}
+                    icon={Icon ? <Icon className="w-4 h-4" /> : <span className="w-4 h-4" />}
+                    active={active === it.id}
+                    onClick={() => setActive(it.id)}
+                    collapsed={collapsed}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* ======= CHILD VIEW: COMPRAS ======= */}
+          {navMode === "compras" && (
+            <div className="space-y-1">
+              {allowedCompras.map((it) => {
                 const Icon = it.icon;
                 return (
                   <SideItem
@@ -709,6 +751,7 @@ export default function Home() {
           <SideItem title="Sair" icon={<LogOut className="w-4 h-4" />} onClick={handleLogout} collapsed={collapsed} />
         </div>
       </aside>
+
 
       {/* Content */}
       <main className="flex-1 min-w-0 h-full relative bg-white">
@@ -779,6 +822,25 @@ export default function Home() {
         {active === "perdas_base" && (
           <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
             <PerdasBasePage />
+          </div>
+        )}
+        
+        {/* Compras */}
+        {active === "compras_cadastro" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <ComprasCadastroPage />
+          </div>
+        )}
+        
+        {active === "compras_base" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <ComprasBasePage />
+          </div>
+        )}
+
+        {active === "compras_dash" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <ComprasDashPage />
           </div>
         )}
 
