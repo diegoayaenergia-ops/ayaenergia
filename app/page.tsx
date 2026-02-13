@@ -31,14 +31,16 @@ import {
 
 import { CoursesPage } from "@/components/CoursesPage";
 import { ExtractionPage } from "@/components/ExtractionPage";
-import { AcionamentosCadastroPage } from "@/components/CadastroAcionamentosPage";
-import { AcionamentosBasePage } from "@/components/BaseAcionamentosPage";
-import { PerdasBasePage } from "@/components/BasePerdasPage";
+import { AcionamentosCadastroPage } from "@/components/Acionamentos/CadastroAcionamentosPage";
+import { AcionamentosBasePage } from "@/components/Acionamentos/BaseAcionamentosPage";
+import { AcionamentosDashPage } from "@/components/Acionamentos/DashAcionamentosPage";
+import { PerdasBasePage } from "@/components/Acionamentos/BasePerdasPage";
 import ServicesContent from "@/components/ServicesPage";
 import { UsinasContent } from "@/components/UsinasPage";
-import { ComprasCadastroPage } from "@/components/CadastroComprasPage";
-import { ComprasBasePage } from "@/components/BaseComprasPage";
-import { ComprasDashPage } from "@/components/DashComprasPage";
+import { ComprasCadastroPage } from "@/components/Compras/CadastroComprasPage";
+import { ComprasBasePage } from "@/components/Compras/BaseComprasPage";
+import { ComprasDashPage } from "@/components/Compras/DashComprasPage";
+import { SismetroDashPage } from "@/components/DashSismetroPage";
 
 /* =========================================================
    TYPES
@@ -66,8 +68,10 @@ const SERVICES_MENU: ReportItem = { id: "servicos", title: "Sobre Nós", icon: U
 const EXTRACTION_MENU: ReportItem = { id: "extracao", title: "Extração por UC", icon: FileSearch };
 const COURSES_MENU: ReportItem = { id: "cursos", title: "Cursos", icon: GraduationCap };
 const USINAS_MENU: ReportItem = { id: "usinas", title: "Usinas", icon: SolarPanel };
+const SS_MENU: ReportItem = { id: "ss", title: "Ordens de Serviço", icon: ClipboardList };
 
 const ACIONAMENTOS_ITEMS: ReportItem[] = [
+  { id: "acionamentos_dash", title: "Dashboard", icon: LayoutDashboard },
   { id: "acionamentos_cadastro", title: "Cadastro", icon: PlusCircle },
   { id: "acionamentos_base", title: "Base Acionamentos", icon: ClipboardList },
   { id: "perdas_base", title: "Base Perdas", icon: TrendingDown },
@@ -126,15 +130,15 @@ const REPORTS: ReportItem[] = [
     icon: Wrench,
     src: "https://app.powerbi.com/view?r=eyJrIjoiM2ZkZGQzZjgtNmQ1Yi00YjdhLWFmOGEtYTQ3MTBiMTk2YmU3IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
-  {
-    id: "compras",
-    title: "Controle de Compras",
-    icon: ShoppingCart,
-    src: "https://app.powerbi.com/view?r=eyJrIjoiMGQ1YmMyMjctMWYzMy00NTg4LWJkNWYtNGI4OWE0MWViZmUyIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
-  },
+  // {
+  //   id: "compras",
+  //   title: "Controle de Compras",
+  //   icon: ShoppingCart,
+  //   src: "https://app.powerbi.com/view?r=eyJrIjoiMGQ1YmMyMjctMWYzMy00NTg4LWJkNWYtNGI4OWE0MWViZmUyIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
+  // },
 ];
 
-const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU];
+const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU, SS_MENU];
 
 /* =========================================================
    HELPERS
@@ -436,6 +440,7 @@ export default function Home() {
     active === "extracao" ||
     active === "acionamentos_cadastro" ||
     active === "acionamentos_base" ||
+    active === "acionamentos_dash" ||
     active === "perdas_base";
     active === "compras_cadastro" ||
     active === "compras_base";
@@ -808,7 +813,19 @@ export default function Home() {
           </div>
         )}
 
+        {/* SISMETRO */}
+        {active === "ss" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <SismetroDashPage />
+          </div>
+        )}
+
         {/* ACIONAMENTOS */}
+        {active === "acionamentos_dash" && (
+          <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
+            <AcionamentosDashPage />
+          </div>
+        )}
         {active === "acionamentos_cadastro" && (
           <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
             <AcionamentosCadastroPage />
