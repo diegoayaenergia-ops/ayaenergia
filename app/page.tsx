@@ -138,7 +138,7 @@ const REPORTS: ReportItem[] = [
   // },
 ];
 
-const PAGE_MENUS: ReportItem[] = [SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU, SS_MENU];
+const PAGE_MENUS: ReportItem[] = [SS_MENU,SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU];
 
 /* =========================================================
    HELPERS

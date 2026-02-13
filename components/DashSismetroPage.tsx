@@ -1300,7 +1300,7 @@ export function SismetroDashPage() {
 
                 {kanbanFilter && (
                   <div className="mt-3 flex items-center justify-between gap-2">
-                    <Pill tone="accent">Filtro kanban: {kanbanFilter}</Pill>
+                    <Pill tone="accent">Filtro: {kanbanFilter}</Pill>
                     <button
                       type="button"
                       onClick={() => setKanbanFilter("")}
