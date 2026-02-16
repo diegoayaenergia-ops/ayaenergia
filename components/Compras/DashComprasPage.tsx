@@ -672,9 +672,6 @@ export function ComprasDashPage() {
                   placeholder="Buscar usina…"
                 />
               </div>
-              <div className={cx(UI.help, "mt-1")} style={{ color: T.text3 }}>
-                ↑ ↓ Enter • Esc
-              </div>
             </div>
 
             {/* Status AYA */}
@@ -719,20 +716,6 @@ export function ComprasDashPage() {
 
             {/* Buttons */}
             <div className="lg:col-span-3 flex items-end justify-end gap-2 py-6">
-              {/* <Btn
-                tone="secondary"
-                onClick={() => {
-                  if (!start || !end) return setMsg({ type: "err", text: "Selecione um período (início e fim)." });
-                  if (invalidRange) return setMsg({ type: "err", text: "A data inicial não pode ser maior que a data final." });
-                  setMsg({ type: "ok", text: "Filtros aplicados ✅" });
-                }}
-                disabled={loading}
-                className="w-full"
-              >
-                <Filter className="w-4 h-4" />
-                Aplicar
-              </Btn> */}
-
               <Btn
                 tone="secondary"
                 onClick={() => {
