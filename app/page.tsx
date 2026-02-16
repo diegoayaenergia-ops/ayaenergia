@@ -418,7 +418,7 @@ export default function Home() {
   }
 
   // ====== SIDEBAR behavior
-  const isExpandedDesktop = pinned || hovering;
+  const isExpandedDesktop = pinned ? true : hovering;
   const collapsed = !isExpandedDesktop;
 
   // ====== access
@@ -548,7 +548,7 @@ export default function Home() {
           "relative z-50 h-full flex flex-col",
           "bg-gradient-to-b from-[#183f24] to-[#0f2f1a] text-white border-r border-white/10",
           "shadow-[10px_0_40px_-30px_rgba(0,0,0,0.55)]",
-          "transition-all duration-3",
+          "transition-all duration-300",
           isExpandedDesktop ? "w-[260px] lg:w-[280px]" : "w-[60px]",
           "md:static md:translate-x-0 ",
           isExpandedDesktop && "shadow-2xl",
@@ -765,7 +765,7 @@ export default function Home() {
       <main
         className={cx(
           "flex-1 min-w-0 h-full relative bg-white transition-all duration-300",
-          !pinned && "md:ml-[60px]"
+          pinned ? "md:ml-[280px]" : "md:ml-[60px]"
         )}
       >
         {/* Mobile top bar */}
