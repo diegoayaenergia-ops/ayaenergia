@@ -81,7 +81,7 @@ const COMPRAS_ITEMS: ReportItem[] = [
   { id: "compras_dash", title: "Visualização", icon: LayoutDashboard },
   { id: "compras_cadastro", title: "Cadastro", icon: PlusCircle },
   { id: "compras_base", title: "Aprovações", icon: ClipboardList },
-  
+
 ];
 
 // cursos
@@ -138,7 +138,7 @@ const REPORTS: ReportItem[] = [
   // },
 ];
 
-const PAGE_MENUS: ReportItem[] = [SS_MENU,SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU];
+const PAGE_MENUS: ReportItem[] = [SS_MENU, SERVICES_MENU, USINAS_MENU, EXTRACTION_MENU, COURSES_MENU];
 
 /* =========================================================
    HELPERS
@@ -259,7 +259,7 @@ export default function Home() {
   const [resetLoading, setResetLoading] = useState(false);
 
   // ✅ padrão: sidebar FIXADA
-  const [pinned, setPinned] = useState(true);
+  const [pinned, setPinned] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -441,10 +441,12 @@ export default function Home() {
     active === "acionamentos_cadastro" ||
     active === "acionamentos_base" ||
     active === "acionamentos_dash" ||
-    active === "perdas_base";
+    active === "perdas_base" ||
     active === "compras_cadastro" ||
-    active === "compras_base";
-    active === "compras_dash";
+    active === "compras_base" ||
+    active === "compras_dash" ||
+    active === "usinas" ||
+    active === "ss";
 
 
   /* =========================================================
@@ -546,9 +548,10 @@ export default function Home() {
           "relative z-50 h-full flex flex-col",
           "bg-gradient-to-b from-[#183f24] to-[#0f2f1a] text-white border-r border-white/10",
           "shadow-[10px_0_40px_-30px_rgba(0,0,0,0.55)]",
-          "transition-[width,transform] duration-200 ease-out",
-          isExpandedDesktop ? "w-[288px]" : "w-[54px]",
-          "md:static md:translate-x-0",
+          "transition-all duration-3",
+          isExpandedDesktop ? "w-[260px] lg:w-[280px]" : "w-[60px]",
+          "md:static md:translate-x-0 ",
+          isExpandedDesktop && "shadow-2xl",
           mobileOpen ? "fixed left-0 top-0 translate-x-0" : "fixed left-0 top-0 -translate-x-full md:translate-x-0"
         )}
         onMouseEnter={() => setHovering(true)}
@@ -759,7 +762,12 @@ export default function Home() {
 
 
       {/* Content */}
-      <main className="flex-1 min-w-0 h-full relative bg-white">
+      <main
+        className={cx(
+          "flex-1 min-w-0 h-full relative bg-white transition-all duration-300",
+          !pinned && "md:ml-[60px]"
+        )}
+      >
         {/* Mobile top bar */}
         <div className="md:hidden h-12 border-b border-black/10 flex items-center px-3 gap-2 bg-white">
           <button
@@ -841,14 +849,14 @@ export default function Home() {
             <PerdasBasePage />
           </div>
         )}
-        
+
         {/* Compras */}
         {active === "compras_cadastro" && (
           <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
             <ComprasCadastroPage />
           </div>
         )}
-        
+
         {active === "compras_base" && (
           <div className="absolute inset-0 overflow-y-auto bg-[#f6f7f8]">
             <ComprasBasePage />
