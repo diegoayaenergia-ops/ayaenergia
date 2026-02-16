@@ -220,8 +220,8 @@ function SideItem({
 function Modal({ children, onClose }: { children: ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="border rounded-2xl w-full max-w-md p-6 shadow-2xl relative bg-white border-black/10">
-        <button onClick={onClose} className="absolute top-4 right-4 text-black/50 hover:text-black" type="button">
+      <div className="border rounded-2xl w-full max-w-md p-6 shadow-2xl relative bg-gradient-to-b from-[#183f24] to-[#0f2f1a] border-white/10">
+        <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-black" type="button">
           <X size={18} />
         </button>
         {children}
@@ -475,7 +475,7 @@ export default function Home() {
         </video>
         <div className="absolute inset-0 bg-black/50" />
 
-        <div className="relative z-10 w-[540px] max-w-[92vw] bg-[#1C4D28] rounded-2xl shadow-2xl border border-white/10 grid grid-cols-2 overflow-hidden">
+        <div className="relative z-10 w-[540px] max-w-[92vw] bg-gradient-to-b from-[#183f24] to-[#0f2f1a] rounded-2xl shadow-2xl border border-white/10 grid grid-cols-2 overflow-hidden">
           <div className="absolute left-1/2 top-6 bottom-6 w-px bg-white/25" />
 
           <div className="p-7 flex flex-col justify-center items-center text-center text-white">
@@ -765,6 +765,7 @@ export default function Home() {
       <main
         className={cx(
           "flex-1 min-w-0 h-full relative bg-white transition-all duration-300",
+
         )}
       >
         {/* Mobile top bar */}
@@ -877,22 +878,22 @@ export default function Home() {
       {/* MODAL SUPORTE */}
       {showSupport && (
         <Modal onClose={() => setShowSupport(false)}>
-          <h3 className="text-lg font-semibold mb-2 text-black">Suporte Técnico</h3>
-          <p className="text-sm mb-4 text-black/65">Entre em contato com o desenvolvedor</p>
+          <h3 className="text-lg font-semibold mb-2 text-white">Suporte Técnico</h3>
+          <p className="text-sm mb-4 text-white/80">Entre em contato com o desenvolvedor</p>
 
           <div className="space-y-3 text-sm">
             <a
               href="https://www.linkedin.com/in/diegodamaro/"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-white/[0.03] hover:bg-white/[0.06] text-white border-white/10"
             >
               LinkedIn
             </a>
 
             <a
               href="mailto:diego.sanchez@ayaenergia.com.br"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-white/[0.03] hover:bg-white/[0.06] text-white border-white/10"
             >
               Email
             </a>
@@ -901,7 +902,7 @@ export default function Home() {
               href="https://wa.me/5511961995900"
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-black/[0.03] hover:bg-black/[0.06] text-black border-black/10"
+              className="flex items-center gap-3 px-4 py-2 rounded-lg border transition bg-white/[0.03] hover:bg-white/[0.06] text-white border-white/10"
             >
               WhatsApp
             </a>
@@ -912,7 +913,7 @@ export default function Home() {
       {/* MODAL RESET */}
       {showReset && (
         <Modal onClose={() => setShowReset(false)}>
-          <h3 className="text-lg font-semibold mb-4 text-black">Redefinir Senha</h3>
+          <h3 className="text-lg font-semibold mb-4 text-white">Redefinir Senha</h3>
 
           <div className="relative mb-3">
             <input
@@ -925,7 +926,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setShowOldPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 hover:text-black"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
             >
               {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -962,7 +963,7 @@ export default function Home() {
           <button
             onClick={handleChangePassword}
             disabled={resetLoading || !oldPass || !newPass}
-            className="w-full bg-[#2E7B57] py-2.5 rounded-lg text-white hover:bg-[#256947] disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full bg-[#2E7B57] py-2.5 rounded-lg text-white hover:bg-[#256947]  disabled:cursor-not-allowed transition"
           >
             {resetLoading ? "Alterando..." : "Alterar Senha"}
           </button>
