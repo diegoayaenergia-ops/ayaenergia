@@ -93,17 +93,17 @@ function Btn({
   const style =
     tone === "primary"
       ? {
-          background: T.accent,
-          borderColor: "rgba(17, 89, 35, 0.45)",
-          color: "#fff",
-        }
+        background: T.accent,
+        borderColor: "rgba(17, 89, 35, 0.45)",
+        color: "#fff",
+      }
       : tone === "danger"
-      ? {
+        ? {
           background: "rgba(239, 68, 68, 0.10)",
           borderColor: "rgba(239, 68, 68, 0.35)",
           color: T.errTx,
         }
-      : {
+        : {
           background: T.card,
           borderColor: T.border,
           color: T.text,
@@ -427,6 +427,8 @@ type Row = {
 
 // desconsiderar no dashboard
 const TIPO_BAN = new Set(["INCONFORMIDADE"]);
+// desconsiderar status no dashboard
+const STATUS_BAN = new Set(["EXCLUÍDA", "CANCELADA"]);
 
 // Kanban fixo (só esses 4)
 const KANBAN_COLS = [
@@ -701,24 +703,31 @@ export function SismetroDashPage() {
         .filter((r) => Boolean(r.idSs));
 
       // ✅ remove INCONFORMIDADE do dashboard
-      const rowsSemInconformidade = rows.filter(
-        (r) => !TIPO_BAN.has(clampUpper(String(r.tipo || "")))
-      );
+      // ✅ remove tipos e status indesejados do dashboard
+      const rowsFiltradas = rows.filter((r) => {
+        const tipoNorm = clampUpper(String(r.tipo || ""));
+        const statusNorm = clampUpper(String(r.status || ""));
+
+        return (
+          !TIPO_BAN.has(tipoNorm) &&
+          !STATUS_BAN.has(statusNorm)
+        );
+      });
 
       // ✅ ordena desc por data
-      rowsSemInconformidade.sort((a, b) => {
+      rowsFiltradas.sort((a, b) => {
         const da = a.data || "0000-00-00";
         const db = b.data || "0000-00-00";
         if (da === db) return (b.idSs || 0) - (a.idSs || 0);
         return db.localeCompare(da);
       });
 
-      setAllRows(rowsSemInconformidade);
+      setAllRows(rowsFiltradas);
 
       // options
       const cli = Array.from(
         new Set(
-          rowsSemInconformidade
+          rowsFiltradas
             .map((r) => clampUpper(r.cliente || ""))
             .filter(Boolean)
         )
@@ -726,7 +735,7 @@ export function SismetroDashPage() {
 
       const us = Array.from(
         new Set(
-          rowsSemInconformidade
+          rowsFiltradas
             .map((r) => clampUpper(r.usina || ""))
             .filter(Boolean)
         )
@@ -734,7 +743,7 @@ export function SismetroDashPage() {
 
       const evo = Array.from(
         new Set(
-          rowsSemInconformidade
+          rowsFiltradas
             .map((r) => clampUpper(r.evolucao || ""))
             .filter(Boolean)
         )
@@ -742,7 +751,7 @@ export function SismetroDashPage() {
 
       const techs = Array.from(
         new Set(
-          rowsSemInconformidade
+          rowsFiltradas
             .map((r) => clampUpper(r.tecnico || ""))
             .filter(Boolean)
         )
@@ -785,9 +794,8 @@ export function SismetroDashPage() {
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       r = r.filter((x) => {
-        const blob = `${x.idSs} ${x.cliente || ""} ${x.usina || ""} ${x.tipo || ""} ${x.evolucao || ""} ${x.status || ""} ${
-          x.descricao || ""
-        } ${x.tecnico || ""} ${x.tecnicoMatricula || ""}`.toLowerCase();
+        const blob = `${x.idSs} ${x.cliente || ""} ${x.usina || ""} ${x.tipo || ""} ${x.evolucao || ""} ${x.status || ""} ${x.descricao || ""
+          } ${x.tecnico || ""} ${x.tecnicoMatricula || ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
