@@ -765,7 +765,6 @@ export default function Home() {
       <main
         className={cx(
           "flex-1 min-w-0 h-full relative bg-white transition-all duration-300",
-          pinned ? "md:ml-[280px]" : "md:ml-[60px]"
         )}
       >
         {/* Mobile top bar */}
