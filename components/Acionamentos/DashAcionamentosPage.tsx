@@ -46,8 +46,8 @@ const T = {
 const UI = {
   page: "w-full min-w-0",
   container: "mx-auto w-full max-w-[1480px] px-4 sm:px-6 py-6",
-  header: "border bg-white",
-  section: "border bg-white",
+  header: "border bg-white min-w-0",
+  section: "border bg-white min-w-0",
 
   headerTitle: "text-base sm:text-lg font-semibold tracking-tight",
   sectionTitle: "text-sm font-semibold",
@@ -856,10 +856,10 @@ export function AcionamentosDashPage() {
   }, []);
 
   useEffect(() => {
-    setPeriodPreset("thisMonth");
     applyPreset("thisMonth");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const invalidRange = useMemo(() => {
     if (!start || !end) return false;
     const s = new Date(`${start}T00:00:00`);
@@ -1562,10 +1562,11 @@ export function AcionamentosDashPage() {
                   className="border rounded-lg overflow-hidden"
                   style={{ borderColor: T.border }}
                 >
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[1750px]">
+                  <div className="overflow-x-auto w-full min-w-0">
+                    <div className="min-w-[1100px]">
+                      {/* header */}
                       <div
-                        className="grid grid-cols-12 gap-0 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+                        className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
                         style={{
                           borderColor: T.border,
                           background: "rgba(251,252,253,0.92)",
@@ -1574,89 +1575,92 @@ export function AcionamentosDashPage() {
                         }}
                       >
                         <div className="col-span-1">Data</div>
-                        <div className="col-span-2">Usina</div>
+                        <div className="col-span-1">Usina</div>
                         <div className="col-span-2">Motivo</div>
-                        <div className="col-span-2">Problema Identificado</div>
+                        <div className="col-span-3">Problema Identificado</div>
                         <div className="col-span-2">Solução Imediata</div>
                         <div className="col-span-2">Solução Definitiva</div>
                         <div className="col-span-1">Ordem de Serviço</div>
                       </div>
 
+                      {/* rows */}
                       {tableRows.map((r) => (
                         <div
                           key={r.id}
-                          className="grid grid-cols-12 gap-0 px-3 py-2 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition"
+                          className="grid grid-cols-12 gap-3 px-3 py-3 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition items-start"
                           style={{
                             borderColor: "rgba(17,24,39,0.08)",
                             background: T.card,
                           }}
                         >
-                          <div
-                            className={cx("text-[11px] col-span-1", UI.mono)}
-                            style={{ color: T.text2 }}
-                          >
+                          {/* Data */}
+                          <div className={cx("text-[11px] col-span-1", UI.mono)} style={{ color: T.text2 }}>
                             {brDate(r.data)}
                           </div>
 
-                          <div className="col-span-2">
+                          {/* Usina */}
+                          <div className="col-span-1 min-w-0">
                             <button
                               type="button"
-                              className="truncate text-left"
+                              className="text-left w-full underline-offset-2 hover:underline"
                               style={{ color: T.text2 }}
                               onClick={() => toggleUsina(safeUpper(r.usina, ""))}
                               title="Clique para filtrar por esta usina"
                             >
-                              {safeText(r.usina).toLowerCase()}
+                              <span className="text-[11px] whitespace-normal break-words">
+                                {safeText(r.usina)}
+                              </span>
                             </button>
                           </div>
 
-                          <div className="col-span-2">
+                          {/* Motivo */}
+                          <div className="col-span-2 min-w-0">
                             <span
-                              className="text-[11px] line-clamp-2"
+                              className="text-[11px] whitespace-pre-wrap break-words"
                               style={{ color: T.text2 }}
                             >
-                              {safeText(r.motivoMobilizacao)}
+                              {safeText(r.motivoMobilizacao, "—")}
                             </span>
                           </div>
 
-                          <div className="col-span-2">
+                          {/* Problema */}
+                          <div className="col-span-3 min-w-0">
                             <span
-                              className="text-[11px] line-clamp-2"
+                              className="text-[11px] whitespace-pre-wrap break-words"
                               style={{ color: T.text2 }}
                             >
-                              {safeText(r.problemaIdentificado)}
+                              {safeText(r.problemaIdentificado, "—")}
                             </span>
                           </div>
 
-                          <div className="col-span-2">
+                          {/* Solução imediata */}
+                          <div className="col-span-2 min-w-0">
                             <span
-                              className="text-[11px] line-clamp-2"
+                              className="text-[11px] whitespace-pre-wrap break-words"
                               style={{ color: T.text2 }}
                             >
-                              {safeText(r.solucaoImediata)}
+                              {safeText(r.solucaoImediata, "—")}
                             </span>
                           </div>
 
-                          <div className="col-span-2">
+                          {/* Solução definitiva */}
+                          <div className="col-span-2 min-w-0">
                             <span
-                              className="text-[11px] line-clamp-2"
+                              className="text-[11px] whitespace-pre-wrap break-words"
                               style={{ color: T.text2 }}
                             >
-                              {safeText(r.solucaoDefinitiva)}
+                              {safeText(r.solucaoDefinitiva, "—")}
                             </span>
                           </div>
 
-                          <div className="col-span-1">
-                            {typeof r.ss === "number" &&
-                              Number.isFinite(r.ss) ? (
+                          {/* OS */}
+                          <div className="col-span-1 min-w-0">
+                            {typeof r.ss === "number" && Number.isFinite(r.ss) ? (
                               <a
                                 href={ssLink(r.ss)}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={cx(
-                                  "text-[11px] inline-flex text-left gap-2 underline",
-                                  UI.mono
-                                )}
+                                className={cx("text-[11px] inline-flex gap-2 underline", UI.mono)}
                                 style={{ color: T.accent }}
                                 title="Abrir SS no Sismetro"
                               >
@@ -1672,6 +1676,7 @@ export function AcionamentosDashPage() {
                       ))}
                     </div>
                   </div>
+
                 </div>
               )}
 
