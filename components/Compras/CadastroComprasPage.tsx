@@ -535,9 +535,6 @@ function ComprasCadastro() {
                       placeholder="Buscar usina…"
                     />
                   </div>
-                  <div className={cx(UI.help, "mt-1")} style={{ color: T.text3 }}>
-                    ↑ ↓ Enter • Esc para fechar
-                  </div>
                 </div>
 
                 <div className="p-3 border rounded-md" style={{ borderColor: T.border, background: T.mutedBg }}>

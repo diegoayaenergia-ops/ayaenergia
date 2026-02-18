@@ -1012,7 +1012,7 @@ function UsinasBase() {
                                                                                 {/* Senha AnyDesk */}
                                                                                 <div className="mt-2 flex items-center gap-2">
                                                                                     <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
-                                                                                        Senha: {maskedValue(u.senha_anydesk, !showSecrets) || "—"}
+                                                                                        Senha: {u.senha_anydesk|| "—"}
                                                                                     </div>
                                                                                     <CopyIconBtn text={u.senha_anydesk || ""} title="Copiar Senha AnyDesk" />
                                                                                 </div>
@@ -1020,7 +1020,7 @@ function UsinasBase() {
                                                                                 {/* Senha do PC */}
                                                                                 <div className="mt-2 flex items-center gap-2">
                                                                                     <div className="min-w-0 flex-1 text-sm truncate" style={{ color: T.text2 }}>
-                                                                                        Senha do PC: {maskedValue(u.senha_computador, !showSecrets) || "—"}
+                                                                                        Senha do PC: {u.senha_computador|| "—"}
                                                                                     </div>
                                                                                     <CopyIconBtn text={u.senha_computador || ""} title="Copiar senha computador" />
                                                                                 </div>

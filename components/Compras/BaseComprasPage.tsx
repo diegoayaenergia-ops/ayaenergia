@@ -722,9 +722,6 @@ function ComprasBase() {
                       placeholder="Buscar usina…"
                     />
                   </div>
-                  <div className={cx(UI.help, "mt-1")} style={{ color: T.text3 }}>
-                    ↑ ↓ Enter • Esc
-                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -865,7 +862,7 @@ function ComprasBase() {
                               <div className="border rounded-lg p-4" style={{ borderColor: T.border, background: T.mutedBg }}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm" style={{ color: T.text2 }}>
                                   <div>BDI: {r.bdi ?? "-"}</div>
-                                  <div>Nota Fiscal: {r.nota_fiscal ? <a href={r.nota_fiscal} target="_blank" rel="noreferrer" className="underline" style={{ color: T.accent }}>Abrir</a> : "-"}</div>
+                                  <div>Comprovante de Pagemento: {r.nota_fiscal ? <a href={r.nota_fiscal} target="_blank" rel="noreferrer" className="underline" style={{ color: T.accent }}>Abrir</a> : "-"}</div>
                                 </div>
                                 <div className="mt-3 text-[11px]" style={{ color: T.text3 }}>
                                   Dica: use o lápis para editar somente os status.
@@ -888,7 +885,7 @@ function ComprasBase() {
       {editOpen && editing && (
         <Modal
           title="Editar status"
-          subtitle="Você pode alterar somente Status e inserir o link da Nota Fiscal."
+          subtitle="Caso o pagamento seja efetuado, inserir o link do comprovante de pagamento."
           onClose={() => {
             setEditOpen(false);
             setEditing(null);
@@ -936,7 +933,7 @@ function ComprasBase() {
 
             <div>
               <label className={UI.label} style={{ color: T.text2 }}>
-                Link da Nota Fiscal (opcional)
+                Link do Comprovante de Pagamento
               </label>
               <input
                 value={editing.nota_fiscal ?? ""}
@@ -949,9 +946,7 @@ function ComprasBase() {
                 style={{ borderColor: T.border }}
                 placeholder="https://..."
               />
-              <div className={cx(UI.help, "mt-1")} style={{ color: T.text3 }}>
-                Aceita apenas link http(s). Se deixar vazio, vira NULL.
-              </div>
+
             </div>
 
             {editing.nota_fiscal && (
@@ -966,7 +961,7 @@ function ComprasBase() {
                   className="text-sm underline"
                   style={{ color: T.accent }}
                 >
-                  Abrir Nota Fiscal
+                  Abrir Comprovante
                 </a>
               </div>
             )}
