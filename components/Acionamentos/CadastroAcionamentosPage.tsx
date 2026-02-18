@@ -367,6 +367,7 @@ function AcionamentosCadastro() {
   const CLIENTES = ["INEER", "KAMAI", "ÉLIS"] as const;
 
   const EQUIPAMENTOS = [
+    "NÃO IDENTIFICADO",
     "CMP",
     "SKID",
     "INVERSOR",
@@ -377,15 +378,19 @@ function AcionamentosCadastro() {
     "PC DE O&M",
     "CAMERA",
     "LOGGER",
+    "BARRAMENTO",
     "RELÉ",
     "DISJUNTOR",
     "MODEM",
     "SCADA",
+    "FONTE DE COMUNICAÇÃO",
+    "RSU",
     "INFRAESTRUTURA",
-    "N/A",
+    
   ] as const;
 
   const ALARME_TO_MOTIVO: Record<string, string> = {
+    "SEM ALARME": "Sem alarme registrado",
     "27": "Subtensão",
     "59": "Sobretensão",
     "74": "Temperatura",
@@ -393,7 +398,7 @@ function AcionamentosCadastro() {
     "51": "Sobrecorrente temporizada",
     PROGRAMADO: "Desligamento programado",
     COMUNICAÇÃO: "Falha de comunicação / internet",
-    GERAL: "Falta de energia / eventos externos", "46": "Corrente de sequência negativa", "81": "Proteção de frequência", "50/51N": "Falta à terra", "32": "Potência direcional", "49": "Sobrecarga térmica", "78": "Falha de sincronismo", "52": "Disjuntor aberto/fechado", "78VS": "Proteção por variação brusca de ângulo de tensão", "86": "Bloqueio", "67": "Direcional de sobrecorrente de fase", "TRACKER": "Tracker sem comunicação", "SOBRETEMPERATURA": "Sobretemperatura do SKID", "SS_INCOMPLETA": "SS sem informações sobre a ocorrência", "47/59": "Sequência de fase inversa / Sobretensão", "V AUXILIAR": "Defeito na alimentação auxiliar", "CONEXÃO_FÍSICA": "Defeito nos conectores (MC4) ou cabeamento CC", "TROCA_EQUIPAMENTO": "Troca de fonte, caixa de aterramento, módulo, etc.", "BATERIA": "TCU com bateria crítica", "FONTE NCU": "Intermitência de fonte", "RELE": "Parâmetro do relé desatualizado", "RELIGAMENTO PC": "PC de O&M desligado", "ISOLAMENTO": "Baixa resistência de isolamento", "ALARME INVERSOR": "Atuação de alarme de inversor", "FAULT": "Problema do VTR ou do controlador de temperatura"
+    GERAL: "Falta de energia / eventos externos", "46": "Corrente de sequência negativa", "81": "Proteção de frequência", "50/51N": "Falta à terra", "32": "Potência direcional", "49": "Sobrecarga térmica", "78": "Falha de sincronismo", "52": "Disjuntor aberto/fechado", "78VS": "Proteção por variação brusca de ângulo de tensão", "86": "Bloqueio", "67": "Direcional de sobrecorrente de fase", "TRACKER": "Tracker sem comunicação", "SOBRETEMPERATURA": "Sobretemperatura do SKID", "SS INCOMPLETA": "SS sem informações sobre a ocorrência", "47/59": "Sequência de fase inversa / Sobretensão", "V AUXILIAR": "Defeito na alimentação auxiliar", "CONEXÃO FÍSICA": "Defeito nos conectores (MC4) ou cabeamento CC", "TROCA EQUIPAMENTO": "Troca de fonte, caixa de aterramento, módulo, etc.", "BATERIA": "TCU com bateria crítica", "FONTE NCU": "Intermitência de fonte", "RELE": "Parâmetro do relé desatualizado", "RELIGAMENTO PC": "PC de O&M desligado", "ISOLAMENTO": "Baixa resistência de isolamento", "ALARME INVERSOR": "Atuação de alarme de inversor", "FAULT": "Problema do VTR ou do controlador de temperatura"
   };
 
   const toNumOrNull = (v: string) => {
