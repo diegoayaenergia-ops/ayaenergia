@@ -972,7 +972,7 @@ function AcionamentosBase() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>
                                     <div className="text-[11px] font-medium" style={{ color: T.text3 }}>
-                                      Solução imediata
+                                      Atividade Realizada
                                     </div>
                                     <div className="mt-1 text-sm whitespace-pre-wrap" style={{ color: T.text2 }}>
                                       {r.solucao_imediata ?? "—"}

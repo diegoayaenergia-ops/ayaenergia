@@ -227,6 +227,37 @@ function ssLink(idSs: number) {
     String(idSs || "")
   )}`;
 }
+// Converte HTML leve do Sismetro em texto seguro
+const decodeHtml = (() => {
+  if (typeof document === "undefined") return (s: string) => s; // fallback
+  const el = document.createElement("textarea");
+  return (s: string) => {
+    el.innerHTML = s;
+    return el.value;
+  };
+})();
+
+function cleanSismetroHtml(raw?: string | null) {
+  const s0 = String(raw ?? "").trim();
+  if (!s0) return null;
+
+  // 1) <br> vira quebra de linha
+  const withBreaks = s0.replace(/<br\s*\/?>/gi, "\n");
+
+  // 2) remove outras tags
+  const noTags = withBreaks.replace(/<\/?[^>]+>/g, "");
+
+  // 3) decodifica entidades (&nbsp;, &amp;, etc.)
+  const decoded = decodeHtml(noTags);
+
+  // 4) normaliza espaços (inclui NBSP real \u00A0)
+  return decoded
+    .replace(/\u00A0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
+}
+
 function safeText(s?: string | null, fallback = "—") {
   const v = String(s || "").trim();
   return v ? v : fallback;
@@ -235,6 +266,19 @@ function safeUpper(s?: string | null, fallback = "—") {
   const v = String(s || "").trim();
   return v ? clampUpper(v) : fallback;
 }
+
+function pickConclusao(it: SsItem): { txt: string | null } {
+  const txtRaw =
+    (it as any).conclusao ??
+    (it as any).conclusaoSs ??
+    (it as any).descricaoConclusao ??
+    null;
+
+  const txt = txtRaw ? String(txtRaw).trim() : null;
+
+  return { txt: txt || null };
+}
+
 
 /* =========================================================
    COLORS
@@ -420,7 +464,7 @@ type Row = {
   status: string | null;
   descricao: string | null;
   url?: string | null;
-
+  conclusaoTexto?: string | null;
   tecnico: string | null;
   tecnicoMatricula?: string | null;
 };
@@ -681,6 +725,7 @@ export function SismetroDashPage() {
         .map((it) => {
           const iso = toISODateFromSismetro(it.dataAbertura);
           const tech = normalizeTecnico(it);
+          const concl = pickConclusao(it);
 
           return {
             id: String(it.idSs),
@@ -695,7 +740,7 @@ export function SismetroDashPage() {
             status: it.status ?? null,
             descricao: it.descricaoSs ?? null,
             url: isHttpUrl(it.url) ? String(it.url) : null,
-
+            conclusaoTexto: cleanSismetroHtml(concl.txt),
             tecnico: tech.tecnico,
             tecnicoMatricula: tech.matricula,
           };
@@ -1494,9 +1539,10 @@ export function SismetroDashPage() {
               {tableRows.length > 0 && (
                 <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
                   <div className="overflow-x-auto">
-                    <div className="min-w-[980px]">
+                    <div className="min-w-[1120px]">
+                      {/* HEADER */}
                       <div
-                        className="grid grid-cols-12 gap-0 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+                        className="grid grid-cols-20 gap-0 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
                         style={{
                           borderColor: T.border,
                           background: "rgba(251,252,253,0.92)",
@@ -1505,97 +1551,131 @@ export function SismetroDashPage() {
                         }}
                       >
                         <div className="col-span-2">SS</div>
-                        <div className="col-span-2">Data/Hora</div>
-                        <div className="col-span-4">Usina + Descrição</div>
-                        <div className="col-span-2">Técnico</div>
-                        <div className="col-span-2 text-right">Abrir</div>
+                        <div className="col-span-3">Data/Hora</div>
+                        <div className="col-span-6">Usina + Descrição</div>
+                        <div className="col-span-5">Conclusão</div>
+                        <div className="col-span-3">Técnico + Evolução</div>
+                        <div className="col-span-1">Abrir</div>
+                        {/* <div className="col-span-1 text-right">Abrir</div> */}
                       </div>
 
-                      {tableRows.map((r) => (
-                        <div
-                          key={r.id}
-                          className="grid grid-cols-12 gap-0 px-3 py-2 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition"
-                          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-                        >
-                          <div className="col-span-2">
-                            <a
-                              href={ssLink(r.idSs)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={cx("font-extrabold", UI.mono)}
-                              style={{ color: T.accent }}
-                              title="Abrir SS no Sismetro"
-                            >
-                              #{r.idSs}
-                            </a>
+                      {/* ROWS */}
+                      {tableRows.map((r) => {
+                        const tecnicoActive = tecnico && clampUpper(tecnico) === safeUpper(r.tecnico);
+                        const usinaActive = usina && clampUpper(usina) === safeUpper(r.usina);
 
-                            <div className="text-[11px] mt-0.5 flex flex-wrap gap-1" style={{ color: T.text3 }}>
-                              <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
-                                {safeText(r.evolucao)}
-                              </span>
-                              <span style={{ color: T.text3 }}>•</span>
-                              <span className="font-semibold">{safeText(r.tipo)}</span>
+                        return (
+                          <div
+                            key={r.id}
+                            className="grid grid-cols-20 gap-0 px-3 py-2 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition"
+                            style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                          >
+                            {/* SS */}
+                            <div className="col-span-2">
+                              <a
+                                href={ssLink(r.idSs)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={cx("font-extrabold", UI.mono)}
+                                style={{ color: T.accent }}
+                                title="Abrir SS no Sismetro"
+                              >
+                                #{r.idSs}
+                              </a>
+
+                              {/* <div className="text-[11px] mt-0.5 flex flex-wrap gap-1" style={{ color: T.text3 }}>
+                                <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
+                                  {safeText(r.evolucao)}
+                                </span>
+                                <span>•</span>
+                                <span className="font-semibold" title={safeText(r.tipo)}>
+                                  {safeText(r.tipo)}
+                                </span>
+                              </div> */}
+                            </div>
+
+                            {/* Data/Hora */}
+                            <div className={cx("col-span-3", UI.mono)} style={{ color: T.text2 }}>
+                              {brDateTimeFromSismetro(r.dataHora || null)}
+                            </div>
+
+                            {/* Usina + Descrição */}
+                            <div className="col-span-6 min-w-0">
+                              <button
+                                type="button"
+                                className="truncate text-left font-semibold max-w-full"
+                                style={{ color: usinaActive ? T.accent : T.text }}
+                                onClick={() => applyUsinaFromChart(safeUpper(r.usina))}
+                                title="Clique para filtrar por esta usina"
+                              >
+                                {safeUpper(r.usina)}
+                              </button>
+
+                              <div
+                                className="text-[11px] line-clamp-2 mt-0.5 whitespace-pre-line"
+                                style={{ color: T.text3 }}
+                                title={safeText(r.descricao, "")}
+                              >
+                                {safeText(r.descricao)}
+                              </div>
+                            </div>
+                            
+                            {/* Conclusão */}
+                            <div className="col-span-5 min-w-0">
+
+                              <div
+                                className="text-[11px] mt-0.5 whitespace-pre-wrap break-words"
+                                style={{ color: T.text3 }}
+                                title={r.conclusaoTexto ? String(r.conclusaoTexto) : undefined}
+                              >
+                                {r.conclusaoTexto ? safeUpper(r.conclusaoTexto, "") : " "}
+                              </div>
+                            </div>
+
+                            {/* Técnico */}
+                            <div className="col-span-3 min-w-0">
+                              <button
+                                type="button"
+                                className="text-[11px] mt-0.5 whitespace-pre-wrap break-words"
+                                style={{ color: tecnicoActive ? T.accent : T.text }}
+                                onClick={() =>
+                                  setTecnico((p) => (clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")))
+                                }
+                                title="Clique para filtrar por este técnico"
+                              >
+                                {safeUpper(r.tecnico)}
+                              </button>
+
+                              <div className="text-[11px] mt-0.5 whitespace-pre-wrap break-words" style={{ color: T.text3 }}>
+                                <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
+                                  {safeText(r.evolucao)}
+                                </span>
+                                
+                              </div>
+
+                            </div>
+
+                            {/* Abrir */}
+                            <div className="col-span-1 flex justify-start">
+                              <a
+                                href={ssLink(r.idSs)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center h-8 w-9 border rounded-md"
+                                style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                                title="Abrir SS no Sismetro"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
                             </div>
                           </div>
-
-                          <div className={cx("col-span-2", UI.mono)} style={{ color: T.text2 }}>
-                            {brDateTimeFromSismetro(r.dataHora || null)}
-                          </div>
-
-                          <div className="col-span-4">
-                            <button
-                              type="button"
-                              className="truncate text-left"
-                              style={{ color: usina && clampUpper(usina) === safeUpper(r.usina) ? T.accent : T.text }}
-                              onClick={() => applyUsinaFromChart(safeUpper(r.usina))}
-                              title="Clique para filtrar por esta usina"
-                            >
-                              {safeUpper(r.usina)}
-                            </button>
-
-                            <div className="text-[11px] line-clamp-2 mt-0.5" style={{ color: T.text3 }}>
-                              {safeText(r.descricao)}
-                            </div>
-                          </div>
-
-                          <div className="col-span-2">
-                            <button
-                              type="button"
-                              className="text-left truncate max-w-full"
-                              style={{ color: tecnico && clampUpper(tecnico) === safeUpper(r.tecnico) ? T.accent : T.text }}
-                              onClick={() =>
-                                setTecnico((p) =>
-                                  clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")
-                                )
-                              }
-                              title="Clique para filtrar por este técnico"
-                            >
-                              {safeUpper(r.tecnico)}
-                            </button>
-
-                            <div className={cx("text-[11px] mt-0.5", UI.mono)} style={{ color: T.text3 }}>
-                              {r.tecnicoMatricula ? `Matrícula: ${r.tecnicoMatricula}` : " "}
-                            </div>
-                          </div>
-
-                          <div className="col-span-2 flex justify-end">
-                            <a
-                              href={ssLink(r.idSs)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center justify-center h-8 w-9 border rounded-md"
-                              style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
-                              title="Abrir SS no Sismetro"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               )}
+
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>

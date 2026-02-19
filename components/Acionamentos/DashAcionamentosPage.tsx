@@ -1578,7 +1578,7 @@ export function AcionamentosDashPage() {
                         <div className="col-span-1">Usina</div>
                         <div className="col-span-2">Motivo</div>
                         <div className="col-span-3">Problema Identificado</div>
-                        <div className="col-span-2">Solução Imediata</div>
+                        <div className="col-span-2">Atividade Realizada</div>
                         <div className="col-span-2">Solução Definitiva</div>
                         <div className="col-span-1">Ordem de Serviço</div>
                       </div>

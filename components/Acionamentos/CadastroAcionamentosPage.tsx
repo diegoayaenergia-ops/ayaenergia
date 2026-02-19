@@ -878,7 +878,7 @@ function AcionamentosCadastro() {
 
                           <div>
                             <label className={UI.label} style={{ color: T.text2 }}>
-                              Solução imediata
+                              Atividade Realizada
                             </label>
                             <textarea
                               value={(form as any).solucao_imediata}
