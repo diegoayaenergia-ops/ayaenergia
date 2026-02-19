@@ -9,7 +9,17 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import { Search, RefreshCw, ChevronDown, ChevronUp, X } from "lucide-react";
+import {
+  Search,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  X,
+  FileDown,
+  ImageDown,
+  FileSpreadsheet,
+} from "lucide-react";
+
 
 const cx = (...p: Array<string | false | null | undefined>) =>
   p.filter(Boolean).join(" ");
@@ -494,7 +504,7 @@ function LegendPills({
           >
             <span
               className="inline-block w-2.5 h-2.5 rounded-sm"
-              style={{ background:  colorForClient(x.label) }}
+              style={{ background: colorForClient(x.label) }}
             />
             <span className="max-w-[140px] truncate">{x.label}</span>
             <span className={UI.mono} style={{ color: isActive ? T.accent : T.text3 }}>
@@ -575,6 +585,7 @@ function StackedBarsCard({
   searchPlaceholder,
   maxSegs = 6,
   maxHeight = 560,
+  exporting = false, // ✅ novo
 }: {
   title: string;
   hint?: ReactNode;
@@ -592,6 +603,7 @@ function StackedBarsCard({
 
   maxSegs?: number;
   maxHeight?: number;
+  exporting?: boolean;
 }) {
   const [q, setQ] = useState("");
 
@@ -670,10 +682,13 @@ function StackedBarsCard({
 
       {/* lista */}
       <div
-        className="mt-3 grid gap-2 overflow-y-auto overflow-x-hidden pr-3 acion-scroll"
+        className={cx(
+          "mt-3 grid gap-2",
+          exporting ? "" : "overflow-y-auto overflow-x-hidden pr-3 acion-scroll"
+        )}
         style={{
-          maxHeight,            // altura do miolo rolável
-          scrollbarGutter: "stable", // reserva espaço pro scroll (Chrome/Edge)
+          maxHeight: exporting ? undefined : maxHeight,
+          overflowY: exporting ? "visible" : undefined,
         }}
       >
 
@@ -694,38 +709,51 @@ function StackedBarsCard({
           const isActive =
             !!groupActive && clampUpper(groupActive) === clampUpper(g.label);
 
+          const labelCol = exporting ? 240 : 190; // ↓ menor = barra mais perto
+          const valueCol = 48;
+
           return (
             <button
               key={g.label}
               type="button"
-              className="flex items-center gap-3 text-left"
               onClick={() => onClickGroup(g.label)}
               title="Clique para filtrar"
+              className="w-full grid items-center gap-3 text-left"
+              style={{
+                gridTemplateColumns: `${labelCol}px 1fr ${valueCol}px`,
+              }}
             >
+              {/* LABEL */}
               <div
-                className="w-56 text-xs truncate"
+                className={cx(
+                  "text-xs",
+                  exporting
+                    ? "whitespace-normal break-words leading-4"
+                    : "whitespace-normal break-words leading-4"
+                )}
                 style={{
                   color: isActive ? T.accent : T.text3,
                   fontWeight: isActive ? 900 : 650,
+                  paddingLeft: 2, // ✅ evita “morder” a primeira letra
                 }}
                 title={g.label}
               >
                 {g.label}
               </div>
 
+              {/* BAR */}
               <div
-                className="flex-1 border rounded-md overflow-hidden flex"
+                className="border rounded-md overflow-hidden flex"
                 style={{
                   borderColor: isActive ? T.accentBorder : T.border,
                   background: T.mutedBg,
                   height: 30,
                 }}
               >
-                {shownSegs.map((s, i) => {
+                {shownSegs.map((s) => {
                   const v = g.bySeg[s.label] || 0;
                   if (!v) return null;
 
-                  // se existir filtro por cliente (segActive), destacamos só o segmento selecionado
                   const activeSeg =
                     !!segActive && clampUpper(segActive) === clampUpper(s.label);
 
@@ -743,7 +771,7 @@ function StackedBarsCard({
                   );
                 })}
 
-                {/* outros */}
+                {/* OUTROS */}
                 {(() => {
                   const other = Object.entries(g.bySeg)
                     .filter(([lbl]) => !shownSegLabels.has(lbl))
@@ -768,8 +796,9 @@ function StackedBarsCard({
                 })()}
               </div>
 
+              {/* TOTAL */}
               <div
-                className={cx("w-12 text-xs text-right", UI.mono)}
+                className={cx("text-xs text-right", UI.mono)}
                 style={{ color: T.text, fontWeight: 900 }}
               >
                 {g.total}
@@ -777,6 +806,7 @@ function StackedBarsCard({
             </button>
           );
         })}
+
       </div>
     </div>
   );
@@ -826,6 +856,231 @@ export function AcionamentosDashPage() {
   const [page, setPage] = useState(1);
 
   const abortRef = useRef<AbortController | null>(null);
+  // =========================
+  // EXPORT (PNG / PDF)
+  // =========================
+  const chartsRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLDivElement | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportAllTable, setExportAllTable] = useState(false);
+  const tableOnlyRef = useRef<HTMLDivElement | null>(null);
+  const chartsOnlyRef = useRef<HTMLDivElement | null>(null);
+  const [exportChartsOnly, setExportChartsOnly] = useState(false);
+  const wait2Frames = () =>
+    new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    );
+
+  const withExportMode = useCallback(async (fn: () => Promise<void>) => {
+    setExporting(true);
+    await wait2Frames();
+    try {
+      await fn();
+    } finally {
+      setExporting(false);
+    }
+  }, []);
+
+  async function elementToCanvas(el: HTMLElement) {
+    const html2canvas = (await import("html2canvas")).default;
+
+    const prevY = window.scrollY;
+    const prevX = window.scrollX;
+
+    // garante layout calculado
+    el.scrollIntoView({ block: "start", inline: "nearest" });
+    await new Promise<void>((r) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => r()))
+    );
+
+    const canvas = await html2canvas(el, {
+      scale: 2,
+      backgroundColor: "#FFFFFF",
+      useCORS: true,
+      logging: false,
+
+      // ✅ captura a área total do elemento
+      width: el.scrollWidth,
+      height: el.scrollHeight,
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight,
+
+      // ✅ compensa scroll atual do documento
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
+    });
+
+    window.scrollTo({ top: prevY, left: prevX });
+    return canvas;
+  }
+
+  async function downloadPNG(el: HTMLElement, filename: string) {
+    const canvas = await elementToCanvas(el);
+
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/png")
+    );
+
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadPDF(
+    el: HTMLElement,
+    filename: string,
+    orientation: "p" | "l" = "p"
+  ) {
+    const canvas = await elementToCanvas(el);
+    const imgData = canvas.toDataURL("image/png", 1.0);
+
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+
+    const margin = 24;
+    const usableW = pageW - margin * 2;
+    const usableH = pageH - margin * 2;
+
+    const imgW = usableW;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    let y = 0;
+    while (y < imgH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, "PNG", margin, margin - y, imgW, imgH);
+      y += usableH;
+    }
+
+    pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+  }
+
+
+  function csvCell(v: any) {
+    let s = String(v ?? "");
+    // evita quebrar linha no CSV
+    s = s.replace(/\r?\n/g, " ").trim();
+    // escapa aspas
+    if (s.includes('"')) s = s.replace(/"/g, '""');
+    // envolve se tiver separador/aspas/quebra
+    if (/[;"\n\r]/.test(s)) s = `"${s}"`;
+    return s;
+  }
+
+  function downloadCSV(filename: string, rows: string[][]) {
+    const bom = "\uFEFF"; // BOM p/ Excel ler acentos
+    const csv = bom + rows.map((r) => r.join(";")).join("\r\n"); // ; é melhor no PT-BR
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  const exportChartsPNG = useCallback(async () => {
+    const el =
+      chartsRef.current ||
+      (document.getElementById("export-graficos") as HTMLElement | null);
+
+    if (!el) return;
+
+    await withExportMode(() =>
+      downloadPNG(el, `acionamentos-graficos_${start}_${end}.png`)
+    );
+  }, [withExportMode, start, end]);
+
+  const exportChartsPDF = useCallback(async () => {
+    const el =
+      chartsRef.current ||
+      (document.getElementById("export-graficos") as HTMLElement | null);
+
+    if (!el) return;
+
+    await withExportMode(() =>
+      downloadPDF(el, `acionamentos-graficos_${start}_${end}.pdf`)
+    );
+  }, [withExportMode, start, end]);
+
+  const exportChartsOnlyPNG = useCallback(async () => {
+    await withExportMode(async () => {
+      setExportChartsOnly(true);
+      await wait2Frames();
+
+      const el = chartsOnlyRef.current;
+      if (el) await downloadPNG(el, `acionamentos-graficos_${start}_${end}.png`);
+
+      setExportChartsOnly(false);
+      await wait2Frames();
+    });
+  }, [withExportMode, start, end]);
+
+  const exportChartsOnlyPDF = useCallback(async () => {
+    await withExportMode(async () => {
+      setExportChartsOnly(true);
+      await wait2Frames();
+
+      const el = chartsOnlyRef.current;
+      if (el)
+        await downloadPDF(
+          el,
+          `acionamentos-graficos_${start}_${end}.pdf`,
+          "l" // ✅ landscape pros 3 cards
+        );
+
+      setExportChartsOnly(false);
+      await wait2Frames();
+    });
+  }, [withExportMode, start, end]);
+
+
+  const exportTablePNG = useCallback(async () => {
+    const el = tableOnlyRef.current;
+    if (!el) return;
+
+    await withExportMode(async () => {
+      setExportAllTable(true);
+      await wait2Frames();
+      try {
+        await downloadPNG(el, `acionamentos-tabela_${start}_${end}.png`);
+      } finally {
+        setExportAllTable(false);
+        await wait2Frames();
+      }
+    });
+  }, [withExportMode, start, end]);
+
+  const exportTablePDF = useCallback(async () => {
+    const el = tableOnlyRef.current;
+    if (!el) return;
+
+    await withExportMode(async () => {
+      setExportAllTable(true);
+      await wait2Frames();
+      try {
+        await downloadPDF(el, `acionamentos-tabela_${start}_${end}.pdf`);
+      } finally {
+        setExportAllTable(false);
+        await wait2Frames();
+      }
+    });
+  }, [withExportMode, start, end]);
+
+
+
 
   const applyPreset = useCallback((p: typeof periodPreset) => {
     const now = new Date();
@@ -1186,6 +1441,33 @@ export function AcionamentosDashPage() {
   }, [allRows, start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
 
   useEffect(() => setPage(1), [start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
+  const exportTableExcel = useCallback(() => {
+    // exporta SEMPRE o total filtrado (não só a página)
+    const header = [
+      "Data",
+      "Usina",
+      "Motivo",
+      "Problema Identificado",
+      "Atividade Realizada",
+      "Solução Definitiva",
+      "Ordem de Serviço",
+    ];
+
+    const body = filteredRows.map((r) => [
+      csvCell(brDate(r.data)),
+      csvCell(safeText(r.usina)),
+      csvCell(safeText(r.motivoMobilizacao, "—")),
+      csvCell(safeText(r.problemaIdentificado, "—")),
+      csvCell(safeText(r.solucaoImediata, "—")),
+      csvCell(safeText(r.solucaoDefinitiva, "—")),
+      csvCell(typeof r.ss === "number" && Number.isFinite(r.ss) ? r.ss : ""),
+    ]);
+
+    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [
+      header.map(csvCell),
+      ...body,
+    ]);
+  }, [filteredRows, start, end]);
 
   // tabela
   const count = filteredRows.length;
@@ -1193,6 +1475,7 @@ export function AcionamentosDashPage() {
   const pageSafe = Math.min(Math.max(1, page), totalPages);
   const offset = (pageSafe - 1) * limit;
   const tableRows = filteredRows.slice(offset, offset + limit);
+  const rowsToRender = exportAllTable ? filteredRows : tableRows;
 
   /* =========================
      GRÁFICOS MELHORES (STACKED)
@@ -1271,6 +1554,7 @@ export function AcionamentosDashPage() {
           className={cx(UI.section, "mt-4 rounded-lg")}
           style={{ borderColor: T.border, background: T.card }}
         >
+
           <div
             className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
             style={{ borderColor: T.border }}
@@ -1454,6 +1738,8 @@ export function AcionamentosDashPage() {
         <main className="mt-4 grid gap-4">
           {/* GRÁFICOS — FIXOS, MELHORES, SEM MODOS */}
           <div
+            id="export-graficos"
+            ref={chartsRef}
             className={cx(UI.section, "p-4 rounded-lg")}
             style={{ borderColor: T.border, background: T.card }}
           >
@@ -1464,7 +1750,21 @@ export function AcionamentosDashPage() {
                   Clique na <b>legenda</b> para filtrar por cliente e clique na <b>linha</b> para filtrar por usina/equipamento/alarme.
                 </>
               }
-              right={<Pill tone="accent">{count} registros (filtro)</Pill>}
+              right={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Pill tone="accent">{count} registros (filtro)</Pill>
+
+                  <Btn tone="secondary" onClick={exportChartsOnlyPNG} disabled={loading}>
+                    <ImageDown className="w-4 h-4" />
+                    PNG
+                  </Btn>
+
+                  <Btn tone="secondary" onClick={exportChartsOnlyPDF} disabled={loading}>
+                    <FileDown className="w-4 h-4" />
+                    PDF
+                  </Btn>
+                </div>
+              }
             />
 
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -1547,6 +1847,7 @@ export function AcionamentosDashPage() {
 
           {/* TABELA — MANTIDA COMO ESTAVA */}
           <div
+            ref={tableRef}
             className={cx(UI.section, "rounded-lg")}
             style={{ borderColor: T.border, background: T.card }}
           >
@@ -1560,6 +1861,16 @@ export function AcionamentosDashPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <Btn tone="secondary" onClick={exportTableExcel} disabled={loading}>
+                  <FileSpreadsheet className="w-4 h-4" />
+                  Excel
+                </Btn>
+
+                <Btn tone="secondary" onClick={exportTablePDF} disabled={loading}>
+                  <FileDown className="w-4 h-4" />
+                  PDF
+                </Btn>
+
                 <Btn
                   tone="secondary"
                   disabled={loading || pageSafe === 1}
@@ -1575,6 +1886,8 @@ export function AcionamentosDashPage() {
                   Próxima
                 </Btn>
               </div>
+
+
             </div>
 
             <div className="p-4">
@@ -1591,16 +1904,16 @@ export function AcionamentosDashPage() {
                 </div>
               )}
 
-              {tableRows.length > 0 && (
+              {rowsToRender.length > 0 && (
                 <div
+                  ref={tableOnlyRef}
                   className="border rounded-lg overflow-hidden"
-                  style={{ borderColor: T.border }}
+                  style={{ borderColor: T.border, background: "#fff" }}
                 >
                   <div className="overflow-x-auto w-full min-w-0">
                     <div className="min-w-[1100px]">
                       {/* header */}
-                      <div
-                        className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+                      <div className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
                         style={{
                           borderColor: T.border,
                           background: "rgba(251,252,253,0.92)",
@@ -1618,7 +1931,7 @@ export function AcionamentosDashPage() {
                       </div>
 
                       {/* rows */}
-                      {tableRows.map((r) => (
+                      {rowsToRender.map((r) => (
                         <div
                           key={r.id}
                           className="grid grid-cols-12 gap-3 px-3 py-3 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition items-start"
@@ -1713,6 +2026,77 @@ export function AcionamentosDashPage() {
 
                 </div>
               )}
+              {exportChartsOnly && (
+                <div
+                  style={{
+                    position: "fixed",
+                    left: 0,
+                    top: 0,
+                    width: 1480,
+                    background: "#fff",
+                    padding: 16,
+                    opacity: 0,          // ✅ invisível
+                    pointerEvents: "none",
+                    zIndex: -1,
+                  }}
+                >
+                  <div ref={chartsOnlyRef}>
+                    <div className="grid grid-cols-12 gap-4 items-start">
+                      <div className="col-span-4">
+                        <StackedBarsCard
+                          title="Acionamentos por usina"
+                          hint={<>Barra segmentada por cliente.</>}
+                          groups={stackedByUsina.groups}
+                          segs={stackedByUsina.segs}
+                          segActive={clienteQuick}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
+                          groupActive={usina}
+                          searchPlaceholder="Buscar usina no gráfico…"
+                          maxSegs={6}
+                          maxHeight={999999}
+                          exporting // ✅ sem scroll / sem corte
+                        />
+                      </div>
+
+                      <div className="col-span-4">
+                        <StackedBarsCard
+                          title="Acionamentos por equipamento"
+                          hint={<>Barra segmentada por cliente.</>}
+                          groups={stackedByEquip.groups}
+                          segs={stackedByEquip.segs}
+                          segActive={clienteQuick}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
+                          groupActive={equipamento}
+                          searchPlaceholder="Buscar equipamento no gráfico…"
+                          maxSegs={6}
+                          maxHeight={999999}
+                          exporting
+                        />
+                      </div>
+
+                      <div className="col-span-4">
+                        <StackedBarsCard
+                          title="Acionamentos por alarme"
+                          hint={<>Barra segmentada por cliente.</>}
+                          groups={stackedByAlarm.groups}
+                          segs={stackedByAlarm.segs}
+                          segActive={clienteQuick}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
+                          groupActive={alarme}
+                          searchPlaceholder="Buscar alarme no gráfico…"
+                          maxSegs={6}
+                          maxHeight={999999}
+                          exportMode
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>
