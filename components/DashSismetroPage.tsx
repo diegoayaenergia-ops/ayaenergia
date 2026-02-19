@@ -172,6 +172,24 @@ function MsgBox({ m }: { m: { type: "ok" | "err"; text: string } | null }) {
 function clampUpper(s: string) {
   return String(s || "").trim().toUpperCase();
 }
+
+function yearRangeISO(year: number) {
+  const start = `${year}-01-01`;
+  const end = `${year}-12-31`;
+  return { start, end };
+}
+
+// ✅ NOVO: range completo baseado nas SS carregadas (min/max)
+function rangeFromRows(rows: Array<{ data?: string | null }>) {
+  const dates = rows
+    .map((r) => String(r?.data || "").trim())
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort(); // ISO => ordena correto
+
+  if (!dates.length) return null;
+  return { start: dates[0], end: dates[dates.length - 1] };
+}
+
 function brDate(iso?: string | null) {
   if (!iso) return "-";
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -285,9 +303,9 @@ function pickConclusao(it: SsItem): { txt: string | null } {
 ========================================================= */
 function pal(i: number) {
   const palette = [
-    "rgba(17, 89, 35, 0.78)",
-    "rgba(46, 123, 65, 0.62)",
-    "rgba(17, 24, 39, 0.56)",
+    "rgba(58, 131, 82, 0.78)",
+    "rgba(85, 145, 77, 0.62)",
+    "rgba(235, 202, 58, 0.95)",
     "rgba(17, 89, 35, 0.38)",
     "rgba(11, 18, 32, 0.34)",
     "rgba(17, 24, 39, 0.28)",
@@ -483,6 +501,53 @@ const KANBAN_COLS = [
 ] as const;
 type KanbanCol = (typeof KANBAN_COLS)[number];
 
+// Paleta “fixa” para TIPOS (você pode ajustar as cores)
+const TYPE_PALETTE = [
+  "#115923", // verde (sua cor)
+  "#2563EB", // azul
+  "#F59E0B", // âmbar
+  "#EF4444", // vermelho
+  "#8B5CF6", // roxo
+  "#14B8A6", // teal
+  "#F97316", // laranja
+  "#64748B", // slate
+  "#DB2777", // pink
+  "#84CC16", // lime
+];
+const KANBAN_COLORS: Record<KanbanCol, string> = {
+  "AGUARDANDO AGENDAMENTO": "#96D9A7", // âmbar
+  "EM EXECUÇÃO": "#5CAE70", // azul
+  "PENDENTE": "#939598", // slate
+  "CONCLUÍDO": "#2E7B41", // verde (sua cor)
+};
+// (Opcional) Overrides: se quiser forçar tipo específico
+const TIPO_COLORS: Record<string, string> = {
+  "PREVENTIVA": "#96D9A7", // azul
+  "CORRETIVA": "#5CAE70", // verde (sua cor)
+  "CONTROLE": "#939598", // slate
+  "VISITA TÉCNICA": "#2E7B41", // âmbar
+  "HANDOVER": "#DBFFE4", // laranja
+};
+
+function hashString(s: string) {
+  // hash simples, estável
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h << 5) - h + s.charCodeAt(i);
+    h |= 0;
+  }
+  return Math.abs(h);
+}
+
+function tipoColor(tpRaw?: string | null) {
+  const key = clampUpper(String(tpRaw || "SEM TIPO"));
+  if (TIPO_COLORS[key]) return TIPO_COLORS[key];
+  return TYPE_PALETTE[hashString(key) % TYPE_PALETTE.length];
+}
+
+
+
+
 function normalizeKanban(evoRaw?: string | null): KanbanCol | "OUTROS" {
   const e = clampUpper(String(evoRaw || ""));
 
@@ -596,13 +661,22 @@ export function SismetroDashPage() {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
     null
   );
+  const allRowsRef = useRef<Row[]>([]);
 
   // ✅ default INEER
   const DEFAULT_CLIENTE = "INEER ENERGIA";
 
   // filtros
   const [periodPreset, setPeriodPreset] = useState<
-    "thisMonth" | "lastMonth" | "last30" | "last7" | "today"
+    | "thisMonth"
+    | "lastMonth"
+    | "last30"
+    | "last7"
+    | "today"
+    | "thisYear"   // ✅ novo
+    | "lastYear"   // ✅ novo
+    | "all"        // ✅ novo
+    | "custom"     // ✅ novo (personalizado)
   >("thisMonth");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -637,7 +711,18 @@ export function SismetroDashPage() {
   const [openKanban, setOpenKanban] = useState(true);
 
   const applyPreset = useCallback(
-    (p: "thisMonth" | "lastMonth" | "last30" | "last7" | "today") => {
+    (
+      p:
+        | "thisMonth"
+        | "lastMonth"
+        | "last30"
+        | "last7"
+        | "today"
+        | "thisYear"
+        | "lastYear"
+        | "all"
+        | "custom"
+    ) => {
       const now = new Date();
       const toISO = (x: Date) => {
         const yy = x.getFullYear();
@@ -645,6 +730,9 @@ export function SismetroDashPage() {
         const dd = String(x.getDate()).padStart(2, "0");
         return `${yy}-${mm}-${dd}`;
       };
+
+      // ✅ custom não mexe em start/end
+      if (p === "custom") return;
 
       if (p === "today") {
         const d = toISO(now);
@@ -679,6 +767,33 @@ export function SismetroDashPage() {
         s.setDate(s.getDate() - 29);
         setStart(toISO(s));
         setEnd(toISO(e));
+        return;
+      }
+
+      // ✅ NOVOS PRESETS
+      if (p === "thisYear") {
+        const yr = yearRangeISO(now.getFullYear());
+        setStart(yr.start);
+        setEnd(yr.end);
+        return;
+      }
+      if (p === "lastYear") {
+        const yr = yearRangeISO(now.getFullYear() - 1);
+        setStart(yr.start);
+        setEnd(yr.end);
+        return;
+      }
+      if (p === "all") {
+        const bounds = rangeFromRows(allRowsRef.current);
+        if (bounds) {
+          setStart(bounds.start);
+          setEnd(bounds.end);
+        } else {
+          // fallback: este mês (caso ainda não tenha dados carregados)
+          const mr = monthRangeISO(now);
+          setStart(mr.start);
+          setEnd(mr.end);
+        }
         return;
       }
     },
@@ -768,6 +883,7 @@ export function SismetroDashPage() {
       });
 
       setAllRows(rowsFiltradas);
+      allRowsRef.current = rowsFiltradas;
 
       // options
       const cli = Array.from(
@@ -823,7 +939,14 @@ export function SismetroDashPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (periodPreset === "all" && allRowsRef.current.length) {
+      applyPreset("all");
+    }
+  }, [periodPreset, applyPreset]);
+
   // ✅ FILTROS (inclui kanbanFilter)
+
   const filteredRows = useMemo(() => {
     let r = allRows;
 
@@ -910,7 +1033,12 @@ export function SismetroDashPage() {
       for (const [t, v] of Object.entries(u.byTipo)) totalsByTipo[t] = (totalsByTipo[t] || 0) + v;
     }
     const tipos = Object.keys(totalsByTipo).sort((a, b) => (totalsByTipo[b] || 0) - (totalsByTipo[a] || 0));
-    const legends = tipos.map((tp, i) => ({ label: tp, value: totalsByTipo[tp] || 0, color: pal(i) }));
+    const legends = tipos.map((tp) => ({
+      label: tp,
+      value: totalsByTipo[tp] || 0,
+      color: tipoColor(tp),
+    }));
+
 
     return { tipos, usinas, legends };
   }, [filteredRows]);
@@ -946,10 +1074,10 @@ export function SismetroDashPage() {
       .slice(0, 25)
       .map(([usina, obj]) => ({ usina, ...obj }));
 
-    const legends = KANBAN_COLS.map((col, i) => ({
+    const legends = KANBAN_COLS.map((col) => ({
       label: col,
       value: usinas.reduce((acc, u) => acc + (u.byEvo[col] || 0), 0),
-      color: pal(i),
+      color: KANBAN_COLORS[col],
     }));
 
     return { cols: [...KANBAN_COLS], usinas, legends };
@@ -1085,8 +1213,12 @@ export function SismetroDashPage() {
                     <option value="today">Hoje</option>
                     <option value="thisMonth">Este mês</option>
                     <option value="lastMonth">Mês passado</option>
-                    <option value="last7">Últimos 7 dias</option>
-                    <option value="last30">Últimos 30 dias</option>
+                    <option value="thisYear">Ano atual</option>
+                    <option value="lastYear">Ano passado</option>
+                    <option value="all">Período completo</option>
+                    {/* <option value="last7">Últimos 7 dias</option>
+                    <option value="last30">Últimos 30 dias</option> */}
+                    <option value="custom">Personalizado</option>
                   </select>
                 </div>
 
@@ -1097,7 +1229,10 @@ export function SismetroDashPage() {
                   <input
                     type="date"
                     value={start}
-                    onChange={(e) => setStart(e.target.value)}
+                    onChange={(e) => {
+                      setStart(e.target.value);
+                      setPeriodPreset("custom");
+                    }}
                     className={cx(UI.input, "mt-1 rounded-md")}
                     style={{ borderColor: T.border }}
                   />
@@ -1110,7 +1245,10 @@ export function SismetroDashPage() {
                   <input
                     type="date"
                     value={end}
-                    onChange={(e) => setEnd(e.target.value)}
+                    onChange={(e) => {
+                      setEnd(e.target.value);
+                      setPeriodPreset("custom"); 
+                    }}
                     className={cx(UI.input, "mt-1 rounded-md")}
                     style={{ borderColor: T.border }}
                   />
@@ -1267,12 +1405,21 @@ export function SismetroDashPage() {
                         className="flex-1 border rounded-md overflow-hidden flex"
                         style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}
                       >
-                        {ssByUsinaTipo.tipos.map((tp, i) => {
+                        {ssByUsinaTipo.tipos.map((tp) => {
                           const v = u.byTipo[tp] || 0;
                           if (!v) return null;
                           const w = (v / Math.max(1, u.total)) * 100;
-                          return <div key={tp} style={{ width: `${w}%`, background: pal(i) }} title={`${tp}: ${v}`} />;
+
+                          return (
+                            <div
+                              key={tp}
+                              style={{ width: `${w}%`, background: tipoColor(tp) }}
+                              title={`${tp}: ${v}`}
+                            />
+                          );
                         })}
+
+
                       </div>
 
                       <div className={cx("w-12 text-xs text-right", UI.mono)} style={{ color: T.text, fontWeight: 900 }}>
@@ -1340,7 +1487,14 @@ export function SismetroDashPage() {
                           const v = u.byEvo[col] || 0;
                           if (!v) return null;
                           const w = (v / Math.max(1, u.total)) * 100;
-                          return <div key={col} style={{ width: `${w}%`, background: pal(i) }} title={`${col}: ${v}`} />;
+                          return (
+                            <div
+                              key={col}
+                              style={{ width: `${w}%`, background: KANBAN_COLORS[col] }}
+                              title={`${col}: ${v}`}
+                            />
+                          );
+
                         })}
                       </div>
 
@@ -1619,7 +1773,7 @@ export function SismetroDashPage() {
                                 {safeText(r.descricao)}
                               </div>
                             </div>
-                            
+
                             {/* Conclusão */}
                             <div className="col-span-5 min-w-0">
 
@@ -1650,7 +1804,7 @@ export function SismetroDashPage() {
                                 <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
                                   {safeText(r.evolucao)}
                                 </span>
-                                
+
                               </div>
 
                             </div>

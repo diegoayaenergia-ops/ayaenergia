@@ -233,6 +233,40 @@ function pal(i: number) {
   ];
   return palette[i % palette.length];
 }
+const CLIENT_COLORS: Record<string, string> = {
+  // use exatamente o mesmo texto que aparece na legenda (normalizado em UPPER)
+  "INEER": "#0c6c13",
+  "ÉLIS": "#364349",
+  "KAMAI": "#f68e1b",
+  // ...
+};
+
+const CLIENT_PALETTE = [
+  "#115923",
+  "#2E7B41",
+  "#0B1220",
+  "#3B82F6",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#14B8A6",
+];
+
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function colorForClient(label: string) {
+  const key = clampUpper(label).replace(/\s+/g, " ").trim();
+  if (!key) return "rgba(17,24,39,0.22)";
+  if (key === "OUTROS") return "rgba(17,24,39,0.22)";
+  return (
+    CLIENT_COLORS[key] ||
+    CLIENT_PALETTE[hashStr(key) % CLIENT_PALETTE.length]
+  );
+}
 
 /* =========================================================
    RANGE: SEMANA / MÊS
@@ -460,7 +494,7 @@ function LegendPills({
           >
             <span
               className="inline-block w-2.5 h-2.5 rounded-sm"
-              style={{ background: pal(i) }}
+              style={{ background:  colorForClient(x.label) }}
             />
             <span className="max-w-[140px] truncate">{x.label}</span>
             <span className={UI.mono} style={{ color: isActive ? T.accent : T.text3 }}>
@@ -701,7 +735,7 @@ function StackedBarsCard({
                       key={`${g.label}-${s.label}`}
                       style={{
                         width: `${w}%`,
-                        background: pal(i),
+                        background: colorForClient(s.label),
                         opacity: segActive ? (activeSeg ? 1 : 0.18) : 1,
                       }}
                       title={`${s.label}: ${v}`}
@@ -1578,7 +1612,7 @@ export function AcionamentosDashPage() {
                         <div className="col-span-1">Usina</div>
                         <div className="col-span-2">Motivo</div>
                         <div className="col-span-3">Problema Identificado</div>
-                        <div className="col-span-2">Atividade Realizada</div>
+                        <div className="col-span-2">Atividade Realizada </div>
                         <div className="col-span-2">Solução Definitiva</div>
                         <div className="col-span-1">Ordem de Serviço</div>
                       </div>

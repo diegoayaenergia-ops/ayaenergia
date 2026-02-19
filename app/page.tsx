@@ -118,18 +118,18 @@ const REPORTS: ReportItem[] = [
     icon: SolarPanel,
     src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
   },
-  {
-    id: "os",
-    title: "Ordens de Serviço",
-    icon: ClipboardList,
-    src: "https://app.powerbi.com/view?r=eyJrIjoiYzQzYjZjM2YtMzc0OS00MDMwLWI1N2EtODFjZGZmYjczMTlkIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
-  },
-  {
-    id: "acionamentos",
-    title: "Análise de Acionamentos",
-    icon: Wrench,
-    src: "https://app.powerbi.com/view?r=eyJrIjoiM2ZkZGQzZjgtNmQ1Yi00YjdhLWFmOGEtYTQ3MTBiMTk2YmU3IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
-  },
+  // {
+  //   id: "os",
+  //   title: "Ordens de Serviço",
+  //   icon: ClipboardList,
+  //   src: "https://app.powerbi.com/view?r=eyJrIjoiYzQzYjZjM2YtMzc0OS00MDMwLWI1N2EtODFjZGZmYjczMTlkIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
+  // },
+  // {
+  //   id: "acionamentos",
+  //   title: "Análise de Acionamentos",
+  //   icon: Wrench,
+  //   src: "https://app.powerbi.com/view?r=eyJrIjoiM2ZkZGQzZjgtNmQ1Yi00YjdhLWFmOGEtYTQ3MTBiMTk2YmU3IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
+  // },
   // {
   //   id: "compras",
   //   title: "Controle de Compras",
@@ -637,20 +637,10 @@ export default function Home() {
 
               {allowedReports.length > 0 && (
                 <SideItem
-                  title="Relatórios"
-                  icon={<ClipboardList className="w-4 h-4" />}
+                  title="Geração e Performance"
+                  icon={<SolarPanel className="w-4 h-4" />}
                   collapsed={collapsed}
                   onClick={() => setNavMode("reports")}
-                  right={!collapsed ? "▸" : null}
-                />
-              )}
-
-              {allowedCompras.length > 0 && (
-                <SideItem
-                  title="Compras"
-                  icon={<ShoppingCart className="w-4 h-4" />}
-                  collapsed={collapsed}
-                  onClick={() => setNavMode("compras")}
                   right={!collapsed ? "▸" : null}
                 />
               )}
@@ -661,6 +651,16 @@ export default function Home() {
                   icon={<Wrench className="w-4 h-4" />}
                   collapsed={collapsed}
                   onClick={() => setNavMode("acionamentos")}
+                  right={!collapsed ? "▸" : null}
+                />
+              )}
+
+              {allowedCompras.length > 0 && (
+                <SideItem
+                  title="Compras"
+                  icon={<ShoppingCart className="w-4 h-4" />}
+                  collapsed={collapsed}
+                  onClick={() => setNavMode("compras")}
                   right={!collapsed ? "▸" : null}
                 />
               )}
