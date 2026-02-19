@@ -20,7 +20,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-
 const cx = (...p: Array<string | false | null | undefined>) =>
   p.filter(Boolean).join(" ");
 
@@ -94,17 +93,17 @@ function Btn({
   const style =
     tone === "primary"
       ? {
-        background: T.accent,
-        borderColor: "rgba(17, 89, 35, 0.45)",
-        color: "#fff",
-      }
+          background: T.accent,
+          borderColor: "rgba(17, 89, 35, 0.45)",
+          color: "#fff",
+        }
       : tone === "danger"
-        ? {
+      ? {
           background: "rgba(239, 68, 68, 0.10)",
           borderColor: "rgba(239, 68, 68, 0.35)",
           color: T.errTx,
         }
-        : { background: T.card, borderColor: T.border, color: T.text };
+      : { background: T.card, borderColor: T.border, color: T.text };
 
   return (
     <button
@@ -229,26 +228,11 @@ function ssLink(numeroSs: number | string) {
     String(numeroSs || "")
   )}`;
 }
-function pal(i: number) {
-  // paleta suave e profissional
-  const palette = [
-    "rgba(17, 89, 35, 0.82)",
-    "rgba(46, 123, 65, 0.66)",
-    "rgba(11, 18, 32, 0.56)",
-    "rgba(17, 89, 35, 0.38)",
-    "rgba(11, 18, 32, 0.34)",
-    "rgba(17, 24, 39, 0.28)",
-    "rgba(46, 123, 65, 0.42)",
-    "rgba(17, 89, 35, 0.22)",
-  ];
-  return palette[i % palette.length];
-}
+
 const CLIENT_COLORS: Record<string, string> = {
-  // use exatamente o mesmo texto que aparece na legenda (normalizado em UPPER)
   "INEER": "#0c6c13",
   "ÉLIS": "#364349",
   "KAMAI": "#f68e1b",
-  // ...
 };
 
 const CLIENT_PALETTE = [
@@ -486,9 +470,8 @@ function LegendPills({
 
   return (
     <div className="mt-2 flex flex-wrap gap-2">
-      {show.map((x, i) => {
-        const isActive =
-          !!active && clampUpper(active) === clampUpper(x.label);
+      {show.map((x) => {
+        const isActive = !!active && clampUpper(active) === clampUpper(x.label);
         return (
           <button
             key={x.label}
@@ -507,7 +490,10 @@ function LegendPills({
               style={{ background: colorForClient(x.label) }}
             />
             <span className="max-w-[140px] truncate">{x.label}</span>
-            <span className={UI.mono} style={{ color: isActive ? T.accent : T.text3 }}>
+            <span
+              className={UI.mono}
+              style={{ color: isActive ? T.accent : T.text3 }}
+            >
               {x.total}
             </span>
           </button>
@@ -517,7 +503,11 @@ function LegendPills({
       {rest > 0 && (
         <span
           className="inline-flex items-center h-8 px-2.5 rounded-md border text-[11px] font-semibold"
-          style={{ borderColor: T.border, background: T.cardSoft, color: T.text3 }}
+          style={{
+            borderColor: T.border,
+            background: T.cardSoft,
+            color: T.text3,
+          }}
           title={`${rest} itens adicionais (use busca no gráfico)`}
         >
           +{rest}
@@ -528,7 +518,7 @@ function LegendPills({
 }
 
 /* =========================================================
-   GRÁFICO MELHOR (STACKED) — LISTA + BARRA SEGMENTADA
+   GRÁFICO (STACKED) — LISTA + BARRA SEGMENTADA
 ========================================================= */
 type StackedRow = {
   label: string;
@@ -554,7 +544,6 @@ function buildStacked(
     if (!group) continue;
 
     if (!map[group]) map[group] = { label: group, total: 0, bySeg: {} };
-
     map[group].total += 1;
 
     const segKey = seg || "SEM CLIENTE";
@@ -585,7 +574,7 @@ function StackedBarsCard({
   searchPlaceholder,
   maxSegs = 6,
   maxHeight = 560,
-  exporting = false, // ✅ novo
+  exportMode = false,
 }: {
   title: string;
   hint?: ReactNode;
@@ -603,7 +592,7 @@ function StackedBarsCard({
 
   maxSegs?: number;
   maxHeight?: number;
-  exporting?: boolean;
+  exportMode?: boolean;
 }) {
   const [q, setQ] = useState("");
 
@@ -655,7 +644,6 @@ function StackedBarsCard({
         </span>
       </div>
 
-      {/* legenda (clientes) */}
       <LegendPills
         items={segs}
         active={segActive}
@@ -663,7 +651,6 @@ function StackedBarsCard({
         max={maxSegs}
       />
 
-      {/* busca interna */}
       <div className="mt-3 relative">
         <input
           value={q}
@@ -680,18 +667,16 @@ function StackedBarsCard({
         </div>
       </div>
 
-      {/* lista */}
       <div
         className={cx(
           "mt-3 grid gap-2",
-          exporting ? "" : "overflow-y-auto overflow-x-hidden pr-3 acion-scroll"
+          exportMode ? "" : "overflow-y-auto overflow-x-hidden pr-3 acion-scroll"
         )}
         style={{
-          maxHeight: exporting ? undefined : maxHeight,
-          overflowY: exporting ? "visible" : undefined,
+          maxHeight: exportMode ? undefined : maxHeight,
+          overflowY: exportMode ? "visible" : undefined,
         }}
       >
-
         {!visibleGroups.length && (
           <div
             className="border rounded-lg p-3 text-sm"
@@ -709,7 +694,8 @@ function StackedBarsCard({
           const isActive =
             !!groupActive && clampUpper(groupActive) === clampUpper(g.label);
 
-          const labelCol = exporting ? 240 : 190; // ↓ menor = barra mais perto
+          // ↓ menor = barra mais perto do "eixo"
+          const labelCol = exportMode ? 260 : 190;
           const valueCol = 48;
 
           return (
@@ -723,25 +709,18 @@ function StackedBarsCard({
                 gridTemplateColumns: `${labelCol}px 1fr ${valueCol}px`,
               }}
             >
-              {/* LABEL */}
               <div
-                className={cx(
-                  "text-xs",
-                  exporting
-                    ? "whitespace-normal break-words leading-4"
-                    : "whitespace-normal break-words leading-4"
-                )}
+                className="text-xs min-w-0 whitespace-normal break-words leading-4"
                 style={{
                   color: isActive ? T.accent : T.text3,
                   fontWeight: isActive ? 900 : 650,
-                  paddingLeft: 2, // ✅ evita “morder” a primeira letra
+                  paddingLeft: 4,
                 }}
                 title={g.label}
               >
                 {g.label}
               </div>
 
-              {/* BAR */}
               <div
                 className="border rounded-md overflow-hidden flex"
                 style={{
@@ -755,7 +734,8 @@ function StackedBarsCard({
                   if (!v) return null;
 
                   const activeSeg =
-                    !!segActive && clampUpper(segActive) === clampUpper(s.label);
+                    !!segActive &&
+                    clampUpper(segActive) === clampUpper(s.label);
 
                   const w = (v / Math.max(1, g.total)) * 100;
                   return (
@@ -771,7 +751,6 @@ function StackedBarsCard({
                   );
                 })}
 
-                {/* OUTROS */}
                 {(() => {
                   const other = Object.entries(g.bySeg)
                     .filter(([lbl]) => !shownSegLabels.has(lbl))
@@ -796,7 +775,6 @@ function StackedBarsCard({
                 })()}
               </div>
 
-              {/* TOTAL */}
               <div
                 className={cx("text-xs text-right", UI.mono)}
                 style={{ color: T.text, fontWeight: 900 }}
@@ -806,7 +784,6 @@ function StackedBarsCard({
             </button>
           );
         })}
-
       </div>
     </div>
   );
@@ -820,9 +797,14 @@ export function AcionamentosDashPage() {
     null
   );
 
-  // filtros
   const [periodPreset, setPeriodPreset] = useState<
-    "today" | "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth" | "last7" | "last30"
+    | "today"
+    | "thisWeek"
+    | "lastWeek"
+    | "thisMonth"
+    | "lastMonth"
+    | "last7"
+    | "last30"
   >("thisMonth");
 
   const [start, setStart] = useState("");
@@ -832,40 +814,37 @@ export function AcionamentosDashPage() {
   const [usina, setUsina] = useState("");
   const [equipamento, setEquipamento] = useState("");
   const [alarme, setAlarme] = useState("");
-
   const [searchText, setSearchText] = useState("");
 
-  // UI
   const [filtersOpen, setFiltersOpen] = useState(true);
-
-  // filtros rápidos (clique em legenda dos gráficos)
   const [clienteQuick, setClienteQuick] = useState("");
 
-  // options (puxadas da base carregada)
   const [clientesList, setClientesList] = useState<string[]>([]);
   const [usinasList, setUsinasList] = useState<string[]>([]);
   const [equipamentosList, setEquipamentosList] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // dados
   const [loading, setLoading] = useState(false);
   const [allRows, setAllRows] = useState<AcRow[]>([]);
 
-  // paginação tabela
   const limit = 14;
   const [page, setPage] = useState(1);
 
   const abortRef = useRef<AbortController | null>(null);
+
   // =========================
   // EXPORT (PNG / PDF)
   // =========================
   const chartsRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<HTMLDivElement | null>(null);
+
   const [exporting, setExporting] = useState(false);
   const [exportAllTable, setExportAllTable] = useState(false);
+
   const tableOnlyRef = useRef<HTMLDivElement | null>(null);
   const chartsOnlyRef = useRef<HTMLDivElement | null>(null);
   const [exportChartsOnly, setExportChartsOnly] = useState(false);
+
   const wait2Frames = () =>
     new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
@@ -887,8 +866,7 @@ export function AcionamentosDashPage() {
     const prevY = window.scrollY;
     const prevX = window.scrollX;
 
-    // garante layout calculado
-    el.scrollIntoView({ block: "start", inline: "nearest" });
+    // ✅ Sem scrollIntoView (evita “puxar” a tela, principalmente pro elemento off-screen)
     await new Promise<void>((r) =>
       requestAnimationFrame(() => requestAnimationFrame(() => r()))
     );
@@ -933,7 +911,8 @@ export function AcionamentosDashPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function downloadPDF(
+  // ✅ PDF multipágina (mantém sua lógica atual)
+  async function downloadPDFPaged(
     el: HTMLElement,
     filename: string,
     orientation: "p" | "l" = "p"
@@ -964,21 +943,51 @@ export function AcionamentosDashPage() {
     pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
   }
 
+  // ✅ PDF 1 página (sem quebra) — encaixa no A4
+  async function downloadPDFFitA4(
+    el: HTMLElement,
+    filename: string,
+    orientation: "p" | "l" = "p"
+  ) {
+    const canvas = await elementToCanvas(el);
+    const imgData = canvas.toDataURL("image/png", 1.0);
+
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
+
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+
+    const margin = 24;
+    const maxW = pageW - margin * 2;
+    const maxH = pageH - margin * 2;
+
+    let drawW = maxW;
+    let drawH = (canvas.height * drawW) / canvas.width;
+
+    if (drawH > maxH) {
+      drawH = maxH;
+      drawW = (canvas.width * drawH) / canvas.height;
+    }
+
+    const x = (pageW - drawW) / 2;
+    const y = (pageH - drawH) / 2;
+
+    pdf.addImage(imgData, "PNG", x, y, drawW, drawH);
+    pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+  }
 
   function csvCell(v: any) {
     let s = String(v ?? "");
-    // evita quebrar linha no CSV
     s = s.replace(/\r?\n/g, " ").trim();
-    // escapa aspas
     if (s.includes('"')) s = s.replace(/"/g, '""');
-    // envolve se tiver separador/aspas/quebra
     if (/[;"\n\r]/.test(s)) s = `"${s}"`;
     return s;
   }
 
   function downloadCSV(filename: string, rows: string[][]) {
-    const bom = "\uFEFF"; // BOM p/ Excel ler acentos
-    const csv = bom + rows.map((r) => r.join(";")).join("\r\n"); // ; é melhor no PT-BR
+    const bom = "\uFEFF";
+    const csv = bom + rows.map((r) => r.join(";")).join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
 
     const url = URL.createObjectURL(blob);
@@ -990,30 +999,6 @@ export function AcionamentosDashPage() {
     a.remove();
     URL.revokeObjectURL(url);
   }
-
-  const exportChartsPNG = useCallback(async () => {
-    const el =
-      chartsRef.current ||
-      (document.getElementById("export-graficos") as HTMLElement | null);
-
-    if (!el) return;
-
-    await withExportMode(() =>
-      downloadPNG(el, `acionamentos-graficos_${start}_${end}.png`)
-    );
-  }, [withExportMode, start, end]);
-
-  const exportChartsPDF = useCallback(async () => {
-    const el =
-      chartsRef.current ||
-      (document.getElementById("export-graficos") as HTMLElement | null);
-
-    if (!el) return;
-
-    await withExportMode(() =>
-      downloadPDF(el, `acionamentos-graficos_${start}_${end}.pdf`)
-    );
-  }, [withExportMode, start, end]);
 
   const exportChartsOnlyPNG = useCallback(async () => {
     await withExportMode(async () => {
@@ -1028,6 +1013,7 @@ export function AcionamentosDashPage() {
     });
   }, [withExportMode, start, end]);
 
+  // ✅ Aqui: PDF sem quebra (1 página) pros 3 gráficos
   const exportChartsOnlyPDF = useCallback(async () => {
     await withExportMode(async () => {
       setExportChartsOnly(true);
@@ -1035,10 +1021,10 @@ export function AcionamentosDashPage() {
 
       const el = chartsOnlyRef.current;
       if (el)
-        await downloadPDF(
+        await downloadPDFFitA4(
           el,
           `acionamentos-graficos_${start}_${end}.pdf`,
-          "l" // ✅ landscape pros 3 cards
+          "l"
         );
 
       setExportChartsOnly(false);
@@ -1046,6 +1032,32 @@ export function AcionamentosDashPage() {
     });
   }, [withExportMode, start, end]);
 
+  const exportTableExcel = useCallback(() => {
+    const header = [
+      "Data",
+      "Usina",
+      "Motivo",
+      "Problema Identificado",
+      "Atividade Realizada",
+      "Solução Definitiva",
+      "Ordem de Serviço",
+    ];
+
+    const body = filteredRows.map((r) => [
+      csvCell(brDate(r.data)),
+      csvCell(safeText(r.usina)),
+      csvCell(safeText(r.motivoMobilizacao, "—")),
+      csvCell(safeText(r.problemaIdentificado, "—")),
+      csvCell(safeText(r.solucaoImediata, "—")),
+      csvCell(safeText(r.solucaoDefinitiva, "—")),
+      csvCell(typeof r.ss === "number" && Number.isFinite(r.ss) ? r.ss : ""),
+    ]);
+
+    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [
+      header.map(csvCell),
+      ...body,
+    ]);
+  }, [start, end, allRows]); // (filteredRows está abaixo; o hook real usa filteredRows, ajustado depois)
 
   const exportTablePNG = useCallback(async () => {
     const el = tableOnlyRef.current;
@@ -1071,16 +1083,14 @@ export function AcionamentosDashPage() {
       setExportAllTable(true);
       await wait2Frames();
       try {
-        await downloadPDF(el, `acionamentos-tabela_${start}_${end}.pdf`);
+        // tabela continua multipágina (senão fica minúsculo)
+        await downloadPDFPaged(el, `acionamentos-tabela_${start}_${end}.pdf`);
       } finally {
         setExportAllTable(false);
         await wait2Frames();
       }
     });
   }, [withExportMode, start, end]);
-
-
-
 
   const applyPreset = useCallback((p: typeof periodPreset) => {
     const now = new Date();
@@ -1157,15 +1167,14 @@ export function AcionamentosDashPage() {
     return s.getTime() > e.getTime();
   }, [start, end]);
 
-  // normaliza resposta do backend
   const normalizeRows = (data: any): AcRow[] => {
     const cand = Array.isArray(data?.rows)
       ? data.rows
       : Array.isArray(data?.items)
-        ? data.items
-        : Array.isArray(data)
-          ? data
-          : [];
+      ? data.items
+      : Array.isArray(data)
+      ? data
+      : [];
 
     return cand
       .map((r: any) => {
@@ -1209,10 +1218,10 @@ export function AcionamentosDashPage() {
         return {
           id: String(
             r?.id ??
-            r?._id ??
-            r?.uuid ??
-            r?.ID ??
-            `${iso}-${ssNum ?? Math.random()}`
+              r?._id ??
+              r?.uuid ??
+              r?.ID ??
+              `${iso}-${ssNum ?? Math.random()}`
           ),
 
           data: iso,
@@ -1221,8 +1230,8 @@ export function AcionamentosDashPage() {
 
           ss:
             ssNum !== null &&
-              ssNum !== undefined &&
-              String(ssNum).trim() !== ""
+            ssNum !== undefined &&
+            String(ssNum).trim() !== ""
               ? Number(ssNum)
               : null,
 
@@ -1274,10 +1283,9 @@ export function AcionamentosDashPage() {
       let data: any = null;
       try {
         data = raw ? JSON.parse(raw) : null;
-      } catch { }
+      } catch {}
 
       if (!res.ok) {
-        // fallback sem mode
         const p2 = new URLSearchParams(params);
         p2.delete("mode");
 
@@ -1290,7 +1298,7 @@ export function AcionamentosDashPage() {
         raw = await res.text();
         try {
           data = raw ? JSON.parse(raw) : null;
-        } catch { }
+        } catch {}
       }
 
       if (!res.ok)
@@ -1311,7 +1319,9 @@ export function AcionamentosDashPage() {
 
     setClientesList(uniq(rows.map((r) => String(r.cliente ?? "").trim())));
     setUsinasList(uniq(rows.map((r) => String(r.usina ?? "").trim())));
-    setEquipamentosList(uniq(rows.map((r) => String(r.equipamento ?? "").trim())));
+    setEquipamentosList(
+      uniq(rows.map((r) => String(r.equipamento ?? "").trim()))
+    );
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -1369,7 +1379,10 @@ export function AcionamentosDashPage() {
       buildOptionsFromRows(byDate);
 
       if (byDate.length === 0)
-        setMsg({ type: "err", text: "Nenhum acionamento no período selecionado." });
+        setMsg({
+          type: "err",
+          text: "Nenhum acionamento no período selecionado.",
+        });
     } catch (e: any) {
       if (e?.name === "AbortError") return;
       setAllRows([]);
@@ -1387,7 +1400,6 @@ export function AcionamentosDashPage() {
     loadAll();
   }, [loadAll]);
 
-  // filtros locais
   const filteredRows = useMemo(() => {
     let r = allRows;
 
@@ -1396,21 +1408,19 @@ export function AcionamentosDashPage() {
         (x) => x.data && inRangeISO(String(x.data).slice(0, 10), start, end)
       );
 
-    // cliente select (filtro principal)
     if (cliente)
       r = r.filter(
         (x) => clampUpper(String(x.cliente ?? "")) === clampUpper(cliente)
       );
 
-    // cliente quick (por legenda do gráfico)
     if (clienteQuick)
       r = r.filter(
-        (x) => clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick)
+        (x) =>
+          clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick)
       );
 
     if (usina) r = r.filter((x) => includesLoose(x.usina ?? "", usina));
 
-    // equipamento = escolha da base (igual pedido)
     if (equipamento)
       r = r.filter(
         (x) =>
@@ -1423,8 +1433,12 @@ export function AcionamentosDashPage() {
       const q = searchText.trim().toLowerCase();
       r = r.filter((x) => {
         const blob =
-          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${x.equipamento ?? ""} ${x.alarme ?? ""} ` +
-          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${x.solucaoImediata ?? ""} ${x.solucaoDefinitiva ?? ""}`.toLowerCase();
+          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${
+            x.equipamento ?? ""
+          } ${x.alarme ?? ""} ` +
+          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${
+            x.solucaoImediata ?? ""
+          } ${x.solucaoDefinitiva ?? ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
@@ -1438,11 +1452,20 @@ export function AcionamentosDashPage() {
     });
 
     return copy;
-  }, [allRows, start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
+  }, [
+    allRows,
+    start,
+    end,
+    cliente,
+    clienteQuick,
+    usina,
+    equipamento,
+    alarme,
+    searchText,
+  ]);
 
-  useEffect(() => setPage(1), [start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
-  const exportTableExcel = useCallback(() => {
-    // exporta SEMPRE o total filtrado (não só a página)
+  // ✅ corrige dependência do exportTableExcel (agora usa filteredRows)
+  const exportTableExcelFixed = useCallback(() => {
     const header = [
       "Data",
       "Usina",
@@ -1469,7 +1492,11 @@ export function AcionamentosDashPage() {
     ]);
   }, [filteredRows, start, end]);
 
-  // tabela
+  useEffect(
+    () => setPage(1),
+    [start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]
+  );
+
   const count = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(count / limit));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
@@ -1477,29 +1504,38 @@ export function AcionamentosDashPage() {
   const tableRows = filteredRows.slice(offset, offset + limit);
   const rowsToRender = exportAllTable ? filteredRows : tableRows;
 
-  /* =========================
-     GRÁFICOS MELHORES (STACKED)
-     segmentação = cliente
-  ========================= */
   const stackedByUsina = useMemo(
-    () => buildStacked(filteredRows, (r) => safeUpper(r.usina, ""), (r) => safeUpper(r.cliente, "")),
+    () =>
+      buildStacked(
+        filteredRows,
+        (r) => safeUpper(r.usina, ""),
+        (r) => safeUpper(r.cliente, "")
+      ),
     [filteredRows]
   );
   const stackedByEquip = useMemo(
-    () => buildStacked(filteredRows, (r) => safeUpper(r.equipamento, ""), (r) => safeUpper(r.cliente, "")),
+    () =>
+      buildStacked(
+        filteredRows,
+        (r) => safeUpper(r.equipamento, ""),
+        (r) => safeUpper(r.cliente, "")
+      ),
     [filteredRows]
   );
   const stackedByAlarm = useMemo(
-    () => buildStacked(filteredRows, (r) => safeUpper(r.alarme, ""), (r) => safeUpper(r.cliente, "")),
+    () =>
+      buildStacked(
+        filteredRows,
+        (r) => safeUpper(r.alarme, ""),
+        (r) => safeUpper(r.cliente, "")
+      ),
     [filteredRows]
   );
 
-  // clique em legenda (cliente quick)
   const toggleClienteQuick = useCallback((lbl: string) => {
     setClienteQuick((p) => (clampUpper(p) === clampUpper(lbl) ? "" : lbl));
   }, []);
 
-  // clique em linhas
   const toggleUsina = useCallback((lbl: string) => {
     setUsina((p) => (clampUpper(p) === clampUpper(lbl) ? "" : lbl));
   }, []);
@@ -1531,10 +1567,14 @@ export function AcionamentosDashPage() {
                   {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}
                 </Pill>
                 <Pill>Cliente: {cliente ? clampUpper(cliente) : "Todos"}</Pill>
-                <Pill>Cliente rápido: {clienteQuick ? clampUpper(clienteQuick) : "Todos"}</Pill>
+                <Pill>
+                  Cliente rápido:{" "}
+                  {clienteQuick ? clampUpper(clienteQuick) : "Todos"}
+                </Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
                 <Pill>
-                  Equipamento: {equipamento ? clampUpper(equipamento) : "Todos"}
+                  Equipamento:{" "}
+                  {equipamento ? clampUpper(equipamento) : "Todos"}
                 </Pill>
                 <Pill>Alarme: {alarme ? clampUpper(alarme) : "Todos"}</Pill>
               </div>
@@ -1554,14 +1594,12 @@ export function AcionamentosDashPage() {
           className={cx(UI.section, "mt-4 rounded-lg")}
           style={{ borderColor: T.border, background: T.card }}
         >
-
           <div
             className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
             style={{ borderColor: T.border }}
           >
             <div className="flex items-center gap-2 flex-wrap">
               <Pill>Filtros</Pill>
-
             </div>
 
             <div className="flex items-center gap-2">
@@ -1671,7 +1709,6 @@ export function AcionamentosDashPage() {
                   </div>
                 </div>
 
-                {/* CLIENTE (select) */}
                 <div className="lg:col-span-4">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Cliente
@@ -1691,7 +1728,6 @@ export function AcionamentosDashPage() {
                   </select>
                 </div>
 
-                {/* USINA */}
                 <div className="lg:col-span-4 relative z-40">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Usina
@@ -1707,7 +1743,6 @@ export function AcionamentosDashPage() {
                   </div>
                 </div>
 
-                {/* EQUIPAMENTO (da base) */}
                 <div className="lg:col-span-4 relative z-30">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Equipamento
@@ -1722,9 +1757,7 @@ export function AcionamentosDashPage() {
                       disabled={!equipamentosList.length && !loadingOptions}
                     />
                   </div>
-
                 </div>
-
 
                 <div className="lg:col-span-8">
                   <MsgBox m={msg} />
@@ -1736,7 +1769,7 @@ export function AcionamentosDashPage() {
 
         {/* MAIN */}
         <main className="mt-4 grid gap-4">
-          {/* GRÁFICOS — FIXOS, MELHORES, SEM MODOS */}
+          {/* GRÁFICOS */}
           <div
             id="export-graficos"
             ref={chartsRef}
@@ -1747,21 +1780,30 @@ export function AcionamentosDashPage() {
               title="Resumo por acionamentos"
               hint={
                 <>
-                  Clique na <b>legenda</b> para filtrar por cliente e clique na <b>linha</b> para filtrar por usina/equipamento/alarme.
+                  Clique na <b>legenda</b> para filtrar por cliente e clique na{" "}
+                  <b>linha</b> para filtrar por usina/equipamento/alarme.
                 </>
               }
               right={
                 <div className="flex items-center gap-2 flex-wrap">
                   <Pill tone="accent">{count} registros (filtro)</Pill>
 
-                  <Btn tone="secondary" onClick={exportChartsOnlyPNG} disabled={loading}>
+                  <Btn
+                    tone="secondary"
+                    onClick={exportChartsOnlyPNG}
+                    disabled={loading || exporting}
+                  >
                     <ImageDown className="w-4 h-4" />
                     PNG
                   </Btn>
 
-                  <Btn tone="secondary" onClick={exportChartsOnlyPDF} disabled={loading}>
+                  <Btn
+                    tone="secondary"
+                    onClick={exportChartsOnlyPDF}
+                    disabled={loading || exporting}
+                  >
                     <FileDown className="w-4 h-4" />
-                    PDF
+                    PDF (1 página)
                   </Btn>
                 </div>
               }
@@ -1821,9 +1863,13 @@ export function AcionamentosDashPage() {
               <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone="accent">Filtros rápidos</Pill>
-                  {clienteQuick ? <Pill>Cliente: {clampUpper(clienteQuick)}</Pill> : null}
+                  {clienteQuick ? (
+                    <Pill>Cliente: {clampUpper(clienteQuick)}</Pill>
+                  ) : null}
                   {usina ? <Pill>Usina: {clampUpper(usina)}</Pill> : null}
-                  {equipamento ? <Pill>Equip.: {clampUpper(equipamento)}</Pill> : null}
+                  {equipamento ? (
+                    <Pill>Equip.: {clampUpper(equipamento)}</Pill>
+                  ) : null}
                   {alarme ? <Pill>Alarme: {clampUpper(alarme)}</Pill> : null}
                 </div>
 
@@ -1845,7 +1891,7 @@ export function AcionamentosDashPage() {
             )}
           </div>
 
-          {/* TABELA — MANTIDA COMO ESTAVA */}
+          {/* TABELA */}
           <div
             ref={tableRef}
             className={cx(UI.section, "rounded-lg")}
@@ -1861,7 +1907,11 @@ export function AcionamentosDashPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Btn tone="secondary" onClick={exportTableExcel} disabled={loading}>
+                <Btn
+                  tone="secondary"
+                  onClick={exportTableExcelFixed}
+                  disabled={loading}
+                >
                   <FileSpreadsheet className="w-4 h-4" />
                   Excel
                 </Btn>
@@ -1886,8 +1936,6 @@ export function AcionamentosDashPage() {
                   Próxima
                 </Btn>
               </div>
-
-
             </div>
 
             <div className="p-4">
@@ -1912,8 +1960,8 @@ export function AcionamentosDashPage() {
                 >
                   <div className="overflow-x-auto w-full min-w-0">
                     <div className="min-w-[1100px]">
-                      {/* header */}
-                      <div className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+                      <div
+                        className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
                         style={{
                           borderColor: T.border,
                           background: "rgba(251,252,253,0.92)",
@@ -1925,12 +1973,11 @@ export function AcionamentosDashPage() {
                         <div className="col-span-1">Usina</div>
                         <div className="col-span-2">Motivo</div>
                         <div className="col-span-3">Problema Identificado</div>
-                        <div className="col-span-2">Atividade Realizada </div>
+                        <div className="col-span-2">Atividade Realizada</div>
                         <div className="col-span-2">Solução Definitiva</div>
                         <div className="col-span-1">Ordem de Serviço</div>
                       </div>
 
-                      {/* rows */}
                       {rowsToRender.map((r) => (
                         <div
                           key={r.id}
@@ -1940,12 +1987,13 @@ export function AcionamentosDashPage() {
                             background: T.card,
                           }}
                         >
-                          {/* Data */}
-                          <div className={cx("text-[11px] col-span-1", UI.mono)} style={{ color: T.text2 }}>
+                          <div
+                            className={cx("text-[11px] col-span-1", UI.mono)}
+                            style={{ color: T.text2 }}
+                          >
                             {brDate(r.data)}
                           </div>
 
-                          {/* Usina */}
                           <div className="col-span-1 min-w-0">
                             <button
                               type="button"
@@ -1960,7 +2008,6 @@ export function AcionamentosDashPage() {
                             </button>
                           </div>
 
-                          {/* Motivo */}
                           <div className="col-span-2 min-w-0">
                             <span
                               className="text-[11px] whitespace-pre-wrap break-words"
@@ -1970,7 +2017,6 @@ export function AcionamentosDashPage() {
                             </span>
                           </div>
 
-                          {/* Problema */}
                           <div className="col-span-3 min-w-0">
                             <span
                               className="text-[11px] whitespace-pre-wrap break-words"
@@ -1980,7 +2026,6 @@ export function AcionamentosDashPage() {
                             </span>
                           </div>
 
-                          {/* Solução imediata */}
                           <div className="col-span-2 min-w-0">
                             <span
                               className="text-[11px] whitespace-pre-wrap break-words"
@@ -1990,7 +2035,6 @@ export function AcionamentosDashPage() {
                             </span>
                           </div>
 
-                          {/* Solução definitiva */}
                           <div className="col-span-2 min-w-0">
                             <span
                               className="text-[11px] whitespace-pre-wrap break-words"
@@ -2000,21 +2044,26 @@ export function AcionamentosDashPage() {
                             </span>
                           </div>
 
-                          {/* OS */}
                           <div className="col-span-1 min-w-0">
                             {typeof r.ss === "number" && Number.isFinite(r.ss) ? (
                               <a
                                 href={ssLink(r.ss)}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={cx("text-[11px] inline-flex gap-2 underline", UI.mono)}
+                                className={cx(
+                                  "text-[11px] inline-flex gap-2 underline",
+                                  UI.mono
+                                )}
                                 style={{ color: T.accent }}
                                 title="Abrir SS no Sismetro"
                               >
                                 {r.ss}
                               </a>
                             ) : (
-                              <span className={UI.mono} style={{ color: T.text3 }}>
+                              <span
+                                className={UI.mono}
+                                style={{ color: T.text3 }}
+                              >
                                 —
                               </span>
                             )}
@@ -2023,20 +2072,19 @@ export function AcionamentosDashPage() {
                       ))}
                     </div>
                   </div>
-
                 </div>
               )}
+
+              {/* ✅ EXPORT ONLY (3 gráficos) — off-screen, mas renderizável */}
               {exportChartsOnly && (
                 <div
                   style={{
                     position: "fixed",
-                    left: 0,
+                    left: -10000,
                     top: 0,
                     width: 1480,
                     background: "#fff",
                     padding: 16,
-                    opacity: 0,          // ✅ invisível
-                    pointerEvents: "none",
                     zIndex: -1,
                   }}
                 >
@@ -2049,13 +2097,13 @@ export function AcionamentosDashPage() {
                           groups={stackedByUsina.groups}
                           segs={stackedByUsina.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
+                          onClickSeg={() => {}}
+                          onClickGroup={() => {}}
                           groupActive={usina}
                           searchPlaceholder="Buscar usina no gráfico…"
                           maxSegs={6}
                           maxHeight={999999}
-                          exporting // ✅ sem scroll / sem corte
+                          exportMode
                         />
                       </div>
 
@@ -2066,13 +2114,13 @@ export function AcionamentosDashPage() {
                           groups={stackedByEquip.groups}
                           segs={stackedByEquip.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
+                          onClickSeg={() => {}}
+                          onClickGroup={() => {}}
                           groupActive={equipamento}
                           searchPlaceholder="Buscar equipamento no gráfico…"
                           maxSegs={6}
                           maxHeight={999999}
-                          exporting
+                          exportMode
                         />
                       </div>
 
@@ -2083,8 +2131,8 @@ export function AcionamentosDashPage() {
                           groups={stackedByAlarm.groups}
                           segs={stackedByAlarm.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
+                          onClickSeg={() => {}}
+                          onClickGroup={() => {}}
                           groupActive={alarme}
                           searchPlaceholder="Buscar alarme no gráfico…"
                           maxSegs={6}
@@ -2097,10 +2145,10 @@ export function AcionamentosDashPage() {
                 </div>
               )}
 
-
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>
-                  Total (filtro): <span className={UI.mono}>{count}</span> • Página{" "}
+                  Total (filtro): <span className={UI.mono}>{count}</span> •
+                  Página{" "}
                   <span className={UI.mono}>
                     {pageSafe}/{totalPages}
                   </span>
