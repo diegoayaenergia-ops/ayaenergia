@@ -649,7 +649,7 @@ function Drawer({
                 </div>
 
                 <div className="h-[calc(100%-56px)] flex flex-col">
-                    <div className="p-4 border-b" style={{ borderColor: UI.border }}>
+                    {/* <div className="p-4 border-b" style={{ borderColor: UI.border }}>
                         <div className="relative">
                             <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/40" />
                             <input
@@ -690,7 +690,7 @@ function Drawer({
                                 <div className="px-3 py-3 text-sm text-black/55">{q ? "Nada encontrado." : "Sem recentes."}</div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
 
                     <div className="flex-1 overflow-y-auto">
                         {sections.length ? (
@@ -830,7 +830,7 @@ export default function PortalClient() {
 
     // ===== Nav base
     const NAV_HOME: NavItem = { id: "home", title: "Home", group: "Geral", icon: HomeIcon };
-    const NAV_COURSES: NavItem = { id: "cursos", title: "Conhecendo GD", group: "Cursos", icon: GraduationCap };
+    const NAV_COURSES: NavItem = { id: "cursos", title: "Entendendo a Geração Distribuída", group: "Cursos", icon: GraduationCap };
 
     const REPORTS: NavItem[] = [
         {
@@ -854,21 +854,21 @@ export default function PortalClient() {
             icon: SolarPanel,
             src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
         },
-        { id: "usinas", title: "Informações das Usinas", group: "Usinas Ineer e Kamai", icon: Info },
+        { id: "usinas", title: "Dados das Usinas", group: "Usinas Ineer e Kamai", icon: Info },
     ];
 
     const MANUTENCAO: NavItem[] = [
-        { id: "ss", title: "Dashboard", group: "Ordens de Serviço", icon: LayoutDashboard },
-        { id: "acionamentos_dash", title: "Dashboard", group: "Acionamentos", icon: LayoutDashboard },
-        { id: "acionamentos_cadastro", title: "Cadastro", group: "Perdas e Acionamentos", icon: PlusCircle },
-        { id: "acionamentos_base", title: "Banco de dados", group: "Acionamentos", icon: ClipboardList },
-        { id: "perdas_base", title: "Banco de dados", group: "Perdas", icon: ClipboardList },
+        { id: "ss", title: "Painel de Ordens de Serviço", group: "Manutenção", icon: LayoutDashboard },
+        { id: "acionamentos_dash", title: "Painel de Acionamentos", group: "Manutenção", icon: LayoutDashboard },
+        { id: "acionamentos_cadastro", title: "Registrar Acionamentos e Perdas", group: "Manutenção", icon: PlusCircle },
+        { id: "acionamentos_base", title: "Histórico de Acionamentos", group: "Manutenção", icon: ClipboardList },
+        { id: "perdas_base", title: "Histórico de Perdas", group: "Manutenção", icon: ClipboardList },
     ];
 
     const COMPRAS: NavItem[] = [
-        { id: "compras_dash", title: "Dashboard", group: "Compras", icon: LayoutDashboard },
-        { id: "compras_cadastro", title: "Cadastros", group: "Compras", icon: PlusCircle },
-        { id: "compras_base", title: "Aprovações", group: "Compras", icon: ClipboardList },
+        { id: "compras_dash", title: "Painel de Compras", group: "Compras", icon: LayoutDashboard },
+        { id: "compras_cadastro", title: "Lançar Transações", group: "Compras", icon: PlusCircle },
+        { id: "compras_base", title: "Aprovar Transações", group: "Compras", icon: ClipboardList },
     ];
 
     // restore session
