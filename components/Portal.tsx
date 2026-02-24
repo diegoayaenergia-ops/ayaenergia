@@ -1286,7 +1286,7 @@ export default function PortalClient() {
             <Drawer
                 open={drawerOpen}
                 onClose={() => setDrawerOpen(false)}
-                userLabel={String(user?.name || user?.login || "Usuário")}
+                userLabel={String(user?.name || user?.empresa || "Usuário")}
                 query={drawerQuery}
                 setQuery={setDrawerQuery}
                 sections={drawerSections}
