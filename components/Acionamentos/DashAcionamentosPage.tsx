@@ -1728,7 +1728,7 @@ export function AcionamentosDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-4 relative z-40">
+                <div className="lg:col-span-4">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Usina
                   </label>
@@ -1743,7 +1743,7 @@ export function AcionamentosDashPage() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-4 relative z-30">
+                <div className="lg:col-span-4">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Equipamento
                   </label>

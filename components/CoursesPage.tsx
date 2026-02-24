@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import VimeoPlayer from "@/components/VimeoPlayer";
 
 type CourseItem = {
@@ -27,7 +26,7 @@ function normalizeStringArray(raw: any): string[] {
 
 function getCourseIndexFromStats(courses: CourseItem[], stats: string[]) {
   const index = courses.findIndex((course) => !stats.includes(course.id));
-  return index === -1 ? courses.length - 1 : index;
+  return index === -1 ? Math.max(0, courses.length - 1) : index;
 }
 
 export function CoursesPage({
@@ -48,142 +47,158 @@ export function CoursesPage({
 
   const completingRef = useRef<string | null>(null);
 
+  const watchedSet = useMemo(() => new Set(stats), [stats]);
+  const current = courses[currentCourse];
+
+  const progressPercent = useMemo(() => {
+    if (!courses.length) return 0;
+    return Math.round((stats.length / courses.length) * 100);
+  }, [stats.length, courses.length]);
+
   // ao entrar, posiciona na primeira não concluída
   useEffect(() => {
     const idx = getCourseIndexFromStats(courses, stats);
     setCurrentCourse(idx >= 0 ? idx : 0);
   }, [courses, stats]);
 
-  // track loading por troca de aula
+  // loading por troca de aula
   useEffect(() => {
     setVideoLoading(true);
     setVideoError("");
   }, [currentCourse]);
 
-  const progressPercent =
-    courses.length > 0 ? Math.round((stats.length / courses.length) * 100) : 0;
+  const isWatched = useCallback((id: string) => watchedSet.has(id), [watchedSet]);
 
-  const isWatched = (id: string) => stats.includes(id);
+  const canAccess = useCallback(
+    (index: number) => {
+      if (index === 0) return true;
 
-  const canAccess = (index: number) => {
-    if (index === 0) return true;
+      const course = courses[index];
+      const prev = courses[index - 1];
 
-    const course = courses[index];
-    const prev = courses[index - 1];
+      if (course?.id && watchedSet.has(course.id)) return true;
+      if (!course?.vimeoId) return true;
+      return !!prev?.id && watchedSet.has(prev.id);
+    },
+    [courses, watchedSet]
+  );
 
-    if (course?.id && stats.includes(course.id)) return true;
-    if (!course?.vimeoId) return true;
-    return !!prev?.id && stats.includes(prev.id);
-  };
+  const completeCourse = useCallback(
+    async (courseId: string) => {
+      if (!courseId) return;
+      if (!user?.login) return;
+      if (watchedSet.has(courseId)) return;
+      if (completingRef.current) return;
 
-  const completeCourse = async (courseId: string) => {
-    if (!courseId) return;
-    if (!user?.login) return;
-    if (stats.includes(courseId)) return;
-    if (completingRef.current) return;
+      completingRef.current = courseId;
 
-    completingRef.current = courseId;
+      try {
+        const res = await fetch("/api/user/stats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ login: user.login, courseId }),
+        });
 
-    try {
-      const res = await fetch("/api/user/stats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: user.login, courseId }),
-      });
+        if (!res.ok) return;
 
-      if (!res.ok) return;
+        const data = await res.json();
+        const fixed = normalizeStringArray(data.stats);
 
-      const data = await res.json();
-      const fixed = normalizeStringArray(data.stats);
+        setStats(fixed);
 
-      setStats(fixed);
-
-      const updatedUser = { ...user, stats: fixed };
-      localStorage.setItem("bi_user", JSON.stringify(updatedUser));
-    } finally {
-      completingRef.current = null;
-    }
-  };
+        const updatedUser = { ...user, stats: fixed };
+        localStorage.setItem("bi_user", JSON.stringify(updatedUser));
+      } finally {
+        completingRef.current = null;
+      }
+    },
+    [user, watchedSet, setStats]
+  );
 
   return (
-    <div className="absolute inset-0 flex bg-[#f6f7f8]">
-      {/* PLAYER */}
-      <main className="flex-1 bg-[#f6f7f8]">
-        <div className="h-full flex flex-col">
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="w-full max-w-[1200px]">
-              <div className="rounded-2xl border overflow-hidden shadow-[0_18px_60px_-30px_rgba(0,0,0,0.7)] border-black/10 bg-white">
-                <div className="relative w-full aspect-video bg-black">
-                  {courses[currentCourse]?.vimeoId ? (
-                    <div className="absolute inset-0">
-                      <VimeoPlayer
-                        key={courses[currentCourse].vimeoId}
-                        videoId={courses[currentCourse].vimeoId!}
-                        onReady={() => {
-                          setVideoLoading(false);
-                          setVideoError("");
-                        }}
-                        onError={(msg) => {
-                          setVideoLoading(false);
-                          setVideoError(msg);
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-black/[0.04]">
-                      <p className="font-semibold text-lg text-black">Conteúdo em preparação</p>
-                      <p className="text-sm mt-2 max-w-md text-black/60">
-                        Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
-                      </p>
-                    </div>
-                  )}
+    <div className="absolute inset-0 flex min-h-0 bg-[#f6f7f8]">
+      {/* ======= VIDEO (MEIO) — ocupa tudo ======= */}
+      <main className="flex-1 min-w-0 relative overflow-hidden bg-white">
+        {/* player ocupa 100% */}
+        <div className="absolute inset-0">
+          {current?.vimeoId ? (
+            <div className="absolute inset-0">
+              {/* Host em full; se seu VimeoPlayer criar iframe dentro, ele vai preencher */}
+              <div className="absolute inset-0">
+                <VimeoPlayer
+                  key={current.vimeoId}
+                  videoId={current.vimeoId}
+                  onReady={() => {
+                    setVideoLoading(false);
+                    setVideoError("");
+                  }}
+                  onError={(msg) => {
+                    setVideoLoading(false);
+                    setVideoError(msg);
+                  }}
+                />
+              </div>
 
-                  {videoLoading && courses[currentCourse]?.vimeoId && !videoError && (
-                    <div className="absolute inset-0 grid place-items-center bg-black/60">
-                      <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-                    </div>
-                  )}
-
-                  {videoError && !videoLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
-                      <div className="max-w-md text-center">
-                        <p className="text-white font-semibold">Erro no player</p>
-                        <p className="text-white/70 text-sm mt-2">{videoError}</p>
-                      </div>
-                    </div>
-                  )}
+              {/* Loading */}
+              {videoLoading && !videoError && (
+                <div className="absolute inset-0 grid place-items-center bg-black/60">
+                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
                 </div>
+              )}
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 bg-black">
+              <p className="font-semibold text-lg text-white">Conteúdo em preparação</p>
+              <p className="text-sm mt-2 max-w-md text-white/70">
+                Esta aula ainda não possui vídeo disponível. Em breve o conteúdo será liberado.
+              </p>
+            </div>
+          )}
 
-                <div className="px-5 py-4 border-t bg-white border-black/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs text-black/50">
-                        Aula {currentCourse + 1} de {courses.length}
-                      </p>
-                      <p className="font-semibold truncate text-black">
-                        {courses[currentCourse]?.title}
-                      </p>
-                    </div>
-
-                    {courses[currentCourse]?.vimeoId && (
-                      <button
-                        onClick={() => completeCourse(courses[currentCourse].id)}
-                        disabled={isWatched(courses[currentCourse].id)}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#5CAE70] text-black disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
-                      >
-                        {isWatched(courses[currentCourse].id) ? "Concluída ✓" : "Marcar como concluída"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
+          {/* Erro */}
+          {videoError && !videoLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
+              <div className="max-w-md text-center">
+                <p className="text-white font-semibold">Erro no player</p>
+                <p className="text-white/70 text-sm mt-2">{videoError}</p>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Overlay topo (não cria “espaço”) */}
+        <div className="absolute top-0 left-0 right-0 p-4">
+          <div className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-black/40 backdrop-blur-md border border-white/10">
+            <span className="text-xs text-white/70">
+              Aula {currentCourse + 1} de {courses.length}
+            </span>
+            <span className="w-1 h-1 rounded-full bg-white/35" />
+            <span className="text-sm font-semibold text-white max-w-[55vw] truncate">
+              {current?.title || "Cursos"}
+            </span>
           </div>
         </div>
+
+        {/* CTA no canto (não empurra o vídeo) */}
+        {/* <div className="absolute bottom-0 left-0 right-0 p-4 flex justify-end">
+          {current?.vimeoId && (
+            <button
+              onClick={() => completeCourse(current.id)}
+              disabled={isWatched(current.id)}
+              className={cx(
+                "px-5 py-3 rounded-2xl text-sm font-semibold transition shadow-lg",
+                "bg-[#5CAE70] text-black hover:brightness-110 active:scale-[0.98]",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              {isWatched(current.id) ? "Concluída ✓" : "Marcar como concluída"}
+            </button>
+          )}
+        </div> */}
       </main>
-      {/* SIDEBAR */}
-      <aside className="w-[360px] border-r flex flex-col bg-white border-black/10 ">
+
+      {/* ======= SIDEBAR (CURSOS) ======= */}
+      <aside className="shrink-0 w-[320px] h-full border-l flex flex-col bg-white border-black/10 min-h-0">
         <div className="p-4 border-b border-black/10">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-base text-black">Conteúdo</h3>
@@ -200,7 +215,7 @@ export function CoursesPage({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-1">
           {courses.map((course, index) => {
             const watched = isWatched(course.id);
             const activeItem = index === currentCourse;
@@ -268,8 +283,8 @@ export function CoursesPage({
                         watched
                           ? "bg-black/[0.03] text-black/40 border-black/10 cursor-not-allowed"
                           : locked
-                            ? "bg-black/[0.03] text-black/30 border-black/10 cursor-not-allowed"
-                            : "bg-[#5CAE70] text-black border-[#5CAE70]/30 hover:brightness-110 active:scale-[0.98]"
+                          ? "bg-black/[0.03] text-black/30 border-black/10 cursor-not-allowed"
+                          : "bg-[#5CAE70] text-black border-[#5CAE70]/30 hover:brightness-110 active:scale-[0.98]"
                       )}
                       title={watched ? "Já concluída" : "Marcar como concluída"}
                     >
@@ -321,15 +336,13 @@ export function CoursesPage({
                 setCurrentCourse(0);
               } catch {}
             }}
-            className="w-full px-4 py-2 rounded-lg text-sm font-semibold border transition border-black/15 text-black/70 hover:bg-black/[0.04]"
+            className="w-full px-4 py-2 rounded-xl text-sm font-semibold border transition border-black/15 text-black/70 hover:bg-black/[0.04]"
             title="Zerar progresso do curso"
           >
             Recomeçar
           </button>
         </div>
       </aside>
-
-      
     </div>
   );
 }

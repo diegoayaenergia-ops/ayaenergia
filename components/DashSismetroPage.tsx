@@ -1294,7 +1294,7 @@ export function SismetroDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-3 relative z-40">
+                <div className="lg:col-span-3 ">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Usina (Localização)
                   </label>
