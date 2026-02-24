@@ -1136,39 +1136,58 @@ export default function PortalClient() {
         const pwScore = calcPasswordScore(senha);
 
         return (
-            <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+            <div className="relative min-h-screen w-full overflow-hidden">
+                {/* background video */}
                 <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
                     <source src="/video.mp4" type="video/mp4" />
                 </video>
-                <div className="absolute inset-0 bg-black/55" />
 
-                <div className="relative z-10 w-[920px] max-w-[94vw] rounded-[28px] overflow-hidden shadow-2xl border border-white/10 bg-white">
-                    <div className="grid grid-cols-1 lg:grid-cols-2">
-                        <div className="p-8 lg:p-10 text-white" style={{ background: `linear-gradient(180deg, ${UI.sub} 0%, ${UI.top} 100%)` }}>
+                {/* overlay: mais contraste + leve vinheta */}
+                <div className="absolute inset-0 bg-black/35" />
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background:
+                            "radial-gradient(80% 70% at 70% 30%, rgba(47,178,106,0.18) 0%, rgba(0,0,0,0) 60%), radial-gradient(90% 90% at 50% 50%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.40) 100%)",
+                    }}
+                />
+
+                {/* container */}
+                <div className="relative z-10 min-h-screen w-full flex items-center justify-center md:justify-center px-4 md:px-10">
+                    <div className="w-[520px] max-w-[94vw] rounded-[26px] overflow-hidden shadow-2xl   bg-white">
+                        {/* top brand bar */}
+                        <div className="p-5 md:p-6 text-white" style={{ background: `linear-gradient(180deg, ${UI.sub} 0%, ${UI.top} 100%)` }}>
                             <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/12 grid place-items-center overflow-hidden">
-                                    <Image src="/logo-aya.png" alt="AYA" width={36} height={36} />
+                                <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/15 grid place-items-center overflow-hidden">
+                                    <Image
+                                        src="/logo-aya.png"
+                                        alt="AYA"
+                                        width={34}
+                                        height={34}
+                                        priority
+                                        className="object-contain"
+                                    />
                                 </div>
+
                                 <div className="min-w-0">
-                                    <div className="text-sm font-semibold">AYA Energia</div>
-                                    <div className="text-[12px] text-white/60">Portal Operacional</div>
+                                    <div className="text-[13px] font-semibold leading-tight">AYA Energia</div>
+                                    <div className="text-[11px] text-white/70 -mt-[1px]">Portal Operacional</div>
                                 </div>
-                            </div>
 
-                            <div className="mt-8">
-                                <div className="text-2xl font-semibold leading-tight">Portal profissional, rápido e seguro.</div>
-                                <div className="mt-3 text-sm text-white/70 leading-relaxed">Operação, Manutenção, Compras e Cursos — conforme seu acesso.</div>
-                            </div>
-
-                            <div className="mt-8 text-[12px] text-white/70 flex items-center gap-2">
-                                <ShieldCheck className="w-4 h-4" />
-                                Acesso seguro
+                                <div className="ml-auto hidden sm:flex items-center gap-2">
+                                    <span className="text-[11px] px-2 py-1 rounded-full bg-white/10 border border-white/15">
+                                        Acesso seguro
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="p-8 lg:p-10">
-                            <div className="text-xl font-semibold text-black/90">Entrar</div>
-                            <div className="text-sm text-black/55 mt-1">Use suas credenciais.</div>
+                        {/* form */}
+                        <div className="p-6 md:p-8">
+                            <div>
+                                <div className="text-xl font-semibold text-black/90">Entrar</div>
+                                <div className="text-sm text-black/55 mt-1">Use suas credenciais para acessar o portal.</div>
+                            </div>
 
                             <form
                                 className="mt-6 space-y-4"
@@ -1177,7 +1196,14 @@ export default function PortalClient() {
                                     handleLogin();
                                 }}
                             >
-                                <Field label="Login" placeholder="Digite seu login" value={login} onChange={setLogin} autoComplete="username" leftIcon={<User className="w-4 h-4" />} />
+                                <Field
+                                    label="Login"
+                                    placeholder="Digite seu login"
+                                    value={login}
+                                    onChange={setLogin}
+                                    autoComplete="username"
+                                    leftIcon={<User className="w-4 h-4" />}
+                                />
 
                                 <Field
                                     label="Senha"
@@ -1188,7 +1214,12 @@ export default function PortalClient() {
                                     type={showPassword ? "text" : "password"}
                                     leftIcon={<Lock className="w-4 h-4" />}
                                     right={
-                                        <IconButton label={showPassword ? "Ocultar senha" : "Mostrar senha"} variant="light" className="h-9 w-9" onClick={() => setShowPassword((v) => !v)}>
+                                        <IconButton
+                                            label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                                            variant="light"
+                                            className="h-9 w-9"
+                                            onClick={() => setShowPassword((v) => !v)}
+                                        >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </IconButton>
                                     }
@@ -1201,20 +1232,42 @@ export default function PortalClient() {
                                     </div>
                                     <div className="mt-2 grid grid-cols-4 gap-2">
                                         {[0, 1, 2, 3].map((i) => (
-                                            <div key={i} className="h-2 rounded-full" style={{ background: pwScore.score >= i + 1 ? UI.accent : "rgba(0,0,0,0.10)" }} />
+                                            <div
+                                                key={i}
+                                                className="h-2 rounded-full"
+                                                style={{ background: pwScore.score >= i + 1 ? UI.accent : "rgba(0,0,0,0.10)" }}
+                                            />
                                         ))}
+                                    </div>
+                                    <div className="mt-2 text-[11px] text-black/50">
+                                        Dica: use <span className="font-semibold text-black/70">8+</span> caracteres e combine letras e números.
                                     </div>
                                 </div>
 
-                                {error && <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</div>}
+                                {error && (
+                                    <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-700">
+                                        {error}
+                                    </div>
+                                )}
 
                                 <Button type="submit" disabled={loginLoading} loading={loginLoading} className="w-full">
                                     {loginLoading ? "Entrando..." : "Entrar no Portal"}
                                 </Button>
 
-                                <button type="button" onClick={() => setShowSupport(true)} className="text-[12px] font-semibold text-black/60 hover:text-black underline underline-offset-4">
-                                    Suporte
-                                </button>
+                                <div className="flex items-center justify-between pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSupport(true)}
+                                        className="text-[12px] font-semibold text-black/60 hover:text-black underline underline-offset-4"
+                                    >
+                                        Suporte
+                                    </button>
+
+                                    <div className="text-[12px] text-black/45 flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4" />
+                                        Ambiente seguro
+                                    </div>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -1434,7 +1487,7 @@ export default function PortalClient() {
                         </video>
                         <div className="absolute inset-0 bg-black/35" />
                         <div className="relative z-10 w-full h-full flex items-center justify-center px-6">
-                            <Image src="/logo-aya.png" alt="AYA" width={520} height={520} className="opacity-60" />
+                            <Image src="/logo-aya.png" alt="AYA" width={520} height={520}  />
                         </div>
                     </div>
                 )}
