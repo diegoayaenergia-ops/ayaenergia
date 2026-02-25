@@ -14,6 +14,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   FileDown,
   ImageDown,
@@ -73,6 +75,30 @@ const UI = {
 } as const;
 
 /* =========================================================
+   HOOK: MOBILE
+========================================================= */
+function useIsMobile(maxWidth = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth - 1}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+
+    // Safari fallback
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, [maxWidth]);
+
+  return isMobile;
+}
+
+/* =========================================================
    UI PRIMITIVES
 ========================================================= */
 function Btn({
@@ -88,7 +114,7 @@ function Btn({
 }) {
   const base =
     "inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold border rounded-md " +
-    "disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
+    "whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
 
   const style =
     tone === "primary"
@@ -230,9 +256,9 @@ function ssLink(numeroSs: number | string) {
 }
 
 const CLIENT_COLORS: Record<string, string> = {
-  "INEER": "#0c6c13",
+  INEER: "#0c6c13",
   "ÉLIS": "#364349",
-  "KAMAI": "#f68e1b",
+  KAMAI: "#f68e1b",
 };
 
 const CLIENT_PALETTE = [
@@ -256,10 +282,7 @@ function colorForClient(label: string) {
   const key = clampUpper(label).replace(/\s+/g, " ").trim();
   if (!key) return "rgba(17,24,39,0.22)";
   if (key === "OUTROS") return "rgba(17,24,39,0.22)";
-  return (
-    CLIENT_COLORS[key] ||
-    CLIENT_PALETTE[hashStr(key) % CLIENT_PALETTE.length]
-  );
+  return CLIENT_COLORS[key] || CLIENT_PALETTE[hashStr(key) % CLIENT_PALETTE.length];
 }
 
 /* =========================================================
@@ -459,11 +482,13 @@ function LegendPills({
   active,
   onClickItem,
   max = 10,
+  compact = false,
 }: {
   items: Array<{ label: string; total: number }>;
   active?: string;
   onClickItem: (lbl: string) => void;
   max?: number;
+  compact?: boolean;
 }) {
   const show = items.slice(0, max);
   const rest = items.length - show.length;
@@ -489,11 +514,10 @@ function LegendPills({
               className="inline-block w-2.5 h-2.5 rounded-sm"
               style={{ background: colorForClient(x.label) }}
             />
-            <span className="max-w-[140px] truncate">{x.label}</span>
-            <span
-              className={UI.mono}
-              style={{ color: isActive ? T.accent : T.text3 }}
-            >
+            <span className={cx(compact ? "max-w-[110px]" : "max-w-[140px]", "truncate")}>
+              {x.label}
+            </span>
+            <span className={UI.mono} style={{ color: isActive ? T.accent : T.text3 }}>
               {x.total}
             </span>
           </button>
@@ -518,7 +542,7 @@ function LegendPills({
 }
 
 /* =========================================================
-   GRÁFICO (STACKED) — LISTA + BARRA SEGMENTADA
+   GRÁFICO (STACKED)
 ========================================================= */
 type StackedRow = {
   label: string;
@@ -575,6 +599,7 @@ function StackedBarsCard({
   maxSegs = 6,
   maxHeight = 560,
   exportMode = false,
+  compact = false,
 }: {
   title: string;
   hint?: ReactNode;
@@ -593,6 +618,7 @@ function StackedBarsCard({
   maxSegs?: number;
   maxHeight?: number;
   exportMode?: boolean;
+  compact?: boolean;
 }) {
   const [q, setQ] = useState("");
 
@@ -649,6 +675,7 @@ function StackedBarsCard({
         active={segActive}
         onClickItem={onClickSeg}
         max={maxSegs}
+        compact={compact}
       />
 
       <div className="mt-3 relative">
@@ -694,9 +721,9 @@ function StackedBarsCard({
           const isActive =
             !!groupActive && clampUpper(groupActive) === clampUpper(g.label);
 
-          // ↓ menor = barra mais perto do "eixo"
-          const labelCol = exportMode ? 260 : 190;
-          const valueCol = 48;
+          const labelCol = exportMode ? 260 : compact ? 140 : 190;
+          const valueCol = compact ? 42 : 48;
+          const barH = compact ? 26 : 30;
 
           return (
             <button
@@ -710,7 +737,10 @@ function StackedBarsCard({
               }}
             >
               <div
-                className="text-xs min-w-0 whitespace-normal break-words leading-4"
+                className={cx(
+                  "min-w-0 whitespace-normal break-words leading-4",
+                  compact ? "text-[11px]" : "text-xs"
+                )}
                 style={{
                   color: isActive ? T.accent : T.text3,
                   fontWeight: isActive ? 900 : 650,
@@ -726,7 +756,7 @@ function StackedBarsCard({
                 style={{
                   borderColor: isActive ? T.accentBorder : T.border,
                   background: T.mutedBg,
-                  height: 30,
+                  height: barH,
                 }}
               >
                 {shownSegs.map((s) => {
@@ -734,8 +764,7 @@ function StackedBarsCard({
                   if (!v) return null;
 
                   const activeSeg =
-                    !!segActive &&
-                    clampUpper(segActive) === clampUpper(s.label);
+                    !!segActive && clampUpper(segActive) === clampUpper(s.label);
 
                   const w = (v / Math.max(1, g.total)) * 100;
                   return (
@@ -776,7 +805,7 @@ function StackedBarsCard({
               </div>
 
               <div
-                className={cx("text-xs text-right", UI.mono)}
+                className={cx(compact ? "text-[11px]" : "text-xs", "text-right", UI.mono)}
                 style={{ color: T.text, fontWeight: 900 }}
               >
                 {g.total}
@@ -790,21 +819,183 @@ function StackedBarsCard({
 }
 
 /* =========================================================
+   MOBILE TABLE CARDS
+========================================================= */
+function MobileField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="grid grid-cols-12 gap-2">
+      <div className="col-span-4 text-[11px] font-semibold" style={{ color: T.text3 }}>
+        {label}
+      </div>
+      <div className="col-span-8 text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MobileRowCard({
+  r,
+  expanded,
+  onToggle,
+  onFilterUsina,
+}: {
+  r: AcRow;
+  expanded: boolean;
+  onToggle: () => void;
+  onFilterUsina: () => void;
+}) {
+  const hasSS = typeof r.ss === "number" && Number.isFinite(r.ss);
+
+  return (
+    <div
+      className="border rounded-lg p-3"
+      style={{ borderColor: T.border, background: T.card }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <button
+          type="button"
+          onClick={onFilterUsina}
+          className="min-w-0 text-left"
+          title="Filtrar por esta usina"
+        >
+          <div className="text-[12px] font-extrabold leading-4 truncate" style={{ color: T.text }}>
+            {safeText(r.usina, "—")}
+          </div>
+          <div className="mt-1 text-[11px] leading-4 line-clamp-2" style={{ color: T.text2 }}>
+            {safeText(r.motivoMobilizacao, "—")}
+          </div>
+        </button>
+
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <span className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+            {brDate(r.data)}
+          </span>
+
+          {hasSS ? (
+            <a
+              href={ssLink(r.ss!)}
+              target="_blank"
+              rel="noreferrer"
+              className={cx("text-[11px] inline-flex gap-1 underline", UI.mono)}
+              style={{ color: T.accent }}
+              title="Abrir SS no Sismetro"
+            >
+              SS {r.ss}
+            </a>
+          ) : (
+            <span className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+              SS —
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        {r.cliente ? (
+          <span
+            className="inline-flex items-center gap-2 h-7 px-2.5 text-[11px] font-semibold border rounded-md"
+            style={{
+              borderColor: T.border,
+              background: T.cardSoft,
+              color: T.text2,
+            }}
+          >
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-sm"
+              style={{ background: colorForClient(r.cliente) }}
+            />
+            {clampUpper(r.cliente)}
+          </span>
+        ) : null}
+
+        {r.equipamento ? (
+          <span
+            className="inline-flex items-center h-7 px-2.5 text-[11px] font-semibold border rounded-md"
+            style={{
+              borderColor: T.border,
+              background: T.cardSoft,
+              color: T.text2,
+            }}
+            title={r.equipamento}
+          >
+            {safeUpper(r.equipamento, "—")}
+          </span>
+        ) : null}
+
+        {r.alarme ? (
+          <span
+            className="inline-flex items-center h-7 px-2.5 text-[11px] font-semibold border rounded-md max-w-full"
+            style={{
+              borderColor: T.border,
+              background: T.cardSoft,
+              color: T.text2,
+            }}
+            title={r.alarme}
+          >
+            <span className="truncate">{safeUpper(r.alarme, "—")}</span>
+          </span>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mt-3 w-full inline-flex items-center justify-center gap-2 h-9 px-3 text-[12px] font-extrabold border rounded-md"
+        style={{
+          borderColor: expanded ? T.accentBorder : T.border,
+          background: expanded ? T.accentSoft : T.cardSoft,
+          color: expanded ? T.accent : T.text2,
+        }}
+      >
+        {expanded ? (
+          <>
+            <ChevronUp className="w-4 h-4" />
+            Ocultar detalhes
+          </>
+        ) : (
+          <>
+            <ChevronDown className="w-4 h-4" />
+            Ver detalhes
+          </>
+        )}
+      </button>
+
+      {expanded && (
+        <div
+          className="mt-3 border rounded-lg p-3"
+          style={{ borderColor: T.border, background: T.cardSoft }}
+        >
+          <div className="grid gap-2">
+            <MobileField
+              label="Problema"
+              value={safeText(r.problemaIdentificado, "—")}
+            />
+            <MobileField
+              label="Atividade"
+              value={safeText(r.solucaoImediata, "—")}
+            />
+            <MobileField
+              label="Solução def."
+              value={safeText(r.solucaoDefinitiva, "—")}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
    PAGE
 ========================================================= */
 export function AcionamentosDashPage() {
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
-    null
-  );
+  const isMobile = useIsMobile(640);
+
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   const [periodPreset, setPeriodPreset] = useState<
-    | "today"
-    | "thisWeek"
-    | "lastWeek"
-    | "thisMonth"
-    | "lastMonth"
-    | "last7"
-    | "last30"
+    "today" | "thisWeek" | "lastWeek" | "thisMonth" | "lastMonth" | "last7" | "last30"
   >("thisMonth");
 
   const [start, setStart] = useState("");
@@ -827,7 +1018,7 @@ export function AcionamentosDashPage() {
   const [loading, setLoading] = useState(false);
   const [allRows, setAllRows] = useState<AcRow[]>([]);
 
-  const limit = 14;
+  const pageSize = isMobile ? 8 : 14;
   const [page, setPage] = useState(1);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -866,7 +1057,6 @@ export function AcionamentosDashPage() {
     const prevY = window.scrollY;
     const prevX = window.scrollX;
 
-    // ✅ Sem scrollIntoView (evita “puxar” a tela, principalmente pro elemento off-screen)
     await new Promise<void>((r) =>
       requestAnimationFrame(() => requestAnimationFrame(() => r()))
     );
@@ -877,13 +1067,11 @@ export function AcionamentosDashPage() {
       useCORS: true,
       logging: false,
 
-      // ✅ captura a área total do elemento
       width: el.scrollWidth,
       height: el.scrollHeight,
       windowWidth: el.scrollWidth,
       windowHeight: el.scrollHeight,
 
-      // ✅ compensa scroll atual do documento
       scrollX: -window.scrollX,
       scrollY: -window.scrollY,
     });
@@ -911,7 +1099,6 @@ export function AcionamentosDashPage() {
     URL.revokeObjectURL(url);
   }
 
-  // ✅ PDF multipágina (mantém sua lógica atual)
   async function downloadPDFPaged(
     el: HTMLElement,
     filename: string,
@@ -943,7 +1130,6 @@ export function AcionamentosDashPage() {
     pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
   }
 
-  // ✅ PDF 1 página (sem quebra) — encaixa no A4
   async function downloadPDFFitA4(
     el: HTMLElement,
     filename: string,
@@ -1013,7 +1199,6 @@ export function AcionamentosDashPage() {
     });
   }, [withExportMode, start, end]);
 
-  // ✅ Aqui: PDF sem quebra (1 página) pros 3 gráficos
   const exportChartsOnlyPDF = useCallback(async () => {
     await withExportMode(async () => {
       setExportChartsOnly(true);
@@ -1031,33 +1216,6 @@ export function AcionamentosDashPage() {
       await wait2Frames();
     });
   }, [withExportMode, start, end]);
-
-  const exportTableExcel = useCallback(() => {
-    const header = [
-      "Data",
-      "Usina",
-      "Motivo",
-      "Problema Identificado",
-      "Atividade Realizada",
-      "Solução Definitiva",
-      "Ordem de Serviço",
-    ];
-
-    const body = filteredRows.map((r) => [
-      csvCell(brDate(r.data)),
-      csvCell(safeText(r.usina)),
-      csvCell(safeText(r.motivoMobilizacao, "—")),
-      csvCell(safeText(r.problemaIdentificado, "—")),
-      csvCell(safeText(r.solucaoImediata, "—")),
-      csvCell(safeText(r.solucaoDefinitiva, "—")),
-      csvCell(typeof r.ss === "number" && Number.isFinite(r.ss) ? r.ss : ""),
-    ]);
-
-    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [
-      header.map(csvCell),
-      ...body,
-    ]);
-  }, [start, end, allRows]); // (filteredRows está abaixo; o hook real usa filteredRows, ajustado depois)
 
   const exportTablePNG = useCallback(async () => {
     const el = tableOnlyRef.current;
@@ -1083,7 +1241,6 @@ export function AcionamentosDashPage() {
       setExportAllTable(true);
       await wait2Frames();
       try {
-        // tabela continua multipágina (senão fica minúsculo)
         await downloadPDFPaged(el, `acionamentos-tabela_${start}_${end}.pdf`);
       } finally {
         setExportAllTable(false);
@@ -1319,9 +1476,7 @@ export function AcionamentosDashPage() {
 
     setClientesList(uniq(rows.map((r) => String(r.cliente ?? "").trim())));
     setUsinasList(uniq(rows.map((r) => String(r.usina ?? "").trim())));
-    setEquipamentosList(
-      uniq(rows.map((r) => String(r.equipamento ?? "").trim()))
-    );
+    setEquipamentosList(uniq(rows.map((r) => String(r.equipamento ?? "").trim())));
   }, []);
 
   const loadAll = useCallback(async () => {
@@ -1404,28 +1559,18 @@ export function AcionamentosDashPage() {
     let r = allRows;
 
     if (start && end)
-      r = r.filter(
-        (x) => x.data && inRangeISO(String(x.data).slice(0, 10), start, end)
-      );
+      r = r.filter((x) => x.data && inRangeISO(String(x.data).slice(0, 10), start, end));
 
     if (cliente)
-      r = r.filter(
-        (x) => clampUpper(String(x.cliente ?? "")) === clampUpper(cliente)
-      );
+      r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(cliente));
 
     if (clienteQuick)
-      r = r.filter(
-        (x) =>
-          clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick)
-      );
+      r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick));
 
     if (usina) r = r.filter((x) => includesLoose(x.usina ?? "", usina));
 
     if (equipamento)
-      r = r.filter(
-        (x) =>
-          clampUpper(String(x.equipamento ?? "")) === clampUpper(equipamento)
-      );
+      r = r.filter((x) => clampUpper(String(x.equipamento ?? "")) === clampUpper(equipamento));
 
     if (alarme) r = r.filter((x) => includesLoose(x.alarme ?? "", alarme));
 
@@ -1452,19 +1597,8 @@ export function AcionamentosDashPage() {
     });
 
     return copy;
-  }, [
-    allRows,
-    start,
-    end,
-    cliente,
-    clienteQuick,
-    usina,
-    equipamento,
-    alarme,
-    searchText,
-  ]);
+  }, [allRows, start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
 
-  // ✅ corrige dependência do exportTableExcel (agora usa filteredRows)
   const exportTableExcelFixed = useCallback(() => {
     const header = [
       "Data",
@@ -1486,49 +1620,42 @@ export function AcionamentosDashPage() {
       csvCell(typeof r.ss === "number" && Number.isFinite(r.ss) ? r.ss : ""),
     ]);
 
-    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [
-      header.map(csvCell),
-      ...body,
-    ]);
+    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [header.map(csvCell), ...body]);
   }, [filteredRows, start, end]);
 
-  useEffect(
-    () => setPage(1),
-    [start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]
-  );
+  useEffect(() => setPage(1), [
+    start,
+    end,
+    cliente,
+    clienteQuick,
+    usina,
+    equipamento,
+    alarme,
+    searchText,
+    pageSize,
+  ]);
 
   const count = filteredRows.length;
-  const totalPages = Math.max(1, Math.ceil(count / limit));
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
   const pageSafe = Math.min(Math.max(1, page), totalPages);
-  const offset = (pageSafe - 1) * limit;
-  const tableRows = filteredRows.slice(offset, offset + limit);
-  const rowsToRender = exportAllTable ? filteredRows : tableRows;
+  const offset = (pageSafe - 1) * pageSize;
+  const tableRows = filteredRows.slice(offset, offset + pageSize);
+
+  // UI vs Export (no mobile, UI continua paginada; export captura tudo)
+  const rowsForExport = exportAllTable ? filteredRows : tableRows;
+  const rowsForUI = isMobile ? tableRows : rowsForExport;
 
   const stackedByUsina = useMemo(
-    () =>
-      buildStacked(
-        filteredRows,
-        (r) => safeUpper(r.usina, ""),
-        (r) => safeUpper(r.cliente, "")
-      ),
+    () => buildStacked(filteredRows, (r) => safeUpper(r.usina, ""), (r) => safeUpper(r.cliente, "")),
     [filteredRows]
   );
   const stackedByEquip = useMemo(
     () =>
-      buildStacked(
-        filteredRows,
-        (r) => safeUpper(r.equipamento, ""),
-        (r) => safeUpper(r.cliente, "")
-      ),
+      buildStacked(filteredRows, (r) => safeUpper(r.equipamento, ""), (r) => safeUpper(r.cliente, "")),
     [filteredRows]
   );
   const stackedByAlarm = useMemo(
-    () =>
-      buildStacked(
-        filteredRows,
-        (r) => safeUpper(r.alarme, ""),
-        (r) => safeUpper(r.cliente, "")
-      ),
+    () => buildStacked(filteredRows, (r) => safeUpper(r.alarme, ""), (r) => safeUpper(r.cliente, "")),
     [filteredRows]
   );
 
@@ -1545,6 +1672,105 @@ export function AcionamentosDashPage() {
   const toggleAlarm = useCallback((lbl: string) => {
     setAlarme((p) => (clampUpper(p) === clampUpper(lbl) ? "" : lbl));
   }, []);
+
+  const [expandedId, setExpandedId] = useState<string>("");
+
+  // MARKUP REUSÁVEL DA TABELA (desktop e export)
+  const DesktopTable = ({ rows }: { rows: AcRow[] }) => (
+    <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border, background: "#fff" }}>
+      <div className="overflow-x-auto w-full min-w-0">
+        <div className="min-w-[1100px]">
+          <div
+            className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+            style={{
+              borderColor: T.border,
+              background: "rgba(251,252,253,0.92)",
+              backdropFilter: "blur(6px)",
+              color: T.text2,
+            }}
+          >
+            <div className="col-span-1">Data</div>
+            <div className="col-span-1">Usina</div>
+            <div className="col-span-2">Motivo</div>
+            <div className="col-span-3">Problema Identificado</div>
+            <div className="col-span-2">Atividade Realizada</div>
+            <div className="col-span-2">Solução Definitiva</div>
+            <div className="col-span-1">Ordem de Serviço</div>
+          </div>
+
+          {rows.map((r) => (
+            <div
+              key={r.id}
+              className="grid grid-cols-12 gap-3 px-3 py-3 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition items-start"
+              style={{
+                borderColor: "rgba(17,24,39,0.08)",
+                background: T.card,
+              }}
+            >
+              <div className={cx("text-[11px] col-span-1", UI.mono)} style={{ color: T.text2 }}>
+                {brDate(r.data)}
+              </div>
+
+              <div className="col-span-1 min-w-0">
+                <button
+                  type="button"
+                  className="text-left w-full underline-offset-2 hover:underline"
+                  style={{ color: T.text2 }}
+                  onClick={() => toggleUsina(safeUpper(r.usina, ""))}
+                  title="Clique para filtrar por esta usina"
+                >
+                  <span className="text-[11px] whitespace-normal break-words">{safeText(r.usina)}</span>
+                </button>
+              </div>
+
+              <div className="col-span-2 min-w-0">
+                <span className="text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+                  {safeText(r.motivoMobilizacao, "—")}
+                </span>
+              </div>
+
+              <div className="col-span-3 min-w-0">
+                <span className="text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+                  {safeText(r.problemaIdentificado, "—")}
+                </span>
+              </div>
+
+              <div className="col-span-2 min-w-0">
+                <span className="text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+                  {safeText(r.solucaoImediata, "—")}
+                </span>
+              </div>
+
+              <div className="col-span-2 min-w-0">
+                <span className="text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+                  {safeText(r.solucaoDefinitiva, "—")}
+                </span>
+              </div>
+
+              <div className="col-span-1 min-w-0">
+                {typeof r.ss === "number" && Number.isFinite(r.ss) ? (
+                  <a
+                    href={ssLink(r.ss)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={cx("text-[11px] inline-flex gap-2 underline", UI.mono)}
+                    style={{ color: T.accent }}
+                    title="Abrir SS no Sismetro"
+                  >
+                    {r.ss}
+                  </a>
+                ) : (
+                  <span className={UI.mono} style={{ color: T.text3 }}>
+                    —
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
@@ -1563,19 +1789,12 @@ export function AcionamentosDashPage() {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Pill tone="accent">Registros: {count}</Pill>
                 <Pill>
-                  Período:{" "}
-                  {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}
+                  Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}
                 </Pill>
                 <Pill>Cliente: {cliente ? clampUpper(cliente) : "Todos"}</Pill>
-                <Pill>
-                  Cliente rápido:{" "}
-                  {clienteQuick ? clampUpper(clienteQuick) : "Todos"}
-                </Pill>
+                <Pill>Cliente rápido: {clienteQuick ? clampUpper(clienteQuick) : "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
-                <Pill>
-                  Equipamento:{" "}
-                  {equipamento ? clampUpper(equipamento) : "Todos"}
-                </Pill>
+                <Pill>Equipamento: {equipamento ? clampUpper(equipamento) : "Todos"}</Pill>
                 <Pill>Alarme: {alarme ? clampUpper(alarme) : "Todos"}</Pill>
               </div>
             </div>
@@ -1603,7 +1822,7 @@ export function AcionamentosDashPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)}>
+              <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
                 {filtersOpen ? (
                   <>
                     <ChevronUp className="w-4 h-4" /> Ocultar
@@ -1629,6 +1848,7 @@ export function AcionamentosDashPage() {
                   setMsg(null);
                 }}
                 disabled={loading}
+                className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
               >
                 Limpar
               </Btn>
@@ -1792,18 +2012,22 @@ export function AcionamentosDashPage() {
                     tone="secondary"
                     onClick={exportChartsOnlyPNG}
                     disabled={loading || exporting}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title="Exportar gráficos em PNG"
                   >
                     <ImageDown className="w-4 h-4" />
-                    PNG
+                    {isMobile ? "PNG" : "PNG"}
                   </Btn>
 
                   <Btn
                     tone="secondary"
                     onClick={exportChartsOnlyPDF}
                     disabled={loading || exporting}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title="Exportar gráficos em PDF (1 página)"
                   >
                     <FileDown className="w-4 h-4" />
-                    PDF (1 página)
+                    {isMobile ? "PDF" : "PDF (1 página)"}
                   </Btn>
                 </div>
               }
@@ -1823,6 +2047,7 @@ export function AcionamentosDashPage() {
                   searchPlaceholder="Buscar usina no gráfico…"
                   maxSegs={6}
                   maxHeight={2000}
+                  compact={isMobile}
                 />
               </div>
 
@@ -1839,6 +2064,7 @@ export function AcionamentosDashPage() {
                   searchPlaceholder="Buscar equipamento no gráfico…"
                   maxSegs={6}
                   maxHeight={2000}
+                  compact={isMobile}
                 />
               </div>
 
@@ -1855,6 +2081,7 @@ export function AcionamentosDashPage() {
                   searchPlaceholder="Buscar alarme no gráfico…"
                   maxSegs={6}
                   maxHeight={2000}
+                  compact={isMobile}
                 />
               </div>
             </div>
@@ -1863,13 +2090,9 @@ export function AcionamentosDashPage() {
               <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex flex-wrap items-center gap-2">
                   <Pill tone="accent">Filtros rápidos</Pill>
-                  {clienteQuick ? (
-                    <Pill>Cliente: {clampUpper(clienteQuick)}</Pill>
-                  ) : null}
+                  {clienteQuick ? <Pill>Cliente: {clampUpper(clienteQuick)}</Pill> : null}
                   {usina ? <Pill>Usina: {clampUpper(usina)}</Pill> : null}
-                  {equipamento ? (
-                    <Pill>Equip.: {clampUpper(equipamento)}</Pill>
-                  ) : null}
+                  {equipamento ? <Pill>Equip.: {clampUpper(equipamento)}</Pill> : null}
                   {alarme ? <Pill>Alarme: {clampUpper(alarme)}</Pill> : null}
                 </div>
 
@@ -1897,8 +2120,9 @@ export function AcionamentosDashPage() {
             className={cx(UI.section, "rounded-lg")}
             style={{ borderColor: T.border, background: T.card }}
           >
+            {/* HEADER DA TABELA (mobile-friendly) */}
             <div
-              className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
+              className="px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               style={{ borderColor: T.border }}
             >
               <div className="flex items-center gap-2 flex-wrap">
@@ -1906,35 +2130,49 @@ export function AcionamentosDashPage() {
                 <Pill tone="accent">{count}</Pill>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Btn
-                  tone="secondary"
-                  onClick={exportTableExcelFixed}
-                  disabled={loading}
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  Excel
-                </Btn>
+              <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Btn
+                    tone="secondary"
+                    onClick={exportTableExcelFixed}
+                    disabled={loading}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    {isMobile ? "Excel" : "Excel"}
+                  </Btn>
 
-                <Btn tone="secondary" onClick={exportTablePDF} disabled={loading}>
-                  <FileDown className="w-4 h-4" />
-                  PDF
-                </Btn>
+                  <Btn
+                    tone="secondary"
+                    onClick={exportTablePDF}
+                    disabled={loading}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    {isMobile ? "PDF" : "PDF"}
+                  </Btn>
+                </div>
 
-                <Btn
-                  tone="secondary"
-                  disabled={loading || pageSafe === 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Anterior
-                </Btn>
-                <Btn
-                  tone="secondary"
-                  disabled={loading || pageSafe >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Próxima
-                </Btn>
+                <div className="flex items-center gap-2 justify-between sm:justify-end">
+                  <Btn
+                    tone="secondary"
+                    disabled={loading || pageSafe === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    {isMobile ? "Anterior" : "Anterior"}
+                  </Btn>
+                  <Btn
+                    tone="secondary"
+                    disabled={loading || pageSafe >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  >
+                    {isMobile ? "Próxima" : "Próxima"}
+                    <ChevronRight className="w-4 h-4" />
+                  </Btn>
+                </div>
               </div>
             </div>
 
@@ -1952,130 +2190,46 @@ export function AcionamentosDashPage() {
                 </div>
               )}
 
-              {rowsToRender.length > 0 && (
-                <div
-                  ref={tableOnlyRef}
-                  className="border rounded-lg overflow-hidden"
-                  style={{ borderColor: T.border, background: "#fff" }}
-                >
-                  <div className="overflow-x-auto w-full min-w-0">
-                    <div className="min-w-[1100px]">
-                      <div
-                        className="grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
-                        style={{
-                          borderColor: T.border,
-                          background: "rgba(251,252,253,0.92)",
-                          backdropFilter: "blur(6px)",
-                          color: T.text2,
-                        }}
-                      >
-                        <div className="col-span-1">Data</div>
-                        <div className="col-span-1">Usina</div>
-                        <div className="col-span-2">Motivo</div>
-                        <div className="col-span-3">Problema Identificado</div>
-                        <div className="col-span-2">Atividade Realizada</div>
-                        <div className="col-span-2">Solução Definitiva</div>
-                        <div className="col-span-1">Ordem de Serviço</div>
-                      </div>
-
-                      {rowsToRender.map((r) => (
-                        <div
-                          key={r.id}
-                          className="grid grid-cols-12 gap-3 px-3 py-3 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition items-start"
-                          style={{
-                            borderColor: "rgba(17,24,39,0.08)",
-                            background: T.card,
-                          }}
-                        >
-                          <div
-                            className={cx("text-[11px] col-span-1", UI.mono)}
-                            style={{ color: T.text2 }}
-                          >
-                            {brDate(r.data)}
-                          </div>
-
-                          <div className="col-span-1 min-w-0">
-                            <button
-                              type="button"
-                              className="text-left w-full underline-offset-2 hover:underline"
-                              style={{ color: T.text2 }}
-                              onClick={() => toggleUsina(safeUpper(r.usina, ""))}
-                              title="Clique para filtrar por esta usina"
-                            >
-                              <span className="text-[11px] whitespace-normal break-words">
-                                {safeText(r.usina)}
-                              </span>
-                            </button>
-                          </div>
-
-                          <div className="col-span-2 min-w-0">
-                            <span
-                              className="text-[11px] whitespace-pre-wrap break-words"
-                              style={{ color: T.text2 }}
-                            >
-                              {safeText(r.motivoMobilizacao, "—")}
-                            </span>
-                          </div>
-
-                          <div className="col-span-3 min-w-0">
-                            <span
-                              className="text-[11px] whitespace-pre-wrap break-words"
-                              style={{ color: T.text2 }}
-                            >
-                              {safeText(r.problemaIdentificado, "—")}
-                            </span>
-                          </div>
-
-                          <div className="col-span-2 min-w-0">
-                            <span
-                              className="text-[11px] whitespace-pre-wrap break-words"
-                              style={{ color: T.text2 }}
-                            >
-                              {safeText(r.solucaoImediata, "—")}
-                            </span>
-                          </div>
-
-                          <div className="col-span-2 min-w-0">
-                            <span
-                              className="text-[11px] whitespace-pre-wrap break-words"
-                              style={{ color: T.text2 }}
-                            >
-                              {safeText(r.solucaoDefinitiva, "—")}
-                            </span>
-                          </div>
-
-                          <div className="col-span-1 min-w-0">
-                            {typeof r.ss === "number" && Number.isFinite(r.ss) ? (
-                              <a
-                                href={ssLink(r.ss)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className={cx(
-                                  "text-[11px] inline-flex gap-2 underline",
-                                  UI.mono
-                                )}
-                                style={{ color: T.accent }}
-                                title="Abrir SS no Sismetro"
-                              >
-                                {r.ss}
-                              </a>
-                            ) : (
-                              <span
-                                className={UI.mono}
-                                style={{ color: T.text3 }}
-                              >
-                                —
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              {/* MOBILE: cards (sem scroll horizontal) */}
+              {rowsForUI.length > 0 && isMobile && (
+                <div className="grid gap-2">
+                  {rowsForUI.map((r) => (
+                    <MobileRowCard
+                      key={r.id}
+                      r={r}
+                      expanded={expandedId === r.id}
+                      onToggle={() => setExpandedId((p) => (p === r.id ? "" : r.id))}
+                      onFilterUsina={() => toggleUsina(safeUpper(r.usina, ""))}
+                    />
+                  ))}
                 </div>
               )}
 
-              {/* ✅ EXPORT ONLY (3 gráficos) — off-screen, mas renderizável */}
+              {/* DESKTOP: tabela completa */}
+              {rowsForUI.length > 0 && !isMobile && (
+                <div ref={tableOnlyRef}>
+                  <DesktopTable rows={rowsForUI} />
+                </div>
+              )}
+
+              {/* EXPORT TABLE (sempre renderiza off-screen, inclusive no mobile) */}
+              <div
+                style={{
+                  position: "fixed",
+                  left: -10000,
+                  top: 0,
+                  width: 1200,
+                  background: "#fff",
+                  padding: 16,
+                  zIndex: -1,
+                }}
+              >
+                <div ref={tableOnlyRef}>
+                  <DesktopTable rows={rowsForExport} />
+                </div>
+              </div>
+
+              {/* EXPORT ONLY (3 gráficos) — off-screen */}
               {exportChartsOnly && (
                 <div
                   style={{
@@ -2147,8 +2301,7 @@ export function AcionamentosDashPage() {
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>
-                  Total (filtro): <span className={UI.mono}>{count}</span> •
-                  Página{" "}
+                  Total (filtro): <span className={UI.mono}>{count}</span> • Página{" "}
                   <span className={UI.mono}>
                     {pageSafe}/{totalPages}
                   </span>
