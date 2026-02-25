@@ -1882,32 +1882,33 @@ export function AcionamentosDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-2">
-                  <label className={UI.label} style={{ color: T.text2 }}>
-                    Início
-                  </label>
-                  <input
-                    type="date"
-                    value={start}
-                    onChange={(e) => setStart(e.target.value)}
-                    className={cx(UI.input, "mt-1 rounded-md")}
-                    style={{ borderColor: T.border }}
-                  />
-                </div>
+                {/* Início */}
+<div className="lg:col-span-3 min-w-0">
+  <label className={UI.label} style={{ color: T.text2 }}>
+    Início
+  </label>
+  <input
+    type="date"
+    value={start}
+    onChange={(e) => setStart(e.target.value)}
+    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
+    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+  />
+</div>
 
-                <div className="lg:col-span-2">
-                  <label className={UI.label} style={{ color: T.text2 }}>
-                    Fim
-                  </label>
-                  <input
-                    type="date"
-                    value={end}
-                    onChange={(e) => setEnd(e.target.value)}
-                    className={cx(UI.input, "mt-1 rounded-md")}
-                    style={{ borderColor: T.border }}
-                  />
-                </div>
-
+{/* Fim */}
+<div className="lg:col-span-3 min-w-0">
+  <label className={UI.label} style={{ color: T.text2 }}>
+    Fim
+  </label>
+  <input
+    type="date"
+    value={end}
+    onChange={(e) => setEnd(e.target.value)}
+    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
+    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+  />
+</div>
                 <div className="lg:col-span-3">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Busca (geral)

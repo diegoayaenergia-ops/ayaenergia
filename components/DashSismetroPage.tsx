@@ -15,6 +15,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
 } from "lucide-react";
 
@@ -53,8 +55,8 @@ const UI = {
   page: "w-full min-w-0",
   container: "mx-auto w-full max-w-[1480px] px-4 sm:px-6 py-6",
 
-  header: "border bg-white",
-  section: "border bg-white",
+  header: "border bg-white min-w-0",
+  section: "border bg-white min-w-0",
 
   headerTitle: "text-base sm:text-lg font-semibold tracking-tight",
   headerSub: "text-xs",
@@ -64,13 +66,32 @@ const UI = {
   help: "text-[11px]",
 
   input:
-    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
+    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0",
   select:
-    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
+    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0",
 
   cardTitle: "text-xs font-semibold",
   mono: "tabular-nums",
 } as const;
+
+/* =========================================================
+   HOOK: MOBILE
+========================================================= */
+function useIsMobile(maxWidth = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth - 1}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, [maxWidth]);
+  return isMobile;
+}
 
 /* =========================================================
    UI PRIMITIVES
@@ -88,7 +109,7 @@ function Btn({
 }) {
   const base =
     "inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold border rounded-md " +
-    "disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
+    "whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
 
   const style =
     tone === "primary"
@@ -179,13 +200,11 @@ function yearRangeISO(year: number) {
   return { start, end };
 }
 
-// ✅ NOVO: range completo baseado nas SS carregadas (min/max)
 function rangeFromRows(rows: Array<{ data?: string | null }>) {
   const dates = rows
     .map((r) => String(r?.data || "").trim())
     .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
-    .sort(); // ISO => ordena correto
-
+    .sort();
   if (!dates.length) return null;
   return { start: dates[0], end: dates[dates.length - 1] };
 }
@@ -245,9 +264,9 @@ function ssLink(idSs: number) {
     String(idSs || "")
   )}`;
 }
-// Converte HTML leve do Sismetro em texto seguro
+
 const decodeHtml = (() => {
-  if (typeof document === "undefined") return (s: string) => s; // fallback
+  if (typeof document === "undefined") return (s: string) => s;
   const el = document.createElement("textarea");
   return (s: string) => {
     el.innerHTML = s;
@@ -259,16 +278,10 @@ function cleanSismetroHtml(raw?: string | null) {
   const s0 = String(raw ?? "").trim();
   if (!s0) return null;
 
-  // 1) <br> vira quebra de linha
   const withBreaks = s0.replace(/<br\s*\/?>/gi, "\n");
-
-  // 2) remove outras tags
   const noTags = withBreaks.replace(/<\/?[^>]+>/g, "");
-
-  // 3) decodifica entidades (&nbsp;, &amp;, etc.)
   const decoded = decodeHtml(noTags);
 
-  // 4) normaliza espaços (inclui NBSP real \u00A0)
   return decoded
     .replace(/\u00A0/g, " ")
     .replace(/[ \t]+/g, " ")
@@ -285,6 +298,23 @@ function safeUpper(s?: string | null, fallback = "—") {
   return v ? clampUpper(v) : fallback;
 }
 
+type SsItem = {
+  idSs: number;
+  tipoSs?: string | null;
+  dataAbertura?: string | null;
+  solicitante?: string | null;
+  localizacao?: string | null;
+  descricaoSs?: string | null;
+  evolucao?: string | null;
+  status?: string | null;
+  url?: string | null;
+
+  tecnicoDesignado?: string | null;
+  matriculaTecnicoDesignado?: string | null;
+
+  [k: string]: any;
+};
+
 function pickConclusao(it: SsItem): { txt: string | null } {
   const txtRaw =
     (it as any).conclusao ??
@@ -293,10 +323,8 @@ function pickConclusao(it: SsItem): { txt: string | null } {
     null;
 
   const txt = txtRaw ? String(txtRaw).trim() : null;
-
   return { txt: txt || null };
 }
-
 
 /* =========================================================
    COLORS
@@ -355,7 +383,7 @@ function UsinaAutocomplete({
   }, [open, filtered.length]);
 
   return (
-    <div ref={ref} className={cx("relative", className)}>
+    <div ref={ref} className={cx("relative min-w-0", className)}>
       <div className="relative">
         <input
           value={value}
@@ -442,25 +470,8 @@ function UsinaAutocomplete({
 }
 
 /* =========================================================
-   TYPES — Sismetro SS
+   TYPES
 ========================================================= */
-type SsItem = {
-  idSs: number;
-  tipoSs?: string | null;
-  dataAbertura?: string | null;
-  solicitante?: string | null;
-  localizacao?: string | null;
-  descricaoSs?: string | null;
-  evolucao?: string | null;
-  status?: string | null;
-  url?: string | null;
-
-  tecnicoDesignado?: string | null;
-  matriculaTecnicoDesignado?: string | null;
-
-  [k: string]: any;
-};
-
 type ApiResp = {
   ok: boolean;
   totalPages?: number;
@@ -472,7 +483,7 @@ type ApiResp = {
 type Row = {
   id: string;
   idSs: number;
-  data: string; // ISO YYYY-MM-DD
+  data: string;
   dataHora?: string | null;
 
   cliente: string | null;
@@ -487,12 +498,9 @@ type Row = {
   tecnicoMatricula?: string | null;
 };
 
-// desconsiderar no dashboard
 const TIPO_BAN = new Set(["INCONFORMIDADE"]);
-// desconsiderar status no dashboard
 const STATUS_BAN = new Set(["EXCLUÍDA", "CANCELADA"]);
 
-// Kanban fixo (só esses 4)
 const KANBAN_COLS = [
   "AGUARDANDO AGENDAMENTO",
   "EM EXECUÇÃO",
@@ -501,36 +509,33 @@ const KANBAN_COLS = [
 ] as const;
 type KanbanCol = (typeof KANBAN_COLS)[number];
 
-// Paleta “fixa” para TIPOS (você pode ajustar as cores)
 const TYPE_PALETTE = [
-  "#115923", // verde (sua cor)
-  "#2563EB", // azul
-  "#F59E0B", // âmbar
-  "#EF4444", // vermelho
-  "#8B5CF6", // roxo
-  "#14B8A6", // teal
-  "#F97316", // laranja
-  "#64748B", // slate
-  "#DB2777", // pink
-  "#84CC16", // lime
+  "#115923",
+  "#2563EB",
+  "#F59E0B",
+  "#EF4444",
+  "#8B5CF6",
+  "#14B8A6",
+  "#F97316",
+  "#64748B",
+  "#DB2777",
+  "#84CC16",
 ];
 const KANBAN_COLORS: Record<KanbanCol, string> = {
-  "AGUARDANDO AGENDAMENTO": "#96D9A7", // âmbar
-  "EM EXECUÇÃO": "#5CAE70", // azul
-  "PENDENTE": "#939598", // slate
-  "CONCLUÍDO": "#2E7B41", // verde (sua cor)
+  "AGUARDANDO AGENDAMENTO": "#96D9A7",
+  "EM EXECUÇÃO": "#5CAE70",
+  PENDENTE: "#939598",
+  "CONCLUÍDO": "#2E7B41",
 };
-// (Opcional) Overrides: se quiser forçar tipo específico
 const TIPO_COLORS: Record<string, string> = {
-  "PREVENTIVA": "#96D9A7", // azul
-  "CORRETIVA": "#5CAE70", // verde (sua cor)
-  "CONTROLE": "#939598", // slate
-  "VISITA TÉCNICA": "#2E7B41", // âmbar
-  "HANDOVER": "#DBFFE4", // laranja
+  PREVENTIVA: "#96D9A7",
+  CORRETIVA: "#5CAE70",
+  CONTROLE: "#939598",
+  "VISITA TÉCNICA": "#2E7B41",
+  HANDOVER: "#DBFFE4",
 };
 
 function hashString(s: string) {
-  // hash simples, estável
   let h = 0;
   for (let i = 0; i < s.length; i++) {
     h = (h << 5) - h + s.charCodeAt(i);
@@ -538,36 +543,27 @@ function hashString(s: string) {
   }
   return Math.abs(h);
 }
-
 function tipoColor(tpRaw?: string | null) {
   const key = clampUpper(String(tpRaw || "SEM TIPO"));
   if (TIPO_COLORS[key]) return TIPO_COLORS[key];
   return TYPE_PALETTE[hashString(key) % TYPE_PALETTE.length];
 }
-
-
-
-
 function normalizeKanban(evoRaw?: string | null): KanbanCol | "OUTROS" {
   const e = clampUpper(String(evoRaw || ""));
-
   if (e === "AGUARDANDO AGENDAMENTO") return "AGUARDANDO AGENDAMENTO";
   if (e === "EM EXECUCAO" || e === "EM EXECUÇÃO" || e.includes("EXECU"))
     return "EM EXECUÇÃO";
   if (e.includes("PENDENTE")) return "PENDENTE";
   if (e === "CONCLUIDO" || e === "CONCLUÍDO" || e.includes("CONCLU"))
     return "CONCLUÍDO";
-
   return "OUTROS";
 }
-
 function normalizeTecnico(it: SsItem): {
   tecnico: string | null;
   matricula: string | null;
 } {
   const name = String(it.tecnicoDesignado || "").trim();
   const mat = String(it.matriculaTecnicoDesignado || "").trim();
-
   return {
     tecnico: name ? clampUpper(name) : null,
     matricula: mat ? mat : null,
@@ -615,14 +611,13 @@ function LegendPills({
   return (
     <div className="mt-2 flex flex-wrap gap-2">
       {items.map((it) => {
-        const isActive =
-          !!active && clampUpper(active) === clampUpper(it.label);
+        const isActive = !!active && clampUpper(active) === clampUpper(it.label);
         return (
           <button
             key={it.label}
             type="button"
             onClick={() => onClickItem?.(it.label)}
-            className="inline-flex items-center gap-2 h-7 px-2.5 text-[11px] font-medium border rounded-md transition"
+            className="inline-flex items-center gap-2 h-7 px-2.5 text-[11px] font-medium border rounded-md transition max-w-full"
             style={{
               borderColor: isActive ? T.accent : T.border,
               background: isActive ? T.accentSoft : T.card,
@@ -631,18 +626,12 @@ function LegendPills({
             }}
             title={onClickItem ? "Clique para filtrar" : undefined}
           >
-            <span
-              className="w-2.5 h-2.5 rounded-sm"
-              style={{ background: it.color }}
-            />
-            <span className="truncate max-w-[210px]">{it.label}</span>
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: it.color }} />
+            <span className="truncate max-w-[220px]">{it.label}</span>
             {typeof it.value === "number" && (
               <>
                 <span style={{ color: T.text3 }}>•</span>
-                <span
-                  className={UI.mono}
-                  style={{ fontWeight: 900, color: T.text }}
-                >
+                <span className={UI.mono} style={{ fontWeight: 900, color: T.text }}>
                   {it.value}
                 </span>
               </>
@@ -655,29 +644,135 @@ function LegendPills({
 }
 
 /* =========================================================
+   MOBILE CARD (Tabela)
+========================================================= */
+function MobileSSCard({
+  r,
+  onFilterUsina,
+  onFilterTecnico,
+}: {
+  r: Row;
+  onFilterUsina: () => void;
+  onFilterTecnico: () => void;
+}) {
+  return (
+    <div className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <a
+            href={ssLink(r.idSs)}
+            target="_blank"
+            rel="noreferrer"
+            className={cx("text-[12px] font-extrabold underline", UI.mono)}
+            style={{ color: T.accent }}
+          >
+            #{r.idSs}
+          </a>
+
+          <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+            {brDateTimeFromSismetro(r.dataHora || null)}
+          </div>
+        </div>
+
+        <a
+          href={ssLink(r.idSs)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center justify-center h-9 w-10 border rounded-md shrink-0"
+          style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+          title="Abrir SS"
+        >
+          <ExternalLink className="w-4 h-4" />
+        </a>
+      </div>
+
+      <button
+        type="button"
+        onClick={onFilterUsina}
+        className="mt-2 w-full text-left"
+        title="Filtrar por esta usina"
+      >
+        <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }}>
+          {safeUpper(r.usina)}
+        </div>
+      </button>
+
+      <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
+        {safeText(r.descricao)}
+      </div>
+
+      <div className="mt-2 border rounded-md p-2" style={{ borderColor: T.border, background: T.cardSoft }}>
+        <div className="text-[11px] font-semibold" style={{ color: T.text3 }}>
+          Conclusão
+        </div>
+        <div className="mt-1 text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+          {r.conclusaoTexto ? safeUpper(r.conclusaoTexto, "") : "—"}
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span
+          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+          style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+        >
+          {safeText(r.tipo)}
+        </span>
+        <span
+          className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+          style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+        >
+          {safeText(r.status)}
+        </span>
+      </div>
+
+      <div className="mt-2 flex items-start justify-between gap-2">
+        <button
+          type="button"
+          onClick={onFilterTecnico}
+          className="text-left min-w-0"
+          title="Filtrar por técnico"
+        >
+          <div className="text-[11px] font-semibold truncate" style={{ color: T.text }}>
+            {safeUpper(r.tecnico)}
+          </div>
+          <div className="text-[11px] truncate" style={{ color: T.text3 }}>
+            {safeText(r.evolucao)}
+          </div>
+        </button>
+
+        {r.tecnicoMatricula ? (
+          <span className={cx("text-[11px] font-extrabold", UI.mono)} style={{ color: T.text }}>
+            {r.tecnicoMatricula}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    PAGE COMPONENT
 ========================================================= */
 export function SismetroDashPage() {
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
-    null
-  );
+  const isMobile = useIsMobile(640);
+
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const allRowsRef = useRef<Row[]>([]);
 
-  // ✅ default INEER
   const DEFAULT_CLIENTE = "INEER ENERGIA";
 
-  // filtros
   const [periodPreset, setPeriodPreset] = useState<
     | "thisMonth"
     | "lastMonth"
     | "last30"
     | "last7"
     | "today"
-    | "thisYear"   // ✅ novo
-    | "lastYear"   // ✅ novo
-    | "all"        // ✅ novo
-    | "custom"     // ✅ novo (personalizado)
+    | "thisYear"
+    | "lastYear"
+    | "all"
+    | "custom"
   >("thisMonth");
+
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
 
@@ -688,25 +783,20 @@ export function SismetroDashPage() {
   const [tecnico, setTecnico] = useState("");
   const [searchText, setSearchText] = useState("");
 
-  // filtro adicional via gráfico (kanban col)
   const [kanbanFilter, setKanbanFilter] = useState<KanbanCol | "">("");
 
-  // options
   const [clientesList, setClientesList] = useState<string[]>([]);
   const [usinasList, setUsinasList] = useState<string[]>([]);
   const [evolucoesList, setEvolucoesList] = useState<string[]>([]);
   const [tecnicosList, setTecnicosList] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // dados
   const [loading, setLoading] = useState(false);
   const [allRows, setAllRows] = useState<Row[]>([]);
 
-  // paginação tabela
-  const limit = 14;
+  const limit = isMobile ? 8 : 14;
   const [page, setPage] = useState(1);
 
-  // UI
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [openKanban, setOpenKanban] = useState(true);
 
@@ -731,7 +821,6 @@ export function SismetroDashPage() {
         return `${yy}-${mm}-${dd}`;
       };
 
-      // ✅ custom não mexe em start/end
       if (p === "custom") return;
 
       if (p === "today") {
@@ -769,8 +858,6 @@ export function SismetroDashPage() {
         setEnd(toISO(e));
         return;
       }
-
-      // ✅ NOVOS PRESETS
       if (p === "thisYear") {
         const yr = yearRangeISO(now.getFullYear());
         setStart(yr.start);
@@ -789,12 +876,10 @@ export function SismetroDashPage() {
           setStart(bounds.start);
           setEnd(bounds.end);
         } else {
-          // fallback: este mês (caso ainda não tenha dados carregados)
           const mr = monthRangeISO(now);
           setStart(mr.start);
           setEnd(mr.end);
         }
-        return;
       }
     },
     []
@@ -818,12 +903,9 @@ export function SismetroDashPage() {
     setLoadingOptions(true);
 
     try {
-      const res = await fetch("/api/sismetro/ss", {
-        method: "GET",
-        cache: "no-store",
-      });
-
+      const res = await fetch("/api/sismetro/ss", { method: "GET", cache: "no-store" });
       const data: ApiResp = await res.json().catch(() => ({} as any));
+
       if (!res.ok || !data?.ok) {
         setAllRows([]);
         setClientesList([clampUpper(DEFAULT_CLIENTE)]);
@@ -862,19 +944,12 @@ export function SismetroDashPage() {
         })
         .filter((r) => Boolean(r.idSs));
 
-      // ✅ remove INCONFORMIDADE do dashboard
-      // ✅ remove tipos e status indesejados do dashboard
       const rowsFiltradas = rows.filter((r) => {
         const tipoNorm = clampUpper(String(r.tipo || ""));
         const statusNorm = clampUpper(String(r.status || ""));
-
-        return (
-          !TIPO_BAN.has(tipoNorm) &&
-          !STATUS_BAN.has(statusNorm)
-        );
+        return !TIPO_BAN.has(tipoNorm) && !STATUS_BAN.has(statusNorm);
       });
 
-      // ✅ ordena desc por data
       rowsFiltradas.sort((a, b) => {
         const da = a.data || "0000-00-00";
         const db = b.data || "0000-00-00";
@@ -885,40 +960,19 @@ export function SismetroDashPage() {
       setAllRows(rowsFiltradas);
       allRowsRef.current = rowsFiltradas;
 
-      // options
-      const cli = Array.from(
-        new Set(
-          rowsFiltradas
-            .map((r) => clampUpper(r.cliente || ""))
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b));
+      const cli = Array.from(new Set(rowsFiltradas.map((r) => clampUpper(r.cliente || "")).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b)
+      );
+      const us = Array.from(new Set(rowsFiltradas.map((r) => clampUpper(r.usina || "")).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b)
+      );
+      const evo = Array.from(new Set(rowsFiltradas.map((r) => clampUpper(r.evolucao || "")).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b)
+      );
+      const techs = Array.from(new Set(rowsFiltradas.map((r) => clampUpper(r.tecnico || "")).filter(Boolean))).sort(
+        (a, b) => a.localeCompare(b)
+      );
 
-      const us = Array.from(
-        new Set(
-          rowsFiltradas
-            .map((r) => clampUpper(r.usina || ""))
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b));
-
-      const evo = Array.from(
-        new Set(
-          rowsFiltradas
-            .map((r) => clampUpper(r.evolucao || ""))
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b));
-
-      const techs = Array.from(
-        new Set(
-          rowsFiltradas
-            .map((r) => clampUpper(r.tecnico || ""))
-            .filter(Boolean)
-        )
-      ).sort((a, b) => a.localeCompare(b));
-
-      // garante INEER no select
       const ineer = clampUpper(DEFAULT_CLIENTE);
       const cliFixed = cli.includes(ineer) ? cli : [ineer, ...cli];
 
@@ -940,12 +994,8 @@ export function SismetroDashPage() {
   }, [load]);
 
   useEffect(() => {
-    if (periodPreset === "all" && allRowsRef.current.length) {
-      applyPreset("all");
-    }
+    if (periodPreset === "all" && allRowsRef.current.length) applyPreset("all");
   }, [periodPreset, applyPreset]);
-
-  // ✅ FILTROS (inclui kanbanFilter)
 
   const filteredRows = useMemo(() => {
     let r = allRows;
@@ -956,14 +1006,14 @@ export function SismetroDashPage() {
     if (tipo) r = r.filter((x) => clampUpper(String(x.tipo || "")) === clampUpper(tipo));
     if (evolucao) r = r.filter((x) => clampUpper(String(x.evolucao || "")) === clampUpper(evolucao));
     if (tecnico) r = r.filter((x) => clampUpper(String(x.tecnico || "")) === clampUpper(tecnico));
-
     if (kanbanFilter) r = r.filter((x) => normalizeKanban(x.evolucao) === kanbanFilter);
 
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       r = r.filter((x) => {
-        const blob = `${x.idSs} ${x.cliente || ""} ${x.usina || ""} ${x.tipo || ""} ${x.evolucao || ""} ${x.status || ""} ${x.descricao || ""
-          } ${x.tecnico || ""} ${x.tecnicoMatricula || ""}`.toLowerCase();
+        const blob =
+          `${x.idSs} ${x.cliente || ""} ${x.usina || ""} ${x.tipo || ""} ${x.evolucao || ""} ${x.status || ""
+            } ${x.descricao || ""} ${x.tecnico || ""} ${x.tecnicoMatricula || ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
@@ -975,11 +1025,10 @@ export function SismetroDashPage() {
       if (da === db) return (b.idSs || 0) - (a.idSs || 0);
       return db.localeCompare(da);
     });
-
     return copy;
   }, [allRows, start, end, cliente, usina, tipo, evolucao, tecnico, searchText, kanbanFilter]);
 
-  useEffect(() => setPage(1), [start, end, cliente, usina, tipo, evolucao, tecnico, searchText, kanbanFilter]);
+  useEffect(() => setPage(1), [start, end, cliente, usina, tipo, evolucao, tecnico, searchText, kanbanFilter, limit]);
 
   const count = filteredRows.length;
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / limit)), [count, limit]);
@@ -987,7 +1036,6 @@ export function SismetroDashPage() {
   const offset = (pageSafe - 1) * limit;
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
 
-  // KPIs
   const kpis = useMemo(() => {
     const total = filteredRows.length;
     const byTipo: Record<string, number> = {};
@@ -1005,11 +1053,12 @@ export function SismetroDashPage() {
       byStatus[st] = (byStatus[st] || 0) + 1;
     }
 
-    const topStatus = Object.entries(byStatus).sort((a, b) => (b[1] || 0) - (a[1] || 0))[0]?.[0] || "—";
+    const topStatus =
+      Object.entries(byStatus).sort((a, b) => (b[1] || 0) - (a[1] || 0))[0]?.[0] || "—";
+
     return { total, byTipo, byKanban, topStatus };
   }, [filteredRows]);
 
-  // Chart A: SS por usina empilhado por tipo (Top 25)
   const ssByUsinaTipo = useMemo(() => {
     const byUsina: Record<string, { total: number; byTipo: Record<string, number> }> = {};
 
@@ -1039,11 +1088,9 @@ export function SismetroDashPage() {
       color: tipoColor(tp),
     }));
 
-
     return { tipos, usinas, legends };
   }, [filteredRows]);
 
-  // Chart B: Por evolução (4 colunas) (Top 25)
   const ssByUsinaEvolucao = useMemo(() => {
     const byUsina: Record<string, { total: number; byEvo: Record<KanbanCol, number> }> = {};
 
@@ -1061,7 +1108,7 @@ export function SismetroDashPage() {
             "AGUARDANDO AGENDAMENTO": 0,
             "EM EXECUÇÃO": 0,
             PENDENTE: 0,
-            CONCLUÍDO: 0,
+            "CONCLUÍDO": 0,
           },
         };
       }
@@ -1083,7 +1130,6 @@ export function SismetroDashPage() {
     return { cols: [...KANBAN_COLS], usinas, legends };
   }, [filteredRows]);
 
-  // ✅ Kanban: TODAS as SS filtradas (sem last20)
   const groupedKanban = useMemo(() => {
     const map = new Map<KanbanCol, Row[]>();
     for (const k of KANBAN_COLS) map.set(k, []);
@@ -1106,7 +1152,6 @@ export function SismetroDashPage() {
     return map;
   }, [filteredRows]);
 
-  // helpers: clique para filtrar
   const toggleTipo = useCallback(
     (v: string) => setTipo((p) => (clampUpper(p) === clampUpper(v) ? "" : clampUpper(v))),
     []
@@ -1139,7 +1184,7 @@ export function SismetroDashPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={load} disabled={loading}>
+              <Btn tone="secondary" onClick={load} disabled={loading} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
                 <RefreshCw className="w-4 h-4" />
                 Recarregar
               </Btn>
@@ -1160,7 +1205,7 @@ export function SismetroDashPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)}>
+              <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
                 {filtersOpen ? (
                   <>
                     <ChevronUp className="w-4 h-4" /> Ocultar
@@ -1187,6 +1232,7 @@ export function SismetroDashPage() {
                   setMsg(null);
                 }}
                 disabled={loading}
+                className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
               >
                 Limpar
               </Btn>
@@ -1196,12 +1242,12 @@ export function SismetroDashPage() {
           {filtersOpen && (
             <div className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Período
                   </label>
                   <select
-                    className={cx(UI.select, "mt-1 rounded-md")}
+                    className={cx(UI.select, "mt-1 rounded-md min-w-0 w-full")}
                     style={{ borderColor: T.border }}
                     value={periodPreset}
                     onChange={(e) => {
@@ -1216,13 +1262,11 @@ export function SismetroDashPage() {
                     <option value="thisYear">Ano atual</option>
                     <option value="lastYear">Ano passado</option>
                     <option value="all">Período completo</option>
-                    {/* <option value="last7">Últimos 7 dias</option>
-                    <option value="last30">Últimos 30 dias</option> */}
                     <option value="custom">Personalizado</option>
                   </select>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Início
                   </label>
@@ -1233,12 +1277,12 @@ export function SismetroDashPage() {
                       setStart(e.target.value);
                       setPeriodPreset("custom");
                     }}
-                    className={cx(UI.input, "mt-1 rounded-md")}
-                    style={{ borderColor: T.border }}
+                    className={cx(UI.input, "mt-1 rounded-md w-full min-w-0 appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
                   />
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Fim
                   </label>
@@ -1247,18 +1291,18 @@ export function SismetroDashPage() {
                     value={end}
                     onChange={(e) => {
                       setEnd(e.target.value);
-                      setPeriodPreset("custom"); 
+                      setPeriodPreset("custom");
                     }}
-                    className={cx(UI.input, "mt-1 rounded-md")}
-                    style={{ borderColor: T.border }}
+                    className={cx(UI.input, "mt-1 rounded-md w-full min-w-0 appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
                   />
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Busca (geral)
                   </label>
-                  <div className="mt-1 relative">
+                  <div className="mt-1 relative min-w-0">
                     <input
                       value={searchText}
                       onChange={(e) => setSearchText(e.target.value)}
@@ -1266,13 +1310,16 @@ export function SismetroDashPage() {
                       style={{ borderColor: T.border }}
                       placeholder="Ex: INVERSOR, UFV - ITU, #7056…"
                     />
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: T.text3 }}>
+                    <div
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                      style={{ color: T.text3 }}
+                    >
                       <Search className="w-4 h-4" />
                     </div>
                   </div>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Cliente (Solicitante)
                   </label>
@@ -1294,11 +1341,11 @@ export function SismetroDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-3 ">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Usina (Localização)
                   </label>
-                  <div className="mt-1">
+                  <div className="mt-1 min-w-0">
                     <UsinaAutocomplete
                       value={usina}
                       onChange={setUsina}
@@ -1309,7 +1356,7 @@ export function SismetroDashPage() {
                   </div>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Técnico
                   </label>
@@ -1328,7 +1375,7 @@ export function SismetroDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Evolução
                   </label>
@@ -1347,7 +1394,7 @@ export function SismetroDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-3 min-w-0">
                   <div className="text-[11px]" style={{ color: invalidRange ? T.errTx : T.text3 }}>
                     {invalidRange ? "Data inicial maior que a final." : " "}
                   </div>
@@ -1372,7 +1419,7 @@ export function SismetroDashPage() {
 
             <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
               {/* Left: por tipo */}
-              <div className="lg:col-span-6 border rounded-lg p-3" style={{ borderColor: T.border, background: T.cardSoft }}>
+              <div className="lg:col-span-6 border rounded-lg p-3 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
                 <div className={UI.cardTitle} style={{ color: T.text }}>
                   Tipos de SS por usina
                 </div>
@@ -1393,44 +1440,40 @@ export function SismetroDashPage() {
                     <button
                       key={u.usina}
                       type="button"
-                      className="flex items-center gap-3 text-left"
+                      className={cx(
+                        "text-left border rounded-lg p-3",
+                        isMobile ? "grid gap-2" : "flex items-center gap-3"
+                      )}
                       onClick={() => applyUsinaFromChart(u.usina)}
                       title="Clique para filtrar por usina"
+                      style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
                     >
-                      <div className="w-56 text-xs truncate" style={{ color: T.text3 }} title={u.usina}>
-                        {u.usina}
+                      <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
+                        <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }} title={u.usina}>
+                          {u.usina}
+                        </div>
+                        <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                          Total: {u.total}
+                        </div>
                       </div>
 
                       <div
-                        className="flex-1 border rounded-md overflow-hidden flex"
+                        className="flex-1 min-w-0 border rounded-md overflow-hidden flex"
                         style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}
                       >
                         {ssByUsinaTipo.tipos.map((tp) => {
                           const v = u.byTipo[tp] || 0;
                           if (!v) return null;
                           const w = (v / Math.max(1, u.total)) * 100;
-
-                          return (
-                            <div
-                              key={tp}
-                              style={{ width: `${w}%`, background: tipoColor(tp) }}
-                              title={`${tp}: ${v}`}
-                            />
-                          );
+                          return <div key={tp} style={{ width: `${w}%`, background: tipoColor(tp) }} title={`${tp}: ${v}`} />;
                         })}
-
-
-                      </div>
-
-                      <div className={cx("w-12 text-xs text-right", UI.mono)} style={{ color: T.text, fontWeight: 900 }}>
-                        {u.total}
                       </div>
                     </button>
                   ))}
                 </div>
 
                 {usina && (
-                  <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                     <Pill tone="accent">Filtro por usina: {safeUpper(usina)}</Pill>
                     <button
                       type="button"
@@ -1446,7 +1489,7 @@ export function SismetroDashPage() {
               </div>
 
               {/* Right: por evolução/kanban */}
-              <div className="lg:col-span-6 border rounded-lg p-3" style={{ borderColor: T.border, background: T.cardSoft }}>
+              <div className="lg:col-span-6 border rounded-lg p-3 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
                 <div className={UI.cardTitle} style={{ color: T.text }}>
                   Evolução por usina
                 </div>
@@ -1471,42 +1514,42 @@ export function SismetroDashPage() {
                     <button
                       key={u.usina}
                       type="button"
-                      className="flex items-center gap-3 text-left"
+                      className={cx(
+                        "text-left border rounded-lg p-3",
+                        isMobile ? "grid gap-2" : "flex items-center gap-3"
+                      )}
                       onClick={() => applyUsinaFromChart(u.usina)}
                       title="Clique para filtrar por usina"
+                      style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
                     >
-                      <div className="w-56 text-xs truncate" style={{ color: T.text3 }} title={u.usina}>
-                        {u.usina}
+                      <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
+                        <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }} title={u.usina}>
+                          {u.usina}
+                        </div>
+                        <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                          Total: {u.total}
+                        </div>
                       </div>
 
                       <div
-                        className="flex-1 border rounded-md overflow-hidden flex"
-                        style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}
-                      >
-                        {ssByUsinaEvolucao.cols.map((col, i) => {
+  className="flex-1 min-w-0 border rounded-md overflow-hidden flex"
+  style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}
+>
+                        {ssByUsinaEvolucao.cols.map((col) => {
                           const v = u.byEvo[col] || 0;
                           if (!v) return null;
                           const w = (v / Math.max(1, u.total)) * 100;
                           return (
-                            <div
-                              key={col}
-                              style={{ width: `${w}%`, background: KANBAN_COLORS[col] }}
-                              title={`${col}: ${v}`}
-                            />
+                            <div key={col} style={{ width: `${w}%`, background: KANBAN_COLORS[col] }} title={`${col}: ${v}`} />
                           );
-
                         })}
-                      </div>
-
-                      <div className={cx("w-12 text-xs text-right", UI.mono)} style={{ color: T.text, fontWeight: 900 }}>
-                        {u.total}
                       </div>
                     </button>
                   ))}
                 </div>
 
                 {kanbanFilter && (
-                  <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
                     <Pill tone="accent">Filtro: {kanbanFilter}</Pill>
                     <button
                       type="button"
@@ -1523,7 +1566,7 @@ export function SismetroDashPage() {
             </div>
           </div>
 
-          {/* KANBAN — TODAS SS */}
+          {/* KANBAN — MOBILE: pilha vertical | DESKTOP: horizontal */}
           <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
             <div
               className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
@@ -1533,38 +1576,31 @@ export function SismetroDashPage() {
                 <Pill tone="accent">{filteredRows.length} registros</Pill>
               </div>
 
-              <Btn tone="secondary" onClick={() => setOpenKanban((p) => !p)}>
+              <Btn tone="secondary" onClick={() => setOpenKanban((p) => !p)} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
                 {openKanban ? "Ocultar" : "Mostrar"}
               </Btn>
             </div>
 
             {openKanban && (
               <div className="p-4">
-                <div className="overflow-x-auto" style={{ height: 400 }}>
-                  <div className="flex gap-4 pr-2" style={{ minWidth: 400 }}>
+                {/* MOBILE: coluna por coluna em pilha */}
+                {isMobile ? (
+                  <div className="grid gap-3">
                     {KANBAN_COLS.map((col) => {
                       const colRows = groupedKanban.get(col) || [];
-
                       return (
                         <div
                           key={col}
-                          className="border rounded-lg overflow-hidden flex flex-col"
-                          style={{
-                            borderColor: T.border,
-                            background: T.card,
-                            width: 330,
-                            flex: "0 0 auto",
-                            height: 400,
-                          }}
+                          className="border rounded-lg overflow-hidden"
+                          style={{ borderColor: T.border, background: T.card }}
                         >
                           <div
                             className="px-3 py-2 border-b flex items-center justify-between"
                             style={{ borderColor: "rgba(17,24,39,0.08)", background: T.cardSoft }}
                           >
-                            <div className="text-[11px] font-extrabold truncate pr-2" style={{ color: T.text }} title={col}>
+                            <div className="text-[11px] font-extrabold truncate pr-2" style={{ color: T.text }}>
                               {col}
                             </div>
-
                             <span
                               className={cx(
                                 "inline-flex items-center justify-center h-6 min-w-[34px] px-2 text-[11px] font-extrabold border rounded-md",
@@ -1576,13 +1612,13 @@ export function SismetroDashPage() {
                             </span>
                           </div>
 
-                          <div className="p-2 grid gap-2 overflow-auto sismetro-scroll" style={{ flex: 1, minHeight: 0 }}>
+                          <div className="p-2 grid gap-2 max-h-[360px] overflow-auto sismetro-scroll">
                             {colRows.length === 0 && (
                               <div
                                 className="border rounded-lg p-3 text-xs"
                                 style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}
                               >
-                                Sem Ordens de Serviço no periodo filtrado.
+                                Sem Ordens de Serviço no período filtrado.
                               </div>
                             )}
 
@@ -1646,7 +1682,116 @@ export function SismetroDashPage() {
                       );
                     })}
                   </div>
-                </div>
+                ) : (
+                  /* DESKTOP: mantém seu horizontal */
+                  <div className="overflow-x-auto" style={{ height: 400 }}>
+                    <div className="flex gap-4 pr-2" style={{ minWidth: 400 }}>
+                      {KANBAN_COLS.map((col) => {
+                        const colRows = groupedKanban.get(col) || [];
+
+                        return (
+                          <div
+                            key={col}
+                            className="border rounded-lg overflow-hidden flex flex-col"
+                            style={{
+                              borderColor: T.border,
+                              background: T.card,
+                              width: 330,
+                              flex: "0 0 auto",
+                              height: 400,
+                            }}
+                          >
+                            <div
+                              className="px-3 py-2 border-b flex items-center justify-between"
+                              style={{ borderColor: "rgba(17,24,39,0.08)", background: T.cardSoft }}
+                            >
+                              <div className="text-[11px] font-extrabold truncate pr-2" style={{ color: T.text }} title={col}>
+                                {col}
+                              </div>
+
+                              <span
+                                className={cx(
+                                  "inline-flex items-center justify-center h-6 min-w-[34px] px-2 text-[11px] font-extrabold border rounded-md",
+                                  UI.mono
+                                )}
+                                style={{ borderColor: T.border, background: T.card, color: T.text }}
+                              >
+                                {colRows.length}
+                              </span>
+                            </div>
+
+                            <div className="p-2 grid gap-2 overflow-auto sismetro-scroll" style={{ flex: 1, minHeight: 0 }}>
+                              {colRows.length === 0 && (
+                                <div
+                                  className="border rounded-lg p-3 text-xs"
+                                  style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}
+                                >
+                                  Sem Ordens de Serviço no periodo filtrado.
+                                </div>
+                              )}
+
+                              {colRows.map((r) => (
+                                <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
+                                        {safeText(r.usina ? clampUpper(r.usina) : null)}
+                                      </div>
+
+                                      <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                                        {brDate(r.data)} •{" "}
+                                        <a
+                                          href={ssLink(r.idSs)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="underline font-extrabold"
+                                          style={{ color: T.accent }}
+                                        >
+                                          #{r.idSs}
+                                        </a>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    >
+                                      {safeText(r.tipo)}
+                                    </span>
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    >
+                                      {safeText(r.status)}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-2 text-[11px] truncate" style={{ color: T.text3 }}>
+                                    Técnico:{" "}
+                                    <span className={UI.mono} style={{ color: T.text3 }}>
+                                      {safeText(r.tecnico, "-")}
+                                    </span>
+                                    {r.tecnicoMatricula ? (
+                                      <span className={cx("ml-2", UI.mono)} style={{ color: T.text }}>
+                                        • {r.tecnicoMatricula}
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
+                                    {safeText(r.descricao)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1654,7 +1799,7 @@ export function SismetroDashPage() {
           {/* TABELA */}
           <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
             <div
-              className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
+              className="px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               style={{ borderColor: T.border }}
             >
               <div className="flex items-center gap-2 flex-wrap">
@@ -1662,20 +1807,24 @@ export function SismetroDashPage() {
                 <Pill tone="accent">{count}</Pill>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 justify-between sm:justify-end">
                 <Btn
                   tone="secondary"
                   disabled={loading || pageSafe === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                 >
+                  <ChevronLeft className="w-4 h-4" />
                   Anterior
                 </Btn>
                 <Btn
                   tone="secondary"
                   disabled={loading || pageSafe >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                 >
                   Próxima
+                  <ChevronRight className="w-4 h-4" />
                 </Btn>
               </div>
             </div>
@@ -1690,11 +1839,27 @@ export function SismetroDashPage() {
                 </div>
               )}
 
-              {tableRows.length > 0 && (
+              {/* MOBILE: cards */}
+              {isMobile && tableRows.length > 0 && (
+                <div className="grid gap-2">
+                  {tableRows.map((r) => (
+                    <MobileSSCard
+                      key={r.id}
+                      r={r}
+                      onFilterUsina={() => applyUsinaFromChart(safeUpper(r.usina))}
+                      onFilterTecnico={() =>
+                        setTecnico((p) => (clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")))
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* DESKTOP: mantém sua tabela (sem mexer em layout grande) */}
+              {!isMobile && tableRows.length > 0 && (
                 <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
                   <div className="overflow-x-auto">
                     <div className="min-w-[1120px]">
-                      {/* HEADER */}
                       <div
                         className="grid grid-cols-20 gap-0 px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
                         style={{
@@ -1710,10 +1875,8 @@ export function SismetroDashPage() {
                         <div className="col-span-5">Conclusão</div>
                         <div className="col-span-3">Técnico + Evolução</div>
                         <div className="col-span-1">Abrir</div>
-                        {/* <div className="col-span-1 text-right">Abrir</div> */}
                       </div>
 
-                      {/* ROWS */}
                       {tableRows.map((r) => {
                         const tecnicoActive = tecnico && clampUpper(tecnico) === safeUpper(r.tecnico);
                         const usinaActive = usina && clampUpper(usina) === safeUpper(r.usina);
@@ -1724,7 +1887,6 @@ export function SismetroDashPage() {
                             className="grid grid-cols-20 gap-0 px-3 py-2 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition"
                             style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
                           >
-                            {/* SS */}
                             <div className="col-span-2">
                               <a
                                 href={ssLink(r.idSs)}
@@ -1736,24 +1898,12 @@ export function SismetroDashPage() {
                               >
                                 #{r.idSs}
                               </a>
-
-                              {/* <div className="text-[11px] mt-0.5 flex flex-wrap gap-1" style={{ color: T.text3 }}>
-                                <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
-                                  {safeText(r.evolucao)}
-                                </span>
-                                <span>•</span>
-                                <span className="font-semibold" title={safeText(r.tipo)}>
-                                  {safeText(r.tipo)}
-                                </span>
-                              </div> */}
                             </div>
 
-                            {/* Data/Hora */}
                             <div className={cx("col-span-3", UI.mono)} style={{ color: T.text2 }}>
                               {brDateTimeFromSismetro(r.dataHora || null)}
                             </div>
 
-                            {/* Usina + Descrição */}
                             <div className="col-span-6 min-w-0">
                               <button
                                 type="button"
@@ -1774,9 +1924,7 @@ export function SismetroDashPage() {
                               </div>
                             </div>
 
-                            {/* Conclusão */}
                             <div className="col-span-5 min-w-0">
-
                               <div
                                 className="text-[11px] mt-0.5 whitespace-pre-wrap break-words"
                                 style={{ color: T.text3 }}
@@ -1786,7 +1934,6 @@ export function SismetroDashPage() {
                               </div>
                             </div>
 
-                            {/* Técnico */}
                             <div className="col-span-3 min-w-0">
                               <button
                                 type="button"
@@ -1804,12 +1951,9 @@ export function SismetroDashPage() {
                                 <span className="truncate max-w-[140px]" title={safeText(r.evolucao)}>
                                   {safeText(r.evolucao)}
                                 </span>
-
                               </div>
-
                             </div>
 
-                            {/* Abrir */}
                             <div className="col-span-1 flex justify-start">
                               <a
                                 href={ssLink(r.idSs)}
@@ -1829,7 +1973,6 @@ export function SismetroDashPage() {
                   </div>
                 </div>
               )}
-
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>
@@ -1864,13 +2007,19 @@ export function SismetroDashPage() {
         </main>
       </div>
 
-      {/* focus ring + scrollbar estilo print */}
+      {/* focus ring + scrollbar + FIX iOS date picker */}
       <style jsx global>{`
         input:focus,
         textarea:focus,
         select:focus {
           outline: none !important;
           box-shadow: 0 0 0 2px ${T.accentRing} !important;
+        }
+
+        /* ✅ iOS/Safari: garante que o date picker apareça */
+        input[type="date"] {
+          -webkit-appearance: auto !important;
+          appearance: auto !important;
         }
 
         .sismetro-scroll::-webkit-scrollbar {
