@@ -1882,7 +1882,7 @@ export function AcionamentosDashPage() {
                   </select>
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-2">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Início
                   </label>
@@ -1895,7 +1895,7 @@ export function AcionamentosDashPage() {
                   />
                 </div>
 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-2">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Fim
                   </label>
