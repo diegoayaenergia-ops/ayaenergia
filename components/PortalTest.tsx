@@ -1170,140 +1170,48 @@ export default function PortalClient() {
         );
     }
 
-    // if (!user) {
-    //     const pwScore = calcPasswordScore(senha);
-
-    //     return (
-    //         <div className="relative min-h-screen w-full overflow-hidden">
-    //             <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
-    //                 <source src="/video.mp4" type="video/mp4" />
-    //             </video>
-
-    //             <div className="absolute inset-0 bg-black/35" />
-    //             <div
-    //                 className="absolute inset-0 pointer-events-none"
-    //                 style={{
-    //                     background:
-    //                         "radial-gradient(80% 70% at 70% 30%, rgba(47,178,106,0.18) 0%, rgba(0,0,0,0) 60%), radial-gradient(90% 90% at 50% 50%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.40) 100%)",
-    //                 }}
-    //             />
-
-    //             <div className="relative z-10 min-h-screen w-full flex items-center justify-center px-4 md:px-10">
-    //                 <div className="w-[520px] max-w-[94vw] rounded-[26px] overflow-hidden shadow-2xl bg-white">
-    //                     <div className="p-5 md:p-6 text-white" style={{ background: `linear-gradient(180deg, ${UI.sub} 0%, ${UI.top} 100%)` }}>
-    //                         <div className="flex items-center gap-3">
-    //                             <div className="h-11 w-11 rounded-2xl bg-white/10 border border-white/15 grid place-items-center overflow-hidden">
-    //                                 <Image src="/logo-aya.png" alt="AYA" width={34} height={34} priority className="object-contain" />
-    //                             </div>
-
-    //                             <div className="min-w-0">
-    //                                 <div className="text-[13px] font-semibold leading-tight">AYA Energia</div>
-    //                                 <div className="text-[11px] text-white/70 -mt-[1px]">Portal Operacional</div>
-    //                             </div>
-
-    //                             <div className="ml-auto hidden sm:flex items-center gap-2">
-    //                                 <span className="text-[11px] px-2 py-1 rounded-full bg-white/10 border border-white/15">Acesso seguro</span>
-    //                             </div>
-    //                         </div>
-    //                     </div>
-
-    //                     <div className="p-6 md:p-8">
-    //                         <div>
-    //                             <div className="text-xl font-semibold text-black/90">Entrar</div>
-    //                             <div className="text-sm text-black/55 mt-1">Use suas credenciais para acessar o portal.</div>
-    //                         </div>
-
-    //                         <form
-    //                             className="mt-6 space-y-4"
-    //                             onSubmit={(e) => {
-    //                                 e.preventDefault();
-    //                                 handleLogin();
-    //                             }}
-    //                         >
-    //                             <Field label="Login" placeholder="Digite seu login" value={login} onChange={setLogin} autoComplete="username" leftIcon={<User className="w-4 h-4" />} />
-
-    //                             <Field
-    //                                 label="Senha"
-    //                                 placeholder="Digite sua senha"
-    //                                 value={senha}
-    //                                 onChange={setSenha}
-    //                                 autoComplete="current-password"
-    //                                 type={showPassword ? "text" : "password"}
-    //                                 leftIcon={<Lock className="w-4 h-4" />}
-    //                                 right={
-    //                                     <IconButton
-    //                                         label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-    //                                         variant="light"
-    //                                         className="h-9 w-9"
-    //                                         onClick={() => setShowPassword((v) => !v)}
-    //                                     >
-    //                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    //                                     </IconButton>
-    //                                 }
-    //                             />
-
-    //                             <div className="rounded-2xl border bg-black/[0.02] p-4 border-black/10">
-    //                                 <div className="flex items-center justify-between">
-    //                                     <div className="text-[12px] font-semibold text-black/70">Segurança da senha</div>
-    //                                     <div className="text-[12px] font-semibold text-black/60">{pwScore.label}</div>
-    //                                 </div>
-    //                                 <div className="mt-2 grid grid-cols-4 gap-2">
-    //                                     {[0, 1, 2, 3].map((i) => (
-    //                                         <div key={i} className="h-2 rounded-full" style={{ background: pwScore.score >= i + 1 ? UI.accent : "rgba(0,0,0,0.10)" }} />
-    //                                     ))}
-    //                                 </div>
-    //                                 <div className="mt-2 text-[11px] text-black/50">
-    //                                     Dica: use <span className="font-semibold text-black/70">8+</span> caracteres e combine letras e números.
-    //                                 </div>
-    //                             </div>
-
-    //                             {error && <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</div>}
-
-    //                             <Button type="submit" disabled={loginLoading} loading={loginLoading} className="w-full">
-    //                                 {loginLoading ? "Entrando..." : "Entrar no Portal"}
-    //                             </Button>
-
-    //                             <div className="flex items-center justify-between pt-1">
-    //                                 <button
-    //                                     type="button"
-    //                                     onClick={() => setShowSupport(true)}
-    //                                     className="text-[12px] font-semibold text-black/60 hover:text-black underline underline-offset-4"
-    //                                 >
-    //                                     Suporte
-    //                                 </button>
-
-    //                                 <div className="text-[12px] text-black/45 flex items-center gap-2">
-    //                                     <ShieldCheck className="w-4 h-4" />
-    //                                     Ambiente seguro
-    //                                 </div>
-    //                             </div>
-    //                         </form>
-    //                     </div>
-    //                 </div>
-    //             </div>
-
-    //             {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
-    //         </div>
-    //     );
-    // }
 
     if (!user) {
-  const pwScore = calcPasswordScore(senha);
-  const showStrength = String(senha || "").length > 0;
+  const senhaStr = String(senha ?? "");
+  const showStrength = senhaStr.length > 0;
+  const pwScore = showStrength ? calcPasswordScore(senhaStr) : null;
+
+  // Paleta (da imagem)
+  const accent = UI.accent ?? "#2E7B41"; // verde principal
+  const mint = "#96D9A7";               // highlight
+  const mintSoft = "#DBFFE4";           // brilho suave
+
+  const fieldBase =
+    "w-full h-11 rounded-xl bg-white/[0.04] text-white placeholder:text-white/35 " +
+    "border border-white/10 outline-none transition " +
+    "hover:border-white/15 focus-visible:ring-2 focus-visible:ring-offset-0";
 
   return (
     <div
-      className="min-h-[100svh] w-full bg-[#0B0F19]"
+      className="min-h-[100svh] w-full text-white"
       style={
         {
-          ["--accent" as any]: UI.accent ?? "#2FB26A",
+          ["--accent" as any]: accent,
+          ["--mint" as any]: mint,
+          ["--mintSoft" as any]: mintSoft,
+
+          // fundos (verde escuro elegante)
+          ["--page" as any]: "#06120B",
+          ["--panel" as any]: "#07160F",
+          ["--panel2" as any]: "#0A1F15",
+
+          // superfícies/linhas com leve “mint”
+          ["--card" as any]: "rgba(219,255,228,0.045)",
+          ["--card2" as any]: "rgba(219,255,228,0.030)",
+          ["--border" as any]: "rgba(219,255,228,0.12)",
+
           ["--tw-ring-color" as any]: "var(--accent)",
         } as React.CSSProperties
       }
     >
-      <div className="min-h-[100svh] w-full grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
-        {/* LEFT: VIDEO */}
-        <div className="relative overflow-hidden h-[40svh] min-h-[240px] sm:h-[46svh] lg:h-auto">
+      <div className="min-h-[100svh] w-full grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
+        {/* LEFT: MEDIA */}
+        <div className="relative overflow-hidden h-[36svh] min-h-[220px] sm:h-[44svh] lg:h-auto">
           <video
             autoPlay
             loop
@@ -1315,19 +1223,26 @@ export default function PortalClient() {
             <source src="/video.mp4" type="video/mp4" />
           </video>
 
-          {/* cinematic overlays */}
-          <div className="absolute inset-0 bg-black/45" />
+          {/* overlays (cinematic + verde) */}
+          <div className="absolute inset-0 bg-black/55" />
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background:
-                "radial-gradient(80% 70% at 18% 22%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 62%), linear-gradient(180deg, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0.10) 55%, rgba(0,0,0,0.55) 100%)",
+                "radial-gradient(70% 60% at 18% 22%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 62%)," +
+                "linear-gradient(180deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.10) 55%, rgba(0,0,0,0.70) 100%)",
             }}
           />
 
-          {/* top brand */}
-          <div className="absolute left-4 sm:left-6 top-4 sm:top-6 flex items-center gap-3 text-white">
-            <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-white/10 border border-white/15 grid place-items-center overflow-hidden backdrop-blur">
+          {/* brand */}
+          <div className="absolute left-4 sm:left-6 top-4 sm:top-6 flex items-center gap-3">
+            <div
+              className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl grid place-items-center overflow-hidden backdrop-blur border"
+              style={{
+                background: "rgba(219,255,228,0.08)",
+                borderColor: "rgba(219,255,228,0.16)",
+              }}
+            >
               <Image
                 src="/logo-aya.png"
                 alt="AYA"
@@ -1347,57 +1262,72 @@ export default function PortalClient() {
             </div>
           </div>
 
-          {/* bottom copy (desktop) */}
-          <div className="absolute left-6 bottom-6 hidden lg:block text-white/70 text-[12px]">
-            <div className="font-semibold text-white/85">Ambiente seguro</div>
-            <div className="mt-1">Acesso controlado e auditável</div>
+          {/* desktop caption */}
+          <div className="absolute left-6 bottom-6 hidden lg:flex items-center gap-3">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: "var(--accent)" }}
+            />
+            <div className="text-[12px] text-white/75">
+              <span className="font-semibold text-white/85">Ambiente seguro</span>
+              <span className="mx-2 text-white/35">•</span>
+              <span>Acesso controlado e auditável</span>
+            </div>
           </div>
 
-          {/* soft edge on desktop */}
-          <div className="hidden lg:block absolute inset-y-0 right-0 w-16 pointer-events-none bg-gradient-to-l from-[#121827] to-transparent" />
+          {/* edge fade on desktop */}
+          <div
+            className="hidden lg:block absolute inset-y-0 right-0 w-16 pointer-events-none"
+            style={{
+              background: "linear-gradient(to left, var(--panel2), transparent)",
+            }}
+          />
         </div>
 
         {/* RIGHT: FORM */}
-        <div className="relative bg-[#0F1626] lg:bg-[#121827] px-4 sm:px-8 lg:px-10 pt-6 sm:pt-8 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex justify-center">
-          {/* subtle pattern */}
+        <div
+          className="relative px-4 sm:px-8 lg:px-10 py-6 sm:py-10 flex justify-center"
+          style={{ background: "linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%)" }}
+        >
+          {/* subtle green pattern */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-[0.35]"
+            className="absolute inset-0 pointer-events-none opacity-60"
             style={{
-              backgroundImage:
-                "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
-              backgroundSize: "18px 18px",
-              backgroundPosition: "0 0",
+              background:
+                "radial-gradient(1100px 600px at 18% 0%, rgba(150,217,167,0.12) 0%, transparent 55%)," +
+                "radial-gradient(rgba(219,255,228,0.07) 1px, transparent 1px)",
+              backgroundSize: "auto, 18px 18px",
+              backgroundPosition: "center, 0 0",
             }}
           />
 
-          {/* overlap card on mobile; centered on desktop */}
-          <div className="relative w-full max-w-[560px] lg:self-center -mt-10 sm:-mt-12 lg:mt-0">
+          <div className="relative w-full max-w-[520px] lg:self-center -mt-10 sm:-mt-12 lg:mt-0">
             {/* glow */}
             <div
-              className="absolute -inset-3 rounded-[32px] blur-2xl opacity-60 pointer-events-none"
+              className="absolute -inset-4 rounded-[32px] blur-2xl opacity-70 pointer-events-none"
               style={{
                 background:
-                  "radial-gradient(60% 60% at 30% 20%, color-mix(in srgb, var(--accent) 35%, transparent) 0%, transparent 65%)",
+                  "radial-gradient(55% 55% at 35% 25%, color-mix(in srgb, var(--mint) 28%, transparent) 0%, transparent 72%)",
               }}
             />
 
             <div
-              className="relative rounded-3xl border shadow-2xl overflow-hidden"
+              className="relative rounded-3xl border overflow-hidden shadow-[0_30px_80px_-45px_rgba(0,0,0,0.90)]"
               style={{
-                borderColor: "rgba(255,255,255,0.10)",
-                background: "rgba(255,255,255,0.035)",
-                backdropFilter: "blur(12px)",
+                borderColor: "var(--border)",
+                background:
+                  "linear-gradient(180deg, var(--card) 0%, var(--card2) 100%)",
+                backdropFilter: "blur(14px)",
               }}
             >
-              {/* top strip */}
+              {/* accent strip */}
               <div className="h-1.5 w-full" style={{ background: "var(--accent)" }} />
 
               <div className="p-5 sm:p-7 lg:p-8">
                 {/* heading */}
                 <div className="mb-6 sm:mb-8">
-                  <div className="text-white text-[26px] sm:text-3xl font-semibold tracking-tight leading-[1.08]">
-                    Entrar no
-                    <br />
+                  <div className="text-[26px] sm:text-3xl font-semibold tracking-tight leading-[1.08]">
+                    Entrar no{" "}
                     <span className="text-white/95">Portal Operacional</span>
                   </div>
                   <div className="mt-2 text-white/60 text-sm">
@@ -1414,7 +1344,7 @@ export default function PortalClient() {
                 >
                   {/* Login */}
                   <div className="space-y-2">
-                    <label className="text-[12px] font-semibold text-white/80">
+                    <label htmlFor="login" className="text-[12px] font-semibold text-white/80">
                       Login <span className="text-red-400">*</span>
                     </label>
 
@@ -1424,27 +1354,26 @@ export default function PortalClient() {
                       </div>
 
                       <input
+                        id="login"
+                        name="login"
                         value={login}
                         onChange={(e) => setLogin(e.target.value)}
                         autoComplete="username"
                         inputMode="email"
-                        className={[
-                          "w-full h-11 pl-10 pr-3 rounded-xl",
-                          "bg-white/[0.04] text-white placeholder:text-white/35",
-                          "border border-white/10",
-                          "outline-none transition",
-                          "focus-visible:ring-2 focus-visible:ring-offset-0",
-                          "hover:border-white/15",
-                        ].join(" ")}
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        required
+                        className={`${fieldBase} pl-10 pr-3`}
                         placeholder="Digite seu login"
                         aria-invalid={!!error}
+                        aria-describedby={error ? "login-error" : undefined}
                       />
                     </div>
                   </div>
 
                   {/* Senha */}
                   <div className="space-y-2">
-                    <label className="text-[12px] font-semibold text-white/80">
+                    <label htmlFor="senha" className="text-[12px] font-semibold text-white/80">
                       Senha <span className="text-red-400">*</span>
                     </label>
 
@@ -1454,47 +1383,40 @@ export default function PortalClient() {
                       </div>
 
                       <input
+                        id="senha"
+                        name="password"
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                         autoComplete="current-password"
                         type={showPassword ? "text" : "password"}
-                        className={[
-                          "w-full h-11 pl-10 pr-11 rounded-xl",
-                          "bg-white/[0.04] text-white placeholder:text-white/35",
-                          "border border-white/10",
-                          "outline-none transition",
-                          "focus-visible:ring-2 focus-visible:ring-offset-0",
-                          "hover:border-white/15",
-                        ].join(" ")}
+                        required
+                        className={`${fieldBase} pl-10 pr-11`}
                         placeholder="Digite sua senha"
                         aria-invalid={!!error}
+                        aria-describedby={error ? "login-error" : undefined}
                       />
 
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/55 hover:text-white transition"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/55 hover:text-white transition active:scale-[0.98]"
                         style={{
-                          borderColor: "rgba(255,255,255,0.12)",
-                          background: "rgba(255,255,255,0.04)",
+                          borderColor: "rgba(219,255,228,0.18)",
+                          background: "rgba(219,255,228,0.06)",
                         }}
                         aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                       >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
 
-                  {/* Remember / Support row */}
+                  {/* row */}
                   <div className="flex items-center justify-between gap-3">
                     <label className="flex items-center gap-2 text-[12px] text-white/70 select-none">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border border-white/20 bg-transparent"
+                        className="h-4 w-4 rounded border border-white/25 bg-transparent"
                         style={{ accentColor: "var(--accent)" }}
                         defaultChecked
                       />
@@ -1511,12 +1433,12 @@ export default function PortalClient() {
                   </div>
 
                   {/* Strength */}
-                  {showStrength && (
+                  {/* {showStrength && pwScore && (
                     <div
                       className="rounded-2xl border p-4"
                       style={{
-                        borderColor: "rgba(255,255,255,0.10)",
-                        background: "rgba(255,255,255,0.03)",
+                        borderColor: "rgba(219,255,228,0.14)",
+                        background: "rgba(0,0,0,0.18)",
                       }}
                     >
                       <div className="flex items-center justify-between">
@@ -1537,17 +1459,19 @@ export default function PortalClient() {
                               background:
                                 pwScore.score >= i + 1
                                   ? "var(--accent)"
-                                  : "rgba(255,255,255,0.10)",
+                                  : "rgba(219,255,228,0.12)",
                             }}
                           />
                         ))}
                       </div>
                     </div>
-                  )}
+                  )} */}
 
+                  {/* Error */}
                   {error && (
                     <div
-                      className="rounded-2xl px-4 py-3 text-sm"
+                      id="login-error"
+                      className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2"
                       style={{
                         border: "1px solid rgba(239,68,68,0.35)",
                         background: "rgba(239,68,68,0.10)",
@@ -1555,7 +1479,8 @@ export default function PortalClient() {
                       }}
                       role="alert"
                     >
-                      {error}
+                      <span className="mt-[2px] inline-block h-2 w-2 rounded-full bg-red-300/90" />
+                      <span>{error}</span>
                     </div>
                   )}
 
@@ -1567,13 +1492,14 @@ export default function PortalClient() {
                       "w-full h-11 rounded-xl font-semibold text-sm transition",
                       "disabled:opacity-60 disabled:cursor-not-allowed",
                       "active:scale-[0.99]",
+                      "hover:brightness-[1.03]",
                     ].join(" ")}
                     style={{
                       background:
-                        "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 78%, #000 22%) 100%)",
+                        "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 72%, #000 28%) 100%)",
                       color: "#fff",
                       boxShadow:
-                        "0 10px 30px -12px color-mix(in srgb, var(--accent) 45%, transparent)",
+                        "0 16px 40px -18px color-mix(in srgb, var(--accent) 55%, transparent)",
                     }}
                   >
                     {loginLoading ? "Entrando..." : "Entrar"}
@@ -1592,10 +1518,7 @@ export default function PortalClient() {
             <div className="hidden lg:flex items-center justify-between mt-4 text-[12px] text-white/40">
               <span>© {new Date().getFullYear()} AYA Energia</span>
               <span className="flex items-center gap-2">
-                <span
-                  className="inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: "var(--accent)" }}
-                />
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />
                 Conexão segura
               </span>
             </div>
@@ -1605,11 +1528,11 @@ export default function PortalClient() {
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
 
-      {/* focus ring (dinâmico via --accent) */}
       <style jsx global>{`
         input:focus-visible,
         textarea:focus-visible,
-        select:focus-visible {
+        select:focus-visible,
+        button:focus-visible {
           outline: none !important;
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent) !important;
         }
