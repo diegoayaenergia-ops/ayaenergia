@@ -237,7 +237,16 @@ function safeFileName(name: string) {
     .replace(/_+/g, "_")
     .trim();
 }
-
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 /* =========================================================
    TYPES
 ========================================================= */
@@ -650,8 +659,8 @@ export function ComprasDashPage() {
     setMsg(null);
 
     try {
-      const XLSX = await import("xlsx");
-      const { saveAs } = await import("file-saver");
+      const XLSXMod = await import("xlsx");
+      const XLSX = (XLSXMod as any).default ?? XLSXMod; // ✅ funciona em ESM/CJS
 
       const data = toExportData(rows);
       const ws = XLSX.utils.json_to_sheet(data);
@@ -679,7 +688,7 @@ export function ComprasDashPage() {
       });
 
       const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.xlsx`;
-      saveAs(blob, name);
+      downloadBlob(blob, name); // ✅ sem file-saver
 
       setMsg({ type: "ok", text: `Exportado Excel (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
     } catch {
@@ -1397,7 +1406,7 @@ export function ComprasDashPage() {
                         PDF (.pdf)
                       </button>
 
-                      
+
                     </div>
                   )}
                 </div>
