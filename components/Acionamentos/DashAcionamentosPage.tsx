@@ -119,17 +119,17 @@ function Btn({
   const style =
     tone === "primary"
       ? {
-          background: T.accent,
-          borderColor: "rgba(17, 89, 35, 0.45)",
-          color: "#fff",
-        }
+        background: T.accent,
+        borderColor: "rgba(17, 89, 35, 0.45)",
+        color: "#fff",
+      }
       : tone === "danger"
-      ? {
+        ? {
           background: "rgba(239, 68, 68, 0.10)",
           borderColor: "rgba(239, 68, 68, 0.35)",
           color: T.errTx,
         }
-      : { background: T.card, borderColor: T.border, color: T.text };
+        : { background: T.card, borderColor: T.border, color: T.text };
 
   return (
     <button
@@ -1328,10 +1328,10 @@ export function AcionamentosDashPage() {
     const cand = Array.isArray(data?.rows)
       ? data.rows
       : Array.isArray(data?.items)
-      ? data.items
-      : Array.isArray(data)
-      ? data
-      : [];
+        ? data.items
+        : Array.isArray(data)
+          ? data
+          : [];
 
     return cand
       .map((r: any) => {
@@ -1375,10 +1375,10 @@ export function AcionamentosDashPage() {
         return {
           id: String(
             r?.id ??
-              r?._id ??
-              r?.uuid ??
-              r?.ID ??
-              `${iso}-${ssNum ?? Math.random()}`
+            r?._id ??
+            r?.uuid ??
+            r?.ID ??
+            `${iso}-${ssNum ?? Math.random()}`
           ),
 
           data: iso,
@@ -1387,8 +1387,8 @@ export function AcionamentosDashPage() {
 
           ss:
             ssNum !== null &&
-            ssNum !== undefined &&
-            String(ssNum).trim() !== ""
+              ssNum !== undefined &&
+              String(ssNum).trim() !== ""
               ? Number(ssNum)
               : null,
 
@@ -1440,7 +1440,7 @@ export function AcionamentosDashPage() {
       let data: any = null;
       try {
         data = raw ? JSON.parse(raw) : null;
-      } catch {}
+      } catch { }
 
       if (!res.ok) {
         const p2 = new URLSearchParams(params);
@@ -1455,7 +1455,7 @@ export function AcionamentosDashPage() {
         raw = await res.text();
         try {
           data = raw ? JSON.parse(raw) : null;
-        } catch {}
+        } catch { }
       }
 
       if (!res.ok)
@@ -1578,12 +1578,10 @@ export function AcionamentosDashPage() {
       const q = searchText.trim().toLowerCase();
       r = r.filter((x) => {
         const blob =
-          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${
-            x.equipamento ?? ""
+          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${x.equipamento ?? ""
           } ${x.alarme ?? ""} ` +
-          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${
-            x.solucaoImediata ?? ""
-          } ${x.solucaoDefinitiva ?? ""}`.toLowerCase();
+          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${x.solucaoImediata ?? ""
+            } ${x.solucaoDefinitiva ?? ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
@@ -1883,32 +1881,32 @@ export function AcionamentosDashPage() {
                 </div>
 
                 {/* Início */}
-<div className="lg:col-span-3 min-w-0">
-  <label className={UI.label} style={{ color: T.text2 }}>
-    Início
-  </label>
-  <input
-    type="date"
-    value={start}
-    onChange={(e) => setStart(e.target.value)}
-    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
-    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
-  />
-</div>
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Início
+                  </label>
+                  <input
+                    type="date"
+                    value={start}
+                    onChange={(e) => setStart(e.target.value)}
+                    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+                  />
+                </div>
 
-{/* Fim */}
-<div className="lg:col-span-3 min-w-0">
-  <label className={UI.label} style={{ color: T.text2 }}>
-    Fim
-  </label>
-  <input
-    type="date"
-    value={end}
-    onChange={(e) => setEnd(e.target.value)}
-    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
-    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
-  />
-</div>
+                {/* Fim */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Fim
+                  </label>
+                  <input
+                    type="date"
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                    className={cx(UI.input, "mt-1 rounded-md min-w-0 w-full appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+                  />
+                </div>
                 <div className="lg:col-span-3">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Busca (geral)
@@ -2252,8 +2250,8 @@ export function AcionamentosDashPage() {
                           groups={stackedByUsina.groups}
                           segs={stackedByUsina.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => {}}
-                          onClickGroup={() => {}}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
                           groupActive={usina}
                           searchPlaceholder="Buscar usina no gráfico…"
                           maxSegs={6}
@@ -2269,8 +2267,8 @@ export function AcionamentosDashPage() {
                           groups={stackedByEquip.groups}
                           segs={stackedByEquip.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => {}}
-                          onClickGroup={() => {}}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
                           groupActive={equipamento}
                           searchPlaceholder="Buscar equipamento no gráfico…"
                           maxSegs={6}
@@ -2286,8 +2284,8 @@ export function AcionamentosDashPage() {
                           groups={stackedByAlarm.groups}
                           segs={stackedByAlarm.segs}
                           segActive={clienteQuick}
-                          onClickSeg={() => {}}
-                          onClickGroup={() => {}}
+                          onClickSeg={() => { }}
+                          onClickGroup={() => { }}
                           groupActive={alarme}
                           searchPlaceholder="Buscar alarme no gráfico…"
                           maxSegs={6}

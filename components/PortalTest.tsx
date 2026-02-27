@@ -1172,356 +1172,257 @@ export default function PortalClient() {
 
 
     if (!user) {
-  const senhaStr = String(senha ?? "");
-  const showStrength = senhaStr.length > 0;
-  const pwScore = showStrength ? calcPasswordScore(senhaStr) : null;
+  const accent = UI.accent ?? "#2E7B41";
+  const accentDark = "#115923";
 
-  // Paleta (da imagem)
-  const accent = UI.accent ?? "#2E7B41"; // verde principal
-  const mint = "#96D9A7";               // highlight
-  const mintSoft = "#DBFFE4";           // brilho suave
+  const hexToRgb = (hex: string) => {
+    const v = hex.replace("#", "");
+    if (v.length !== 6) return { r: 46, g: 123, b: 65 };
+    const n = parseInt(v, 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  };
+  const rgb = hexToRgb(accent);
 
-  const fieldBase =
-    "w-full h-11 rounded-xl bg-white/[0.04] text-white placeholder:text-white/35 " +
-    "border border-white/10 outline-none transition " +
-    "hover:border-white/15 focus-visible:ring-2 focus-visible:ring-offset-0";
+  const inputBase =
+    "w-full h-11 rounded-xl bg-white/95 text-slate-900 placeholder:text-slate-400 " +
+    "border border-white/25 outline-none transition " +
+    "focus-visible:ring-4 focus-visible:ring-offset-0";
 
   return (
     <div
-      className="min-h-[100svh] w-full text-white"
+      className="relative min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] w-full overflow-hidden"
       style={
         {
           ["--accent" as any]: accent,
-          ["--mint" as any]: mint,
-          ["--mintSoft" as any]: mintSoft,
-
-          // fundos (verde escuro elegante)
-          ["--page" as any]: "#06120B",
-          ["--panel" as any]: "#07160F",
-          ["--panel2" as any]: "#0A1F15",
-
-          // superfícies/linhas com leve “mint”
-          ["--card" as any]: "rgba(219,255,228,0.045)",
-          ["--card2" as any]: "rgba(219,255,228,0.030)",
-          ["--border" as any]: "rgba(219,255,228,0.12)",
-
-          ["--tw-ring-color" as any]: "var(--accent)",
+          ["--accentDark" as any]: accentDark,
+          ["--accent-rgb" as any]: `${rgb.r} ${rgb.g} ${rgb.b}`,
+          ["--tw-ring-color" as any]: `rgb(var(--accent-rgb) / 0.28)`,
         } as React.CSSProperties
       }
     >
-      <div className="min-h-[100svh] w-full grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr]">
-        {/* LEFT: MEDIA */}
-        <div className="relative overflow-hidden h-[36svh] min-h-[220px] sm:h-[44svh] lg:h-auto">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 w-full h-full object-cover"
+      {/* VIDEO FUNDO */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="/video.mp4" type="video/mp4" />
+      </video>
+
+      {/* overlays (deixa com cara “empresa grande” e legível) */}
+      <div className="absolute inset-0 bg-black/55" />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(70% 60% at 18% 22%, rgb(var(--accent-rgb) / 0.22) 0%, transparent 62%)," +
+            "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.78) 100%)",
+        }}
+      />
+
+      {/* TOP BAR discreta */}
+      <div className="absolute left-4 right-4 top-4 sm:left-8 sm:right-8 sm:top-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-3">
+          <div
+            className="h-11 w-11 rounded-2xl grid place-items-center overflow-hidden border"
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              borderColor: "rgba(255,255,255,0.14)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
           >
-            <source src="/video.mp4" type="video/mp4" />
-          </video>
-
-          {/* overlays (cinematic + verde) */}
-          <div className="absolute inset-0 bg-black/55" />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(70% 60% at 18% 22%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 62%)," +
-                "linear-gradient(180deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.10) 55%, rgba(0,0,0,0.70) 100%)",
-            }}
-          />
-
-          {/* brand */}
-          <div className="absolute left-4 sm:left-6 top-4 sm:top-6 flex items-center gap-3">
-            <div
-              className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl grid place-items-center overflow-hidden backdrop-blur border"
-              style={{
-                background: "rgba(219,255,228,0.08)",
-                borderColor: "rgba(219,255,228,0.16)",
-              }}
-            >
-              <Image
-                src="/logo-aya.png"
-                alt="AYA"
-                width={36}
-                height={36}
-                priority
-                className="object-contain"
-              />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[13px] sm:text-[14px] font-semibold leading-tight">
-                AYA Energia
-              </div>
-              <div className="text-[11px] sm:text-[12px] text-white/70 -mt-[1px]">
-                Portal Operacional
-              </div>
-            </div>
+            <Image src="/logo-aya.png" alt="AYA" width={30} height={30} priority />
           </div>
-
-          {/* desktop caption */}
-          <div className="absolute left-6 bottom-6 hidden lg:flex items-center gap-3">
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: "var(--accent)" }}
-            />
-            <div className="text-[12px] text-white/75">
-              <span className="font-semibold text-white/85">Ambiente seguro</span>
-              <span className="mx-2 text-white/35">•</span>
-              <span>Acesso controlado e auditável</span>
-            </div>
+          <div className="leading-tight">
+            <div className="text-[13px] font-semibold text-white">AYA Energia</div>
+            <div className="text-[12px] text-white/65 -mt-[1px]">Portal Operacional</div>
           </div>
-
-          {/* edge fade on desktop */}
-          <div
-            className="hidden lg:block absolute inset-y-0 right-0 w-16 pointer-events-none"
-            style={{
-              background: "linear-gradient(to left, var(--panel2), transparent)",
-            }}
-          />
         </div>
 
-        {/* RIGHT: FORM */}
-        <div
-          className="relative px-4 sm:px-8 lg:px-10 py-6 sm:py-10 flex justify-center"
-          style={{ background: "linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%)" }}
+        <button
+          type="button"
+          onClick={() => setShowSupport(true)}
+          className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
         >
-          {/* subtle green pattern */}
+          Suporte
+        </button>
+      </div>
+
+      {/* CAIXA CENTRAL */}
+      <div className="relative z-10 min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-[460px]">
+          {/* glow */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-60"
+            className="absolute left-1/2 -translate-x-1/2 -mt-10 h-40 w-[520px] max-w-[92vw] blur-3xl opacity-70 pointer-events-none"
             style={{
               background:
-                "radial-gradient(1100px 600px at 18% 0%, rgba(150,217,167,0.12) 0%, transparent 55%)," +
-                "radial-gradient(rgba(219,255,228,0.07) 1px, transparent 1px)",
-              backgroundSize: "auto, 18px 18px",
-              backgroundPosition: "center, 0 0",
+                "radial-gradient(55% 55% at 50% 50%, rgb(var(--accent-rgb) / 0.35) 0%, transparent 70%)",
             }}
           />
 
-          <div className="relative w-full max-w-[520px] lg:self-center -mt-10 sm:-mt-12 lg:mt-0">
-            {/* glow */}
-            <div
-              className="absolute -inset-4 rounded-[32px] blur-2xl opacity-70 pointer-events-none"
-              style={{
-                background:
-                  "radial-gradient(55% 55% at 35% 25%, color-mix(in srgb, var(--mint) 28%, transparent) 0%, transparent 72%)",
-              }}
-            />
+          <div
+            className="relative rounded-3xl border overflow-hidden shadow-[0_35px_90px_-50px_rgba(0,0,0,0.95)]"
+            style={{
+              borderColor: "rgba(255,255,255,0.18)",
+              background: "rgba(8, 16, 12, 0.55)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+            }}
+          >
+            <div className="h-1.5 w-full" style={{ background: "var(--accent)" }} />
 
-            <div
-              className="relative rounded-3xl border overflow-hidden shadow-[0_30px_80px_-45px_rgba(0,0,0,0.90)]"
-              style={{
-                borderColor: "var(--border)",
-                background:
-                  "linear-gradient(180deg, var(--card) 0%, var(--card2) 100%)",
-                backdropFilter: "blur(14px)",
-              }}
-            >
-              {/* accent strip */}
-              <div className="h-1.5 w-full" style={{ background: "var(--accent)" }} />
+            <div className="p-6 sm:p-8">
+              <div className="mb-6">
+                <div className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-white leading-tight">
+                  Entrar no Portal
+                </div>
+                <div className="mt-2 text-[13px] text-white/65">
+                  Use suas credenciais para acessar o ambiente operacional.
+                </div>
+              </div>
 
-              <div className="p-5 sm:p-7 lg:p-8">
-                {/* heading */}
-                <div className="mb-6 sm:mb-8">
-                  <div className="text-[26px] sm:text-3xl font-semibold tracking-tight leading-[1.08]">
-                    Entrar no{" "}
-                    <span className="text-white/95">Portal Operacional</span>
-                  </div>
-                  <div className="mt-2 text-white/60 text-sm">
-                    Use suas credenciais para acessar.
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleLogin();
+                }}
+              >
+                <div className="space-y-2">
+                  <label htmlFor="login" className="text-[12px] font-semibold text-white/80">
+                    Login <span className="text-red-400">*</span>
+                  </label>
+
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
+                      <User className="w-4 h-4" />
+                    </div>
+
+                    <input
+                      id="login"
+                      name="login"
+                      value={login}
+                      onChange={(e) => setLogin(e.target.value)}
+                      autoComplete="username"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      required
+                      className={`${inputBase} pl-10 pr-3`}
+                      placeholder="Digite seu login"
+                      aria-invalid={!!error}
+                      aria-describedby={error ? "login-error" : undefined}
+                    />
                   </div>
                 </div>
 
-                <form
-                  className="space-y-5"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleLogin();
-                  }}
-                >
-                  {/* Login */}
-                  <div className="space-y-2">
-                    <label htmlFor="login" className="text-[12px] font-semibold text-white/80">
-                      Login <span className="text-red-400">*</span>
-                    </label>
+                <div className="space-y-2">
+                  <label htmlFor="senha" className="text-[12px] font-semibold text-white/80">
+                    Senha <span className="text-red-400">*</span>
+                  </label>
 
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-                        <User className="w-4 h-4" />
-                      </div>
-
-                      <input
-                        id="login"
-                        name="login"
-                        value={login}
-                        onChange={(e) => setLogin(e.target.value)}
-                        autoComplete="username"
-                        inputMode="email"
-                        autoCapitalize="none"
-                        spellCheck={false}
-                        required
-                        className={`${fieldBase} pl-10 pr-3`}
-                        placeholder="Digite seu login"
-                        aria-invalid={!!error}
-                        aria-describedby={error ? "login-error" : undefined}
-                      />
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
+                      <Lock className="w-4 h-4" />
                     </div>
-                  </div>
 
-                  {/* Senha */}
-                  <div className="space-y-2">
-                    <label htmlFor="senha" className="text-[12px] font-semibold text-white/80">
-                      Senha <span className="text-red-400">*</span>
-                    </label>
-
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-                        <Lock className="w-4 h-4" />
-                      </div>
-
-                      <input
-                        id="senha"
-                        name="password"
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        autoComplete="current-password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        className={`${fieldBase} pl-10 pr-11`}
-                        placeholder="Digite sua senha"
-                        aria-invalid={!!error}
-                        aria-describedby={error ? "login-error" : undefined}
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/55 hover:text-white transition active:scale-[0.98]"
-                        style={{
-                          borderColor: "rgba(219,255,228,0.18)",
-                          background: "rgba(219,255,228,0.06)",
-                        }}
-                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* row */}
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="flex items-center gap-2 text-[12px] text-white/70 select-none">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border border-white/25 bg-transparent"
-                        style={{ accentColor: "var(--accent)" }}
-                        defaultChecked
-                      />
-                      Lembrar-me
-                    </label>
+                    <input
+                      id="senha"
+                      name="password"
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      autoComplete="current-password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      className={`${inputBase} pl-10 pr-11`}
+                      placeholder="Digite sua senha"
+                      aria-invalid={!!error}
+                      aria-describedby={error ? "login-error" : undefined}
+                    />
 
                     <button
                       type="button"
-                      onClick={() => setShowSupport(true)}
-                      className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/70 hover:text-white transition active:scale-[0.98]"
+                      style={{
+                        borderColor: "rgba(255,255,255,0.20)",
+                        background: "rgba(255,255,255,0.08)",
+                      }}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
-                      Suporte
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
 
-                  {/* Strength */}
-                  {/* {showStrength && pwScore && (
-                    <div
-                      className="rounded-2xl border p-4"
-                      style={{
-                        borderColor: "rgba(219,255,228,0.14)",
-                        background: "rgba(0,0,0,0.18)",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="text-[12px] font-semibold text-white/75">
-                          Segurança
-                        </div>
-                        <div className="text-[12px] font-semibold text-white/60">
-                          {pwScore.label}
-                        </div>
-                      </div>
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <label className="flex items-center gap-2 text-[12px] text-white/70 select-none">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border border-white/25 bg-transparent"
+                      style={{ accentColor: "var(--accent)" }}
+                      defaultChecked
+                    />
+                    Lembrar-me
+                  </label>
 
-                      <div className="mt-2 grid grid-cols-4 gap-2">
-                        {[0, 1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className="h-2 rounded-full transition"
-                            style={{
-                              background:
-                                pwScore.score >= i + 1
-                                  ? "var(--accent)"
-                                  : "rgba(219,255,228,0.12)",
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )} */}
-
-                  {/* Error */}
-                  {error && (
-                    <div
-                      id="login-error"
-                      className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2"
-                      style={{
-                        border: "1px solid rgba(239,68,68,0.35)",
-                        background: "rgba(239,68,68,0.10)",
-                        color: "#fecaca",
-                      }}
-                      role="alert"
-                    >
-                      <span className="mt-[2px] inline-block h-2 w-2 rounded-full bg-red-300/90" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-
-                  {/* Submit */}
                   <button
-                    type="submit"
-                    disabled={loginLoading}
-                    className={[
-                      "w-full h-11 rounded-xl font-semibold text-sm transition",
-                      "disabled:opacity-60 disabled:cursor-not-allowed",
-                      "active:scale-[0.99]",
-                      "hover:brightness-[1.03]",
-                    ].join(" ")}
-                    style={{
-                      background:
-                        "linear-gradient(180deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 72%, #000 28%) 100%)",
-                      color: "#fff",
-                      boxShadow:
-                        "0 16px 40px -18px color-mix(in srgb, var(--accent) 55%, transparent)",
-                    }}
+                    type="button"
+                    onClick={() => setShowSupport(true)}
+                    className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
                   >
-                    {loginLoading ? "Entrando..." : "Entrar"}
+                    Esqueci minha senha
                   </button>
+                </div>
 
-                  {/* footer note */}
-                  <div className="pt-2 text-[12px] text-white/45 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    Ambiente seguro • Acesso monitorado
+                {error && (
+                  <div
+                    id="login-error"
+                    className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2"
+                    style={{
+                      border: "1px solid rgba(239,68,68,0.35)",
+                      background: "rgba(239,68,68,0.10)",
+                      color: "#fecaca",
+                    }}
+                    role="alert"
+                  >
+                    <span className="mt-[6px] inline-block h-2 w-2 rounded-full bg-red-300/90" />
+                    <span>{error}</span>
                   </div>
-                </form>
-              </div>
-            </div>
+                )}
 
-            {/* desktop footer */}
-            <div className="hidden lg:flex items-center justify-between mt-4 text-[12px] text-white/40">
-              <span>© {new Date().getFullYear()} AYA Energia</span>
-              <span className="flex items-center gap-2">
-                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />
-                Conexão segura
-              </span>
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className={[
+                    "w-full h-11 rounded-xl font-semibold text-sm transition",
+                    "disabled:opacity-60 disabled:cursor-not-allowed",
+                    "active:scale-[0.99]",
+                    "hover:brightness-[1.04]",
+                  ].join(" ")}
+                  style={{
+                    background: "linear-gradient(180deg, var(--accent) 0%, var(--accentDark) 100%)",
+                    color: "#fff",
+                    boxShadow: "0 16px 40px -18px rgb(var(--accent-rgb) / 0.55)",
+                  }}
+                >
+                  {loginLoading ? "Entrando..." : "Entrar"}
+                </button>
+
+                <div className="pt-2 text-[12px] text-white/55 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" />
+                  Ambiente seguro • Acesso monitorado
+                </div>
+              </form>
             </div>
+          </div>
+
+          <div className="mt-4 text-center text-[12px] text-white/45">
+            © {new Date().getFullYear()} AYA Energia
           </div>
         </div>
       </div>
@@ -1534,7 +1435,17 @@ export default function PortalClient() {
         select:focus-visible,
         button:focus-visible {
           outline: none !important;
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent) !important;
+          box-shadow: 0 0 0 4px rgb(var(--accent-rgb) / 0.28) !important;
+        }
+
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #0f172a !important;
+          caret-color: #0f172a !important;
+          transition: background-color 9999s ease-in-out 0s;
+          box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.92) inset !important;
+          border: 1px solid rgba(255, 255, 255, 0.25) !important;
         }
       `}</style>
     </div>
@@ -1595,71 +1506,6 @@ export default function PortalClient() {
                             <div className="text-[11px] text-white/65">Portal Operacional</div>
                         </div>
                     </button>
-
-                    {/* SEARCH (desktop) */}
-                    {/* <div ref={searchWrapRef} className="relative hidden md:block flex-1 max-w-[350px] mx-3">
-                        <div className="h-11 rounded-2xl overflow-hidden bg-white ring-1 ring-white/15 flex items-center">
-                            <div className="px-3 text-black/40">
-                                <SearchIcon className="w-4 h-4" />
-                            </div>
-                            <input
-                                ref={searchInputRef}
-                                value={navQuery}
-                                onChange={(e) => {
-                                    setNavQuery(e.target.value);
-                                    setSearchOpen(true);
-                                }}
-                                onFocus={() => setSearchOpen(true)}
-                                placeholder="Buscar no portal…"
-                                className="flex-1 h-11 px-2 text-sm outline-none text-black placeholder:text-black/45"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSearchOpen(true);
-                                    requestAnimationFrame(() => searchInputRef.current?.focus());
-                                }}
-                                className="h-11 w-12 grid place-items-center"
-                                style={{ background: UI.top2 }}
-                                aria-label="Buscar"
-                            >
-                                <SearchIcon className="w-5 h-5 text-white/90" />
-                            </button>
-                        </div>
-
-                        {searchOpen && (navQuery.trim() ? true : recentItems.length > 0) && (
-                            <div className="absolute left-0 right-0 top-[46px] z-50 rounded-2xl border bg-white shadow-2xl overflow-hidden" style={{ borderColor: UI.border }}>
-                                <div className="px-3 py-2 border-b text-[12px] font-semibold text-black/70 bg-black/[0.02]" style={{ borderColor: UI.border }}>
-                                    {navQuery.trim() ? "Resultados" : "Recentes"}
-                                </div>
-
-                                <div className="max-h-[100px] overflow-y-auto p-1">
-                                    {(navQuery.trim() ? searchResults : recentItems).map((it) => {
-                                        const Icon = it.icon || SolarPanel;
-                                        return (
-                                            <button
-                                                key={it.id}
-                                                type="button"
-                                                onClick={() => go(it.id)}
-                                                className="w-full px-3 py-2.5 rounded-xl flex items-center gap-3 text-left hover:bg-black/[0.04]"
-                                            >
-                                                <span className="w-9 h-9 rounded-xl bg-black/[0.03] grid place-items-center text-black/60">
-                                                    <Icon className="w-4 h-4" />
-                                                </span>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-sm font-semibold text-black/85 truncate">{it.title}</div>
-                                                    <div className="text-[11px] text-black/45 truncate">{it.group}</div>
-                                                </div>
-                                                <ChevronRight className="w-5 h-5 text-black/20" />
-                                            </button>
-                                        );
-                                    })}
-                                    {!navQuery.trim() && recentItems.length === 0 ? <div className="px-3 py-3 text-sm text-black/55">Sem recentes.</div> : null}
-                                    {navQuery.trim() && searchResults.length === 0 ? <div className="px-3 py-3 text-sm text-black/55">Nada encontrado.</div> : null}
-                                </div>
-                            </div>
-                        )}
-                    </div> */}
 
                     {/* LISTAS (desktop) */}
                     <div className="hidden ml-auto flex md:flex items-center gap-2 justify-center">
@@ -1738,68 +1584,6 @@ export default function PortalClient() {
                         </button>
                     </div>
                 </div>
-
-                {/* second row: dropdown lists (desktop only) */}
-                {/* <div className="hidden md:flex h-11 px-3 md:px-4 items-center gap-2" style={{ background: UI.sub }}>
-                    <button
-                        type="button"
-                        onClick={() => setDrawerOpen(true)}
-                        className="h-9 px-3 rounded-xl flex items-center gap-2 text-[13px] font-semibold text-white/95 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
-                        aria-label="Abrir menu"
-                    >
-                        <Menu className="w-5 h-5" />
-                    </button>
-
-                    <TopDropdown
-                        label="Operação"
-                        open={openMenu === "operacao"}
-                        onOpen={() => setOpenMenu("operacao")}
-                        onClose={() => setOpenMenu(null)}
-                        items={allowedOperacao}
-                        onPick={go}
-                        desktopHover={true}
-                        stickyByClick={stickyMenu === "operacao"}
-                        setStickyByClick={(v) => setStickyMenu(v ? "operacao" : null)}
-                    />
-
-                    <TopDropdown
-                        label="Manutenção"
-                        open={openMenu === "manutencao"}
-                        onOpen={() => setOpenMenu("manutencao")}
-                        onClose={() => setOpenMenu(null)}
-                        items={allowedManut}
-                        onPick={go}
-                        desktopHover={true}
-                        stickyByClick={stickyMenu === "manutencao"}
-                        setStickyByClick={(v) => setStickyMenu(v ? "manutencao" : null)}
-                    />
-
-                    <TopDropdown
-                        label="Compras"
-                        open={openMenu === "compras"}
-                        onOpen={() => setOpenMenu("compras")}
-                        onClose={() => setOpenMenu(null)}
-                        items={allowedCompras}
-                        onPick={go}
-                        desktopHover={true}
-                        stickyByClick={stickyMenu === "compras"}
-                        setStickyByClick={(v) => setStickyMenu(v ? "compras" : null)}
-                    />
-
-                    <TopDropdown
-                        label="Cursos"
-                        open={openMenu === "cursos"}
-                        onOpen={() => setOpenMenu("cursos")}
-                        onClose={() => setOpenMenu(null)}
-                        items={canCourses ? [NAV_COURSES] : []}
-                        onPick={go}
-                        desktopHover={true}
-                        stickyByClick={stickyMenu === "cursos"}
-                        setStickyByClick={(v) => setStickyMenu(v ? "cursos" : null)}
-                    />
-
-                    <div className="ml-auto" />
-                </div> */}
             </header>
 
             {/* CONTENT */}
