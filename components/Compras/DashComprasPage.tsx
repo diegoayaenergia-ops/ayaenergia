@@ -2,7 +2,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Search, RefreshCw, ExternalLink, Filter } from "lucide-react";
+import {
+  Search,
+  RefreshCw,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Download,
+} from "lucide-react";
 
 const cx = (...p: Array<string | false | null | undefined>) => p.filter(Boolean).join(" ");
 
@@ -46,12 +53,14 @@ const UI = {
   sectionTitle: "text-sm font-semibold",
   sectionHint: "text-xs",
   label: "text-[11px] font-medium",
-  help: "text-[11px]",
 
   input: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
   select: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
 } as const;
 
+/* =========================================================
+   UI COMPONENTS
+========================================================= */
 function Btn({
   tone = "primary",
   loading,
@@ -111,6 +120,50 @@ function MsgBox({ m }: { m: { type: "ok" | "err"; text: string } | null }) {
   return (
     <div className="text-sm px-3 py-2 border rounded-md" style={s}>
       {m.text}
+    </div>
+  );
+}
+
+function MobileAccordion({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border, background: T.cardSoft }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full px-3 py-2 border-b flex items-center justify-between gap-3 text-left"
+        style={{ borderColor: "rgba(17,24,39,0.08)" }}
+      >
+        <div className="min-w-0">
+          <div className="text-xs font-semibold truncate" style={{ color: T.text }}>
+            {title}
+          </div>
+          <div className="text-[11px]" style={{ color: T.text3 }}>
+            {count} {count === 1 ? "registro" : "registros"}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Pill>{count}</Pill>
+          {open ? (
+            <ChevronUp className="w-4 h-4" style={{ color: T.text3 }} />
+          ) : (
+            <ChevronDown className="w-4 h-4" style={{ color: T.text3 }} />
+          )}
+        </div>
+      </button>
+
+      {open && <div className="p-3">{children}</div>}
     </div>
   );
 }
@@ -177,12 +230,46 @@ function isHttpUrl(s?: string | null) {
     return false;
   }
 }
+function safeFileName(name: string) {
+  return name
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .trim();
+}
+
+/* =========================================================
+   TYPES
+========================================================= */
+type Row = {
+  id: string;
+  id_compra?: number | string | null;
+  created_at?: string | null;
+  data: string;
+  cliente: string | null;
+  usina: string | null;
+  impacto: string | null;
+  servico: string | null;
+  valor: number | null;
+  status_cliente: string | null;
+  status_aya: string | null;
+  forma_de_pag: string | null;
+  bdi: number | null;
+  nota_fiscal?: string | null;
+};
+
+type DashResponse = {
+  ok: boolean;
+  total?: number;
+  resumo_status_aya?: Record<string, number>;
+  resumo_status_cliente?: Record<string, number>;
+  fluxo_mensal?: Record<string, number>;
+  lista?: Row[];
+  error?: string;
+};
 
 function canShowComprovante(r: Row) {
-  return (
-    String(r.status_aya || "") === "PAGAMENTO EFETUADO" &&
-    isHttpUrl(r.nota_fiscal)
-  );
+  return String(r.status_aya || "") === "PAGAMENTO EFETUADO" && isHttpUrl(r.nota_fiscal);
 }
 
 /* =========================================================
@@ -310,39 +397,14 @@ function UsinaAutocomplete({
 }
 
 /* =========================================================
-   TYPES
+   PAGE
 ========================================================= */
-type Row = {
-  id: string;
-  id_compra?: number | string | null; // ✅ ADD
-  created_at?: string | null;
-  data: string;
-  cliente: string | null;
-  usina: string | null;
-  impacto: string | null;
-  servico: string | null;
-  valor: number | null;
-  status_cliente: string | null;
-  status_aya: string | null;
-  forma_de_pag: string | null;
-  bdi: number | null;
-  nota_fiscal?: string | null;
-};
-
-
-type DashResponse = {
-  ok: boolean;
-  total?: number;
-  resumo_status_aya?: Record<string, number>;
-  resumo_status_cliente?: Record<string, number>;
-  fluxo_mensal?: Record<string, number>;
-  lista?: Row[];
-  error?: string;
-};
+export default function Page() {
+  return <ComprasDashPage />;
+}
 
 export function ComprasDashPage() {
   const CLIENTES = ["INEER", "KAMAI", "ÉLIS"] as const;
-
   const STATUS_AYA = ["PENDENTE APROVAÇÃO", "APROVADO", "PAGAMENTO EFETUADO", "REPROVADO", "CANCELADO"] as const;
   const STATUS_CLIENTE = ["REEMBOLSO PENDENTE", "REEMBOLSO EFETUADO"] as const;
 
@@ -373,6 +435,30 @@ export function ComprasDashPage() {
   // UI
   const [openAya, setOpenAya] = useState(true);
   const [openCliente, setOpenCliente] = useState(true);
+
+  // MOBILE accordion state (por status)
+  const [ayaOpenMap, setAyaOpenMap] = useState<Record<string, boolean>>({});
+  const [cliOpenMap, setCliOpenMap] = useState<Record<string, boolean>>({});
+
+  // export
+  const [exporting, setExporting] = useState<"" | "xlsx" | "pdf">("");
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (!exportRef.current?.contains(e.target as Node)) setExportOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExportOpen(false);
+    };
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   const applyPreset = (p: typeof periodPreset) => {
     const now = new Date();
@@ -448,8 +534,6 @@ export function ComprasDashPage() {
       const u = Array.from(new Set(list.map((r) => clampUpper(r.usina || "")).filter(Boolean))).sort((a, b) => a.localeCompare(b));
       setUsinasList(u);
       setUsinasLoading(false);
-
-      // setMsg({ type: "ok", text: "Dados carregados ✅" });
     } catch {
       setMsg({ type: "err", text: "Erro de conexão." });
     } finally {
@@ -485,7 +569,6 @@ export function ComprasDashPage() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / limit)), [count, limit]);
   const pageSafe = Math.min(Math.max(1, page), totalPages);
   const offset = (pageSafe - 1) * limit;
-
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
 
   // dashboard (baseado nos filtrados)
@@ -522,7 +605,7 @@ export function ComprasDashPage() {
       else map.get("OUTROS")!.push(r);
     }
     return map;
-  }, [filteredRows, STATUS_AYA]);
+  }, [filteredRows]);
 
   const groupedCliente = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -534,9 +617,194 @@ export function ComprasDashPage() {
       else map.get("OUTROS")!.push(r);
     }
     return map;
-  }, [filteredRows, STATUS_CLIENTE]);
+  }, [filteredRows]);
 
-  const totalValue = useMemo(() => filteredRows.reduce((acc, r) => acc + (Number(r.valor) || 0), 0), [filteredRows]);
+  const exportRows = (scope: "filtered" | "page") => (scope === "filtered" ? filteredRows : tableRows);
+
+  const exportBaseName = () => {
+    const s = start || "inicio";
+    const e = end || "fim";
+    return safeFileName(`compras_${s}_a_${e}`);
+  };
+
+  const toExportData = (rows: Row[]) =>
+    rows.map((r) => ({
+      "ID Compra": fmtCompraId(r.id_compra),
+      Usina: r.usina ? clampUpper(r.usina) : "—",
+      Data: brDate(r.data),
+      Cliente: r.cliente || "—",
+      "Serviço/Produto": r.servico || "—",
+      Valor: r.valor ?? null,
+      "Status AYA": r.status_aya || "—",
+      "Status Cliente": r.status_cliente || "—",
+      Pagamento: r.forma_de_pag || "—",
+      Impacto: r.impacto || "—",
+      "Nota/Comprovante": r.nota_fiscal || "",
+    }));
+
+  const exportExcel = async (scope: "filtered" | "page" = "filtered") => {
+    const rows = exportRows(scope);
+    if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
+
+    setExporting("xlsx");
+    setMsg(null);
+
+    try {
+      const XLSX = await import("xlsx");
+      const { saveAs } = await import("file-saver");
+
+      const data = toExportData(rows);
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      ws["!cols"] = [
+        { wch: 10 }, // ID
+        { wch: 16 }, // Usina
+        { wch: 12 }, // Data
+        { wch: 10 }, // Cliente
+        { wch: 40 }, // Serviço
+        { wch: 14 }, // Valor
+        { wch: 22 }, // Status AYA
+        { wch: 18 }, // Status Cliente
+        { wch: 12 }, // Pagamento
+        { wch: 12 }, // Impacto
+        { wch: 44 }, // Nota
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Compras");
+
+      const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([out], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.xlsx`;
+      saveAs(blob, name);
+
+      setMsg({ type: "ok", text: `Exportado Excel (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
+    } catch {
+      setMsg({ type: "err", text: "Falha ao exportar Excel." });
+    } finally {
+      setExporting("");
+    }
+  };
+
+  const exportPDF = async (scope: "filtered" | "page" = "filtered") => {
+    const rows = exportRows(scope);
+    if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
+
+    setExporting("pdf");
+    setMsg(null);
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      // Retrato A4 (5 colunas)
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+
+      // ✅ evita “P e r i o d o ...”
+      // (algum lugar pode ter setado charSpace; garante normal)
+      // @ts-ignore
+      doc.setCharSpace?.(0);
+
+      const marginX = 32;
+      const pageW = doc.internal.pageSize.getWidth();
+      const usableW = pageW - marginX * 2;
+
+      const title = "Compras";
+      const subtitle = `Período: ${start && end ? `${brDate(start)} - ${brDate(end)}` : "—"
+        }`;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.text(title, marginX, 38);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      // ✅ quebra linha corretamente e não estoura a largura
+      const subLines = doc.splitTextToSize(subtitle, usableW);
+      doc.text(subLines, marginX, 58);
+
+      const startY = 58 + subLines.length * 14 + 8;
+
+      // ✅ larguras que cabem (somam usableW)
+      const wUsina = 90;
+      const wData = 68;
+      const wCliente = 80;
+      const wValor = 78;
+      const wServico = Math.max(160, usableW - (wUsina + wData + wCliente + wValor)); // resto da página
+
+      const head = [["Usina", "Data", "Cliente", "Serviço/Produto", "Valor"]];
+
+      const body = rows.map((r) => [
+        r.usina ? clampUpper(r.usina) : "—",
+        brDate(r.data),
+        r.cliente || "—",
+        String(r.servico || "—"),
+        r.valor != null ? formatBRL(r.valor) : "—",
+      ]);
+
+      autoTable(doc, {
+        head,
+        body,
+        startY,
+        margin: { left: marginX, right: marginX, bottom: 36 },
+        styles: {
+          fontSize: 9,
+          cellPadding: 4,
+          overflow: "linebreak",
+          valign: "middle",
+        },
+        headStyles: { fillColor: [17, 89, 35], textColor: 255, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [248, 250, 249] },
+        columnStyles: {
+          0: { cellWidth: wUsina },
+          1: { cellWidth: wData },
+          2: { cellWidth: wCliente },
+          3: { cellWidth: wServico },
+          4: { cellWidth: wValor, halign: "right" },
+        },
+        didDrawPage: () => {
+          // @ts-ignore
+          doc.setCharSpace?.(0);
+          const pageCount = doc.getNumberOfPages();
+          const page = (doc as any).internal.getCurrentPageInfo().pageNumber as number;
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(120);
+          doc.text(
+            `Página ${page}/${pageCount}`,
+            doc.internal.pageSize.getWidth() - marginX,
+            doc.internal.pageSize.getHeight() - 18,
+            { align: "right" }
+          );
+        },
+      });
+
+      const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.pdf`;
+      doc.save(name);
+
+      setMsg({ type: "ok", text: `Exportado PDF (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
+    } catch {
+      setMsg({ type: "err", text: "Falha ao exportar PDF." });
+    } finally {
+      setExporting("");
+    }
+  };
+
+  const clearFilters = () => {
+    setCliente("");
+    setUsina("");
+    setStatusAya("");
+    setStatusCliente("");
+    setPeriodPreset("thisMonth");
+    applyPreset("thisMonth");
+    setMsg(null);
+  };
 
   return (
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
@@ -557,10 +825,6 @@ export function ComprasDashPage() {
                 <Pill>Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}</Pill>
                 <Pill>Cliente: {cliente || "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
-                <Pill>Total: {formatBRL(totalValue)}</Pill>
-                <Pill>
-                  Página {pageSafe}/{totalPages}
-                </Pill>
               </div>
             </div>
 
@@ -573,7 +837,7 @@ export function ComprasDashPage() {
           </div>
         </div>
 
-        {/* FILTROS HORIZONTAIS (top) */}
+        {/* FILTROS */}
         <div className={cx(UI.section, "mt-4 p-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
@@ -584,7 +848,12 @@ export function ComprasDashPage() {
                 Ajusta e atualiza tudo.
               </div>
             </div>
-            <Pill>{usinasLoading ? "Carregando…" : `${usinasList.length} usinas`}</Pill>
+
+            <div className="flex items-center gap-2">
+              <Btn tone="secondary" onClick={clearFilters} disabled={loading} className="h-9 px-3 text-[12px]">
+                Limpar
+              </Btn>
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
@@ -713,26 +982,6 @@ export function ComprasDashPage() {
                 ))}
               </select>
             </div>
-
-            {/* Buttons */}
-            <div className="lg:col-span-3 flex items-end justify-end gap-2 py-6">
-              <Btn
-                tone="secondary"
-                onClick={() => {
-                  setCliente("");
-                  setUsina("");
-                  setStatusAya("");
-                  setStatusCliente("");
-                  setPeriodPreset("thisMonth");
-                  applyPreset("thisMonth");
-                  setMsg(null);
-                }}
-                disabled={loading}
-                className="w-full"
-              >
-                Limpar
-              </Btn>
-            </div>
           </div>
 
           {invalidRange && (
@@ -764,14 +1013,17 @@ export function ComprasDashPage() {
 
             <div className="mt-4 grid gap-2">
               {!monthSeries.length && (
-                <div className="border rounded-lg p-4 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
+                <div
+                  className="border rounded-lg p-4 text-sm"
+                  style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}
+                >
                   Sem dados para o período.
                 </div>
               )}
 
               {monthSeries.map((m) => (
                 <div key={m.key} className="flex items-center gap-3">
-                  <div className="w-28 text-xs" style={{ color: T.text3 }}>
+                  <div className="w-20 sm:w-28 text-xs" style={{ color: T.text3 }}>
                     {m.label}
                   </div>
                   <div className="flex-1 border rounded-md overflow-hidden" style={{ borderColor: T.border, background: T.mutedBg }}>
@@ -783,7 +1035,7 @@ export function ComprasDashPage() {
                       }}
                     />
                   </div>
-                  <div className="w-28 text-xs text-right" style={{ color: T.text2, fontWeight: 600 }}>
+                  <div className="w-24 sm:w-28 text-xs text-right" style={{ color: T.text2, fontWeight: 600 }}>
                     {formatBRL(m.value)}
                   </div>
                 </div>
@@ -804,74 +1056,152 @@ export function ComprasDashPage() {
             </div>
 
             {openAya && (
-              <div className="p-4 overflow-x-auto">
-                <div className="min-w-[900px] grid grid-cols-5 gap-3">
-                  {STATUS_AYA.map((s) => (
-                    <div key={s} className="border rounded-lg" style={{ borderColor: T.border, background: T.cardSoft }}>
-                      <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: "rgba(17,24,39,0.08)" }}>
-                        <div className="text-xs font-semibold" style={{ color: T.text }}>
-                          {s}
-                        </div>
-                        <Pill>{groupedAya.get(s)?.length || 0}</Pill>
-                      </div>
-
-                      <div className="p-3 grid gap-2 max-h-[360px] overflow-auto">
-                        {(groupedAya.get(s) || []).slice(0, 100).map((r) => (
-                          <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="text-xs font-semibold" style={{ color: T.text }}>
-                                {r.usina ? clampUpper(r.usina) : "—"}
-                              </div>
-
-                              <span
-                                className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
-                                style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                                title="ID da compra"
-                              >
-                                {fmtCompraId(r.id_compra)}
-                              </span>
-                            </div>
-
-                            <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
-                              {brDate(r.data)} • {r.cliente || "—"} • {r.forma_de_pag || "—"}
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <Pill>Valor: {formatBRL(r.valor)}</Pill>
-                              <Pill>Impacto: {r.impacto || "-"}</Pill>
-                            </div>
-                            <div className="mt-2 text-[11px]" style={{ color: T.text2 }}>
-                              {r.servico || "—"}
-                            </div>
-
-                            {canShowComprovante(r) && (
-                              <a
-                                href={r.nota_fiscal!}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-2 inline-flex items-center justify-center h-8 px-3 text-[11px] font-semibold border rounded-md"
-                                style={{
-                                  borderColor: T.border,
-                                  background: T.accentSoft,
-                                  color: T.accent,
-                                }}
-                              >
-                                Abrir comprovante
-                              </a>
-                            )}
-
+              <>
+                {/* MOBILE: accordion */}
+                <div className="sm:hidden p-4 grid gap-2">
+                  {STATUS_AYA.map((s) => {
+                    const items = groupedAya.get(s) || [];
+                    const isOpen = ayaOpenMap[s] ?? (items.length > 0 && s === "PENDENTE APROVAÇÃO");
+                    return (
+                      <MobileAccordion
+                        key={s}
+                        title={s}
+                        count={items.length}
+                        open={!!isOpen}
+                        onToggle={() =>
+                          setAyaOpenMap((prev) => ({
+                            ...prev,
+                            [s]: !(prev[s] ?? (items.length > 0 && s === "PENDENTE APROVAÇÃO")),
+                          }))
+                        }
+                      >
+                        {items.length === 0 ? (
+                          <div className="text-xs" style={{ color: T.text3 }}>
+                            Sem itens.
                           </div>
-                        ))}
+                        ) : (
+                          <div className="grid gap-2">
+                            {items.slice(0, 50).map((r) => (
+                              <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="text-xs font-semibold min-w-0 truncate" style={{ color: T.text }}>
+                                    {r.usina ? clampUpper(r.usina) : "—"}
+                                  </div>
+                                  <span
+                                    className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    title="ID da compra"
+                                  >
+                                    {fmtCompraId(r.id_compra)}
+                                  </span>
+                                </div>
 
-                        {(groupedAya.get(s)?.length || 0) > 100 && (
-                          <div className="text-[11px] text-center" style={{ color: T.text3 }}>
-                            Mostrando 100 (use a tabela para ver tudo).
+                                <div className="mt-1 text-[11px] truncate" style={{ color: T.text3 }}>
+                                  {brDate(r.data)} • {r.cliente || "—"} • {r.forma_de_pag || "—"}
+                                </div>
+
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <Pill>Valor: {formatBRL(r.valor)}</Pill>
+                                  <Pill>Impacto: {r.impacto || "-"}</Pill>
+                                </div>
+
+                                <div className="mt-2 text-[11px]" style={{ color: T.text2 }}>
+                                  {r.servico || "—"}
+                                </div>
+
+                                {canShowComprovante(r) && (
+                                  <a
+                                    href={r.nota_fiscal!}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-2 inline-flex items-center justify-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-md"
+                                    style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Abrir comprovante
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+
+                            {items.length > 50 && (
+                              <div className="text-[11px] text-center" style={{ color: T.text3 }}>
+                                Mostrando 50 (use a tabela para ver tudo).
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    </div>
-                  ))}
+                      </MobileAccordion>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* DESKTOP/TABLET: grid */}
+                <div className="hidden sm:block p-4 overflow-x-auto">
+                  <div className="min-w-[900px] grid grid-cols-5 gap-3">
+                    {STATUS_AYA.map((s) => (
+                      <div key={s} className="border rounded-lg" style={{ borderColor: T.border, background: T.cardSoft }}>
+                        <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: "rgba(17,24,39,0.08)" }}>
+                          <div className="text-xs font-semibold" style={{ color: T.text }}>
+                            {s}
+                          </div>
+                          <Pill>{groupedAya.get(s)?.length || 0}</Pill>
+                        </div>
+
+                        <div className="p-3 grid gap-2 max-h-[360px] overflow-auto">
+                          {(groupedAya.get(s) || []).slice(0, 100).map((r) => (
+                            <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-xs font-semibold min-w-0 truncate" style={{ color: T.text }}>
+                                  {r.usina ? clampUpper(r.usina) : "—"}
+                                </div>
+
+                                <span
+                                  className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                  style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                  title="ID da compra"
+                                >
+                                  {fmtCompraId(r.id_compra)}
+                                </span>
+                              </div>
+
+                              <div className="mt-1 text-[11px] truncate" style={{ color: T.text3 }}>
+                                {brDate(r.data)} • {r.cliente || "—"} • {r.forma_de_pag || "—"}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <Pill>Valor: {formatBRL(r.valor)}</Pill>
+                                <Pill>Impacto: {r.impacto || "-"}</Pill>
+                              </div>
+                              <div className="mt-2 text-[11px]" style={{ color: T.text2 }}>
+                                {r.servico || "—"}
+                              </div>
+
+                              {canShowComprovante(r) && (
+                                <a
+                                  href={r.nota_fiscal!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-2 inline-flex items-center justify-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-md"
+                                  style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  Abrir comprovante
+                                </a>
+                              )}
+                            </div>
+                          ))}
+
+                          {(groupedAya.get(s)?.length || 0) > 100 && (
+                            <div className="text-[11px] text-center" style={{ color: T.text3 }}>
+                              Mostrando 100 (use a tabela para ver tudo).
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -888,43 +1218,123 @@ export function ComprasDashPage() {
             </div>
 
             {openCliente && (
-              <div className="p-4 overflow-x-auto">
-                <div className="min-w-[700px] grid grid-cols-2 gap-3">
-                  {STATUS_CLIENTE.map((s) => (
-                    <div key={s} className="border rounded-lg" style={{ borderColor: T.border, background: T.cardSoft }}>
-                      <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: "rgba(17,24,39,0.08)" }}>
-                        <div className="text-xs font-semibold" style={{ color: T.text }}>
-                          {s}
-                        </div>
-                        <Pill>{groupedCliente.get(s)?.length || 0}</Pill>
-                      </div>
-
-                      <div className="p-3 grid gap-2 max-h-[320px] overflow-auto">
-                        {(groupedCliente.get(s) || []).slice(0, 25).map((r) => (
-                          <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
-                            <div className="text-xs font-semibold" style={{ color: T.text }}>
-                              {r.usina ? clampUpper(r.usina) : "—"}
-                            </div>
-                            <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
-                              {brDate(r.data)} • {r.cliente || "—"} • {r.status_aya || "—"}
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              <Pill>Valor: {formatBRL(r.valor)}</Pill>
-                              <Pill>Pagamento: {r.forma_de_pag || "-"}</Pill>
-                            </div>
+              <>
+                {/* MOBILE accordion */}
+                <div className="sm:hidden p-4 grid gap-2">
+                  {STATUS_CLIENTE.map((s) => {
+                    const items = groupedCliente.get(s) || [];
+                    const isOpen = cliOpenMap[s] ?? (items.length > 0 && s === "REEMBOLSO PENDENTE");
+                    return (
+                      <MobileAccordion
+                        key={s}
+                        title={s}
+                        count={items.length}
+                        open={!!isOpen}
+                        onToggle={() =>
+                          setCliOpenMap((prev) => ({
+                            ...prev,
+                            [s]: !(prev[s] ?? (items.length > 0 && s === "REEMBOLSO PENDENTE")),
+                          }))
+                        }
+                      >
+                        {items.length === 0 ? (
+                          <div className="text-xs" style={{ color: T.text3 }}>
+                            Sem itens.
                           </div>
-                        ))}
+                        ) : (
+                          <div className="grid gap-2">
+                            {items.slice(0, 40).map((r) => (
+                              <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                                <div className="text-xs font-semibold truncate" style={{ color: T.text }}>
+                                  {r.usina ? clampUpper(r.usina) : "—"}
+                                </div>
+                                <div className="mt-1 text-[11px] truncate" style={{ color: T.text3 }}>
+                                  {brDate(r.data)} • {r.cliente || "—"} • {r.status_aya || "—"}
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <Pill>Valor: {formatBRL(r.valor)}</Pill>
+                                  <Pill>Pagamento: {r.forma_de_pag || "-"}</Pill>
+                                </div>
 
-                        {(groupedCliente.get(s)?.length || 0) > 25 && (
-                          <div className="text-[11px] text-center" style={{ color: T.text3 }}>
-                            Mostrando 25 (use a tabela para ver tudo).
+                                {canShowComprovante(r) && (
+                                  <a
+                                    href={r.nota_fiscal!}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-2 inline-flex items-center justify-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-md"
+                                    style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Abrir comprovante
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+
+                            {items.length > 40 && (
+                              <div className="text-[11px] text-center" style={{ color: T.text3 }}>
+                                Mostrando 40 (use a tabela para ver tudo).
+                              </div>
+                            )}
                           </div>
                         )}
-                      </div>
-                    </div>
-                  ))}
+                      </MobileAccordion>
+                    );
+                  })}
                 </div>
-              </div>
+
+                {/* DESKTOP/TABLET */}
+                <div className="hidden sm:block p-4 overflow-x-auto">
+                  <div className="min-w-[700px] grid grid-cols-2 gap-3">
+                    {STATUS_CLIENTE.map((s) => (
+                      <div key={s} className="border rounded-lg" style={{ borderColor: T.border, background: T.cardSoft }}>
+                        <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: "rgba(17,24,39,0.08)" }}>
+                          <div className="text-xs font-semibold" style={{ color: T.text }}>
+                            {s}
+                          </div>
+                          <Pill>{groupedCliente.get(s)?.length || 0}</Pill>
+                        </div>
+
+                        <div className="p-3 grid gap-2 max-h-[320px] overflow-auto">
+                          {(groupedCliente.get(s) || []).slice(0, 25).map((r) => (
+                            <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                              <div className="text-xs font-semibold" style={{ color: T.text }}>
+                                {r.usina ? clampUpper(r.usina) : "—"}
+                              </div>
+                              <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+                                {brDate(r.data)} • {r.cliente || "—"} • {r.status_aya || "—"}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <Pill>Valor: {formatBRL(r.valor)}</Pill>
+                                <Pill>Pagamento: {r.forma_de_pag || "-"}</Pill>
+                              </div>
+
+                              {canShowComprovante(r) && (
+                                <a
+                                  href={r.nota_fiscal!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-2 inline-flex items-center justify-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-md"
+                                  style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  Abrir comprovante
+                                </a>
+                              )}
+                            </div>
+                          ))}
+
+                          {(groupedCliente.get(s)?.length || 0) > 25 && (
+                            <div className="text-[11px] text-center" style={{ color: T.text3 }}>
+                              Mostrando 25 (use a tabela para ver tudo).
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -933,14 +1343,73 @@ export function ComprasDashPage() {
             <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: T.border }}>
               <div className="flex items-center gap-2">
                 <Pill>Lista de compras</Pill>
-                {/* <Pill>{loading ? "Carregando…" : `${tableRows.length} itens (página)`}</Pill> */}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Export dropdown (Excel + PDF) */}
+                <div ref={exportRef} className="relative">
+                  <Btn
+                    tone="secondary"
+                    disabled={loading || !count}
+                    loading={exporting !== ""}
+                    onClick={() => setExportOpen((v) => !v)}
+                    className="h-10"
+                    aria-haspopup="menu"
+                    aria-expanded={exportOpen}
+                    title="Exportar registros filtrados"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportar
+                    <ChevronDown className="w-4 h-4" />
+                  </Btn>
+
+                  {exportOpen && exporting === "" && (
+                    <div
+                      className="absolute right-0 mt-2 w-48 border rounded-lg shadow-sm bg-white overflow-hidden z-50"
+                      style={{ borderColor: T.border }}
+                      role="menu"
+                    >
+                      <button
+                        type="button"
+                        disabled={loading || !count}
+                        onClick={() => {
+                          setExportOpen(false);
+                          exportExcel("filtered");
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ color: T.text }}
+                        role="menuitem"
+                      >
+                        Excel (.xlsx)
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={loading || !count}
+                        onClick={() => {
+                          setExportOpen(false);
+                          exportPDF("filtered");
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ color: T.text }}
+                        role="menuitem"
+                      >
+                        PDF (.pdf)
+                      </button>
+
+                      
+                    </div>
+                  )}
+                </div>
+
                 <Btn tone="secondary" disabled={loading || pageSafe === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
                   Anterior
                 </Btn>
-                <Btn tone="secondary" disabled={loading || pageSafe >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                <Btn
+                  tone="secondary"
+                  disabled={loading || pageSafe >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
                   Próxima
                 </Btn>
               </div>
@@ -954,43 +1423,91 @@ export function ComprasDashPage() {
               )}
 
               {tableRows.length > 0 && (
-                <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
-                  <div
-                    className="grid grid-cols-12 gap-0 px-3 py-2 text-[11px] font-semibold border-b"
-                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                  >
-                    <div className="col-span-2">Usina</div>
-                    <div className="col-span-2">Data</div>
-                    <div className="col-span-4">Serviço/Produto</div>
-                    <div className="col-span-2">Status</div>
-                    <div className="col-span-2 text-right">Valor</div>
+                <>
+                  {/* MOBILE: cards */}
+                  <div className="sm:hidden grid gap-2">
+                    {tableRows.map((r) => (
+                      <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold truncate" style={{ color: T.text }}>
+                              {r.usina ? clampUpper(r.usina) : "—"}
+                            </div>
+                            <div className="mt-0.5 text-[11px] truncate" style={{ color: T.text3 }}>
+                              {brDate(r.data)} • {r.cliente || "—"}
+                            </div>
+                          </div>
+
+                          <div className="text-sm font-semibold whitespace-nowrap" style={{ color: T.text }}>
+                            {formatBRL(r.valor)}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 text-[12px]" style={{ color: T.text2 }}>
+                          {r.servico || "—"}
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Pill>AYA: {r.status_aya || "—"}</Pill>
+                          <Pill>CLI: {r.status_cliente || "—"}</Pill>
+                          <Pill>ID: {fmtCompraId(r.id_compra)}</Pill>
+                        </div>
+
+                        {canShowComprovante(r) && (
+                          <a
+                            href={r.nota_fiscal!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center justify-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-md"
+                            style={{ borderColor: T.border, background: T.accentSoft, color: T.accent }}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Abrir comprovante
+                          </a>
+                        )}
+                      </div>
+                    ))}
                   </div>
 
-                  {tableRows.map((r) => (
+                  {/* DESKTOP: tabela */}
+                  <div className="hidden sm:block border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
                     <div
-                      key={r.id}
-                      className="grid grid-cols-12 gap-0 px-3 py-2 text-sm border-b last:border-b-0"
-                      style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                      className="grid grid-cols-12 gap-0 px-3 py-2 text-[11px] font-semibold border-b"
+                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
                     >
-                      <div className="col-span-2" style={{ color: T.text }}>
-                        {r.usina ? clampUpper(r.usina) : "—"}
-                      </div>
-                      <div className="col-span-2" style={{ color: T.text2 }}>
-                        {brDate(r.data)}
-                      </div>
-                      <div className="col-span-4" style={{ color: T.text2 }}>
-                        {r.servico || "—"}
-                      </div>
-                      <div className="col-span-2 text-[11px] flex flex-col gap-1" style={{ color: T.text2 }}>
-                        <span>AYA: {r.status_aya || "—"}</span>
-                        <span>CLI: {r.status_cliente || "—"}</span>
-                      </div>
-                      <div className="col-span-2 text-right font-semibold" style={{ color: T.text }}>
-                        {formatBRL(r.valor)}
-                      </div>
+                      <div className="col-span-2">Usina</div>
+                      <div className="col-span-2">Data</div>
+                      <div className="col-span-4">Serviço/Produto</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-2 text-right">Valor</div>
                     </div>
-                  ))}
-                </div>
+
+                    {tableRows.map((r) => (
+                      <div
+                        key={r.id}
+                        className="grid grid-cols-12 gap-0 px-3 py-2 text-sm border-b last:border-b-0"
+                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                      >
+                        <div className="col-span-2 truncate" style={{ color: T.text }}>
+                          {r.usina ? clampUpper(r.usina) : "—"}
+                        </div>
+                        <div className="col-span-2" style={{ color: T.text2 }}>
+                          {brDate(r.data)}
+                        </div>
+                        <div className="col-span-4 truncate" style={{ color: T.text2 }}>
+                          {r.servico || "—"}
+                        </div>
+                        <div className="col-span-2 text-[11px] flex flex-col gap-1" style={{ color: T.text2 }}>
+                          <span className="truncate">AYA: {r.status_aya || "—"}</span>
+                          <span className="truncate">CLI: {r.status_cliente || "—"}</span>
+                        </div>
+                        <div className="col-span-2 text-right font-semibold" style={{ color: T.text }}>
+                          {formatBRL(r.valor)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               <div className="mt-3 text-[11px]" style={{ color: T.text3 }}>
