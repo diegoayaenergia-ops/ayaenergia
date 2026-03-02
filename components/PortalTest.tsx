@@ -42,6 +42,7 @@ import { ComprasCadastroPage } from "@/components/Compras/CadastroComprasPage";
 import { ComprasBasePage } from "@/components/Compras/BaseComprasPage";
 import { ComprasDashPage } from "@/components/Compras/DashComprasPage";
 import { SismetroDashPage } from "@/components/DashSismetroPage";
+import { ExtractionPage } from "@/components/ExtractionPage";
 
 /* =========================================================
    TYPES / DATA
@@ -99,6 +100,7 @@ const NON_IFRAME = new Set<string>([
     "compras_dash",
     "compras_cadastro",
     "compras_base",
+    "extracao",
 ]);
 
 /* =========================================================
@@ -894,6 +896,7 @@ export default function PortalClient() {
             src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
         },
         { id: "usinas", title: "Dados das Usinas", group: "Usinas Ineer e Kamai", icon: Info },
+        { id: "extracao", title: "Geração por UC", group: "Usinas Ineer", icon: Info },
     ];
 
     const MANUTENCAO: NavItem[] = [
@@ -1652,6 +1655,12 @@ export default function PortalClient() {
                 {active === "compras_dash" && (
                     <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
                         <ComprasDashPage />
+                    </div>
+                )}
+
+                {active === "extracao" && (
+                    <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
+                        <ExtractionPage />
                     </div>
                 )}
 
