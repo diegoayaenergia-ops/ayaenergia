@@ -2023,10 +2023,10 @@ export function AcionamentosDashPage() {
                     onClick={exportChartsOnlyPDF}
                     disabled={loading || exporting}
                     className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                    title="Exportar gráficos em PDF (1 página)"
+                    title="Exportar gráficos em PDF "
                   >
                     <FileDown className="w-4 h-4" />
-                    {isMobile ? "PDF" : "PDF (1 página)"}
+                    {isMobile ? "PDF" : "PDF"}
                   </Btn>
                 </div>
               }
@@ -2126,7 +2126,6 @@ export function AcionamentosDashPage() {
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <Pill>Lista de Acionamentos</Pill>
-                <Pill tone="accent">{count}</Pill>
               </div>
 
               <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
