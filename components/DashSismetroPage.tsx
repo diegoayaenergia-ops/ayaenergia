@@ -118,17 +118,17 @@ function Btn({
   const style =
     tone === "primary"
       ? {
-          background: T.accent,
-          borderColor: "rgba(17, 89, 35, 0.45)",
-          color: "#fff",
-        }
+        background: T.accent,
+        borderColor: "rgba(17, 89, 35, 0.45)",
+        color: "#fff",
+      }
       : tone === "danger"
-      ? {
+        ? {
           background: "rgba(239, 68, 68, 0.10)",
           borderColor: "rgba(239, 68, 68, 0.35)",
           color: T.errTx,
         }
-      : {
+        : {
           background: T.card,
           borderColor: T.border,
           color: T.text,
@@ -220,25 +220,39 @@ function SectionHeader({
   title,
   hint,
   right,
+  divider = true,
 }: {
   title: ReactNode;
   hint?: ReactNode;
   right?: ReactNode;
+  divider?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 flex-wrap">
-      <div className="min-w-0">
-        <div className={UI.sectionTitle} style={{ color: T.text }}>
-          {title}
-        </div>
-        {hint ? (
-          <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
-            {hint}
+    <>
+      <div className="flex items-start justify-between gap-3 flex-wrap px-4 py-3">
+        <div>
+          <div className={UI.sectionTitle} style={{ color: T.text }}>
+            {title}
           </div>
-        ) : null}
+          {hint ? (
+            <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
+              {hint}
+            </div>
+          ) : null}
+        </div>
+        {right}
       </div>
-      {right}
-    </div>
+
+      {divider && (
+        <div
+          style={{
+            height: 1,
+            background: T.border,
+            opacity: 0.8,
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -270,7 +284,7 @@ function FullscreenShell({
     <div
       className="fixed inset-0 z-[999] flex flex-col"
       style={{
-        background: T.bg, // cobre tudo
+        background: T.bg,
         color: T.text,
       }}
     >
@@ -304,7 +318,7 @@ function FullscreenShell({
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">
-              {filtersOpen ? "Ocultar filtros" : "Filtros"}
+              {filtersOpen ? "Ocultar filtros" : ""}
             </span>
           </Btn>
 
@@ -317,12 +331,11 @@ function FullscreenShell({
             title="Sair da tela cheia"
           >
             <Minimize2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Fechar</span>
           </Btn>
         </div>
       </div>
 
-      {/* FILTROS (sem overflow aqui pra não cortar autocomplete) */}
+      {/* FILTROS */}
       {filtersOpen && (
         <div
           className="shrink-0 border-b"
@@ -332,7 +345,7 @@ function FullscreenShell({
         </div>
       )}
 
-      {/* CONTEÚDO (scroll só aqui) */}
+      {/* CONTEÚDO */}
       <div className="flex-1 min-h-0 overflow-auto px-4 sm:px-6 py-4">
         {children}
       </div>
@@ -508,6 +521,49 @@ function normalizeTecnico(it: SsItem): {
 /* =========================================================
    EXPORT HELPERS
 ========================================================= */
+function imageTypeFromDataUrl(d: string): "PNG" | "JPEG" {
+  const s = String(d || "").toLowerCase();
+  if (s.startsWith("data:image/jpeg") || s.startsWith("data:image/jpg")) return "JPEG";
+  return "PNG";
+}
+const PDF_BRAND = {
+  companyName: "AYA ENERGIA",
+  reportTitle: "Relatório de Solicitações de Serviço (SS)",
+  green: [17, 89, 35] as [number, number, number],
+  black: [11, 18, 32] as [number, number, number],
+  gray: [107, 114, 128] as [number, number, number],
+  lightGray: [244, 246, 248] as [number, number, number],
+  borderGray: [209, 213, 219] as [number, number, number],
+  logoUrl: "/logo-aya.png",
+  logoDataUrl: null as string | null,
+};
+
+function brDateTimeNow() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const dd = pad(d.getDate());
+  const mm = pad(d.getMonth() + 1);
+  const yy = d.getFullYear();
+  const hh = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  return `${dd}/${mm}/${yy} ${hh}:${mi}`;
+}
+
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ""));
+      fr.onerror = () => reject(new Error("Falha ao ler imagem"));
+      fr.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 function fileSafeName(s: string) {
   return String(s || "")
     .trim()
@@ -524,15 +580,12 @@ function exportFileBaseName(args: {
   tecnico?: string;
 }) {
   const parts = [
-    "SS",
-    args.cliente || "TODOS",
+    "Relatorio de SS_",
     args.start || "SEM_INICIO",
+    "-",
     args.end || "SEM_FIM",
-    args.usina ? `USINA_${args.usina}` : "",
-    args.tipo ? `TIPO_${args.tipo}` : "",
-    args.tecnico ? `TEC_${args.tecnico}` : "",
   ].filter(Boolean);
-  return fileSafeName(parts.join("__"));
+  return fileSafeName(parts.join(""));
 }
 function rowsToExportData(rows: Row[]) {
   return rows.map((r) => ({
@@ -770,18 +823,12 @@ function LegendPills({
             }}
             title={onClickItem ? "Clique para filtrar" : undefined}
           >
-            <span
-              className="w-2.5 h-2.5 rounded-sm"
-              style={{ background: it.color }}
-            />
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: it.color }} />
             <span className="truncate max-w-[220px]">{it.label}</span>
             {typeof it.value === "number" && (
               <>
                 <span style={{ color: T.text3 }}>•</span>
-                <span
-                  className={UI.mono}
-                  style={{ fontWeight: 900, color: T.text }}
-                >
+                <span className={UI.mono} style={{ fontWeight: 900, color: T.text }}>
                   {it.value}
                 </span>
               </>
@@ -806,10 +853,7 @@ function MobileSSCard({
   onFilterTecnico: () => void;
 }) {
   return (
-    <div
-      className="border rounded-lg p-3"
-      style={{ borderColor: T.border, background: T.card }}
-    >
+    <div className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <a
@@ -839,12 +883,7 @@ function MobileSSCard({
         </a>
       </div>
 
-      <button
-        type="button"
-        onClick={onFilterUsina}
-        className="mt-2 w-full text-left"
-        title="Filtrar por esta usina"
-      >
+      <button type="button" onClick={onFilterUsina} className="mt-2 w-full text-left" title="Filtrar por esta usina">
         <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }}>
           {safeUpper(r.usina)}
         </div>
@@ -879,12 +918,7 @@ function MobileSSCard({
       </div>
 
       <div className="mt-2 flex items-start justify-between gap-2">
-        <button
-          type="button"
-          onClick={onFilterTecnico}
-          className="text-left min-w-0"
-          title="Filtrar por técnico"
-        >
+        <button type="button" onClick={onFilterTecnico} className="text-left min-w-0" title="Filtrar por técnico">
           <div className="text-[11px] font-semibold truncate" style={{ color: T.text }}>
             {safeUpper(r.tecnico)}
           </div>
@@ -903,9 +937,7 @@ function MobileSSCard({
 export function SismetroDashPage() {
   const isMobile = useIsMobile(640);
 
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(
-    null
-  );
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const allRowsRef = useRef<Row[]>([]);
 
   const DEFAULT_CLIENTE = "INEER ENERGIA";
@@ -952,15 +984,12 @@ export function SismetroDashPage() {
   type FullTarget = "charts" | "kanban" | "table" | null;
   const [full, setFull] = useState<FullTarget>(null);
 
-  // filtros dentro do fullscreen (sempre abre ao entrar)
-  const [fsFiltersOpen, setFsFiltersOpen] = useState(true);
+  const [fsFiltersOpen, setFsFiltersOpen] = useState(false);
 
-  // export
   const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement | null>(null);
 
-  // boot overlay
   const [bootOverlay, setBootOverlay] = useState(true);
   useEffect(() => {
     const t = window.setTimeout(() => setBootOverlay(false), 5000);
@@ -1064,7 +1093,6 @@ export function SismetroDashPage() {
     return s.getTime() > e.getTime();
   }, [start, end]);
 
-  // FULLSCREEN: sempre abre filtros e item expandido (shell)
   const toggleFull = useCallback((target: Exclude<FullTarget, null>) => {
     setFull((prev) => {
       const next = prev === target ? null : target;
@@ -1081,7 +1109,6 @@ export function SismetroDashPage() {
     });
   }, []);
 
-  // fullscreen: trava scroll body e ESC fecha filtros primeiro
   useEffect(() => {
     if (!full) return;
 
@@ -1101,7 +1128,6 @@ export function SismetroDashPage() {
     };
   }, [full, fsFiltersOpen]);
 
-  // click fora / ESC fecha export menu
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (!exportRef.current) return;
@@ -1261,28 +1287,6 @@ export function SismetroDashPage() {
   const offset = (pageSafe - 1) * limit;
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
 
-  const kpis = useMemo(() => {
-    const total = filteredRows.length;
-    const byTipo: Record<string, number> = {};
-    const byKanban: Record<string, number> = {};
-    const byStatus: Record<string, number> = {};
-
-    for (const r of filteredRows) {
-      const tp = clampUpper(String(r.tipo || "SEM TIPO"));
-      byTipo[tp] = (byTipo[tp] || 0) + 1;
-
-      const kb = normalizeKanban(r.evolucao);
-      if (kb !== "OUTROS") byKanban[kb] = (byKanban[kb] || 0) + 1;
-
-      const st = clampUpper(String(r.status || "—"));
-      byStatus[st] = (byStatus[st] || 0) + 1;
-    }
-
-    const topStatus =
-      Object.entries(byStatus).sort((a, b) => (b[1] || 0) - (a[1] || 0))[0]?.[0] || "—";
-    return { total, byTipo, byKanban, topStatus };
-  }, [filteredRows]);
-
   const ssByUsinaTipo = useMemo(() => {
     const byUsina: Record<string, { total: number; byTipo: Record<string, number> }> = {};
     for (const r of filteredRows) {
@@ -1369,9 +1373,18 @@ export function SismetroDashPage() {
     return map;
   }, [filteredRows]);
 
-  const toggleTipo = useCallback((v: string) => setTipo((p) => (clampUpper(p) === clampUpper(v) ? "" : clampUpper(v))), []);
-  const toggleKanban = useCallback((v: KanbanCol) => setKanbanFilter((p) => (p === v ? "" : v)), []);
-  const applyUsinaFromChart = useCallback((u: string) => setUsina((p) => (clampUpper(p) === clampUpper(u) ? "" : clampUpper(u))), []);
+  const toggleTipo = useCallback(
+    (v: string) => setTipo((p) => (clampUpper(p) === clampUpper(v) ? "" : clampUpper(v))),
+    []
+  );
+  const toggleKanban = useCallback(
+    (v: KanbanCol) => setKanbanFilter((p) => (p === v ? "" : v)),
+    []
+  );
+  const applyUsinaFromChart = useCallback(
+    (u: string) => setUsina((p) => (clampUpper(p) === clampUpper(u) ? "" : clampUpper(u))),
+    []
+  );
 
   const handleExportExcel = useCallback(async () => {
     setExporting("xlsx");
@@ -1431,24 +1444,135 @@ export function SismetroDashPage() {
       const autoTableMod: any = await import("jspdf-autotable");
       const autoTableFn = autoTableMod.default || autoTableMod.autoTable || autoTableMod;
 
+      let logoDataUrl = PDF_BRAND.logoDataUrl;
+      if (!logoDataUrl && PDF_BRAND.logoUrl) {
+        logoDataUrl = await fetchAsDataUrl(PDF_BRAND.logoUrl);
+      }
+
       const doc = new JsPDFCtor({ orientation: "landscape", unit: "pt", format: "a4" });
 
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+
+      const HEADER_H = 64;
+      const MARGIN_X = 30;
+      const TOP_MARGIN_TABLE = HEADER_H + 18;
+      const FIRST_PAGE_START_Y = HEADER_H + 18;
+
+      const issuedAt = brDateTimeNow();
+
       const base = exportFileBaseName({ cliente, start, end, usina, tipo, tecnico });
-      const title = `Ordens de Serviço (SS) — Período: ${brDate(start)} - ${brDate(end)}`;
-      doc.setFontSize(12);
-      doc.text(title, 40, 34);
+
+      function drawImageContain(opts: {
+        doc: any;
+        dataUrl: string;
+        format: "PNG" | "JPEG";
+        x: number;
+        y: number;
+        boxW: number;
+        boxH: number;
+      }) {
+        const { doc, dataUrl, format, x, y, boxW, boxH } = opts;
+
+        const p = doc.getImageProperties(dataUrl);
+        const iw = Number(p?.width || 1);
+        const ih = Number(p?.height || 1);
+
+        const scale = Math.min(boxW / iw, boxH / ih);
+        const w = iw * scale;
+        const h = ih * scale;
+
+        const dx = x + (boxW - w) / 2;
+        const dy = y + (boxH - h) / 2;
+
+        doc.addImage(dataUrl, format, dx, dy, w, h, undefined, "FAST");
+      }
+
+      const drawHeader = () => {
+        doc.setFillColor(...PDF_BRAND.green);
+        doc.rect(0, 0, pageW, HEADER_H, "F");
+
+        const logoBoxW = 48;
+        const logoBoxH = 48;
+        const logoX = MARGIN_X;
+        const logoY = (HEADER_H - logoBoxH) / 2;
+
+        if (logoDataUrl) {
+          const fmt = imageTypeFromDataUrl(logoDataUrl);
+          drawImageContain({
+            doc,
+            dataUrl: logoDataUrl,
+            format: fmt,
+            x: logoX,
+            y: logoY,
+            boxW: logoBoxW,
+            boxH: logoBoxH,
+          });
+        } else {
+          doc.setDrawColor(255, 255, 255);
+          doc.setLineWidth(1);
+          doc.roundedRect(logoX, logoY, logoBoxW, logoBoxH, 8, 8, "S");
+        }
+
+        const textX = logoX + logoBoxW + 12;
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text(PDF_BRAND.companyName, textX, 30);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(PDF_BRAND.reportTitle, textX, 46);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(255, 255, 255);
+        const rightText = `Emitido em: ${issuedAt}`;
+        const rtW = doc.getTextWidth(rightText);
+        doc.text(rightText, pageW - MARGIN_X - rtW, 30);
+      };
+
+      const drawFooter = () => {
+        doc.setDrawColor(...PDF_BRAND.borderGray);
+        doc.setLineWidth(1);
+        doc.line(MARGIN_X, pageH - 26, pageW - MARGIN_X, pageH - 26);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...PDF_BRAND.gray);
+
+        const pageNum = doc.getNumberOfPages();
+        const footerLeft = `Período: ${brDate(start)} - ${brDate(end)}`;
+        doc.text(footerLeft, MARGIN_X, pageH - 12);
+
+        const footerRight = `Página ${pageNum}`;
+        const frW = doc.getTextWidth(footerRight);
+        doc.text(footerRight, pageW - MARGIN_X - frW, pageH - 12);
+      };
+
+      drawHeader();
 
       const data = rowsToExportData(filteredRows);
+
       const head = [[
-        "SS", "Data/Hora", "Cliente", "Usina", "Tipo", "Status", "Evolucao", "Tecnico", "Descricao", "Conclusao"
+        "SS",
+        "Data/Hora",
+        "Cliente",
+        "Usina",
+        "Tipo",
+        "Evolução",
+        "Técnico",
+        "Descrição",
+        "Conclusão",
       ]];
+
       const body = data.map((d) => [
         String(d.SS),
         d["Data/Hora"],
         d.Cliente,
         d.Usina,
         d.Tipo,
-        d.Status,
         d.Evolucao,
         d.Tecnico,
         d.Descricao,
@@ -1458,17 +1582,44 @@ export function SismetroDashPage() {
       const opts: any = {
         head,
         body,
-        startY: 46,
-        styles: { fontSize: 7, cellPadding: 3, overflow: "linebreak" as const },
-        headStyles: { fontStyle: "bold" as const },
-        margin: { left: 30, right: 30 },
+        startY: FIRST_PAGE_START_Y,
+        margin: { left: MARGIN_X, right: MARGIN_X, top: TOP_MARGIN_TABLE, bottom: 34 },
+
+        styles: {
+          font: "helvetica",
+          fontSize: 7.2,
+          cellPadding: 4,
+          overflow: "linebreak",
+          textColor: PDF_BRAND.black,
+          lineColor: PDF_BRAND.borderGray,
+          lineWidth: 0.6,
+          valign: "top",
+        },
+
+        headStyles: {
+          fillColor: PDF_BRAND.green,
+          textColor: 255,
+          fontStyle: "bold",
+          halign: "left",
+        },
+
+        alternateRowStyles: { fillColor: PDF_BRAND.lightGray },
+
+        columnStyles: {
+          0: { cellWidth: 48 },
+          1: { cellWidth: 78 },
+          2: { cellWidth: 82 },
+          3: { cellWidth: 112 },
+          4: { cellWidth: 65 },
+          5: { cellWidth: 90 },
+          6: { cellWidth: 90 },
+          7: { cellWidth: 113 },
+          8: { cellWidth: 114 },
+        },
+
         didDrawPage: () => {
-          doc.setFontSize(8);
-          doc.text(
-            `Página ${doc.getNumberOfPages()}`,
-            doc.internal.pageSize.getWidth() - 90,
-            doc.internal.pageSize.getHeight() - 18
-          );
+          drawHeader();
+          drawFooter();
         },
       };
 
@@ -1632,11 +1783,7 @@ export function SismetroDashPage() {
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
       {/* BOOT OVERLAY */}
       {bootOverlay && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center"
-          aria-busy="true"
-          aria-live="polite"
-        >
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" aria-busy="true" aria-live="polite">
           <div
             className="absolute inset-0"
             style={{
@@ -1673,15 +1820,12 @@ export function SismetroDashPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className={UI.headerTitle} style={{ color: T.text }}>
-                Ordens de Serviço
+                Painel de Ordens de Serviços
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Pill tone="accent">Registros: {kpis.total}</Pill>
                 <Pill>Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}</Pill>
                 <Pill>Cliente: {cliente || "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
-                <Pill>Tipo: {tipo || "Todos"}</Pill>
-                <Pill>Técnico: {tecnico || "Todos"}</Pill>
               </div>
             </div>
 
@@ -1693,53 +1837,50 @@ export function SismetroDashPage() {
                 className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
               >
                 <RefreshCw className="w-4 h-4" />
-                Recarregar
               </Btn>
             </div>
           </div>
         </div>
 
-        {/* FILTROS (na própria página) */}
+        {/* FILTROS (padronizado com SectionHeader) */}
         <div className={cx(UI.section, "mt-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-          <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: T.border }}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Pill>Filtros</Pill>
-              <Pill>{loadingOptions ? "Carregando…" : `${usinasList.length} usinas`}</Pill>
-              <Pill>{tecnicosList.length} técnicos</Pill>
-            </div>
+          <SectionHeader
+            title="Filtros"
+            hint={<>Selecione os filtros desejados</>}
+            right={
+              <div className="flex items-center gap-2">
+                <Btn
+                  tone="secondary"
+                  onClick={() => setFiltersOpen((p) => !p)}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title={filtersOpen ? "Ocultar filtros" : ""}
+                >
+                  {filtersOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Btn>
 
-            <div className="flex items-center gap-2">
-              <Btn
-                tone="secondary"
-                onClick={() => setFiltersOpen((p) => !p)}
-                className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                title={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}
-              >
-                {filtersOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </Btn>
-
-              <Btn
-                tone="secondary"
-                onClick={() => {
-                  setCliente(clampUpper(DEFAULT_CLIENTE));
-                  setUsina("");
-                  setTipo("");
-                  setEvolucao("");
-                  setTecnico("");
-                  setSearchText("");
-                  setKanbanFilter("");
-                  setPeriodPreset("thisMonth");
-                  applyPreset("thisMonth");
-                  setMsg(null);
-                }}
-                disabled={loading}
-                className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                title="Limpar filtros"
-              >
-                <Eraser className="w-4 h-4" />
-              </Btn>
-            </div>
-          </div>
+                <Btn
+                  tone="secondary"
+                  onClick={() => {
+                    setCliente(clampUpper(DEFAULT_CLIENTE));
+                    setUsina("");
+                    setTipo("");
+                    setEvolucao("");
+                    setTecnico("");
+                    setSearchText("");
+                    setKanbanFilter("");
+                    setPeriodPreset("thisMonth");
+                    applyPreset("thisMonth");
+                    setMsg(null);
+                  }}
+                  disabled={loading}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title="Limpar filtros"
+                >
+                  <Eraser className="w-4 h-4" />
+                </Btn>
+              </div>
+            }
+          />
 
           {filtersOpen && FiltersBody}
         </div>
@@ -1749,10 +1890,10 @@ export function SismetroDashPage() {
           {/* KANBAN */}
           {(() => {
             const isFull = full === "kanban";
-            const kanbanH = 420; // ✅ normal tem altura; fullscreen NÃO
+            const kanbanH = 420;
 
             const content = (
-              <div className="py-4">
+              <div className="p-4">
                 {isMobile ? (
                   <div className="grid gap-3">
                     {KANBAN_COLS.map((col) => {
@@ -1781,20 +1922,22 @@ export function SismetroDashPage() {
                             </span>
                           </div>
 
-                          <div
-                            className={cx(
-                              "p-2 grid gap-2",
-                              isFull ? "" : "max-h-[360px] overflow-auto sismetro-scroll"
-                            )}
-                          >
+                          <div className={cx("p-2 grid gap-2", isFull ? "" : "max-h-[360px] overflow-auto sismetro-scroll")}>
                             {colRows.length === 0 && (
-                              <div className="border rounded-lg p-3 text-xs" style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}>
+                              <div
+                                className="border rounded-lg p-3 text-xs"
+                                style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}
+                              >
                                 Sem Ordens de Serviço no período filtrado.
                               </div>
                             )}
 
                             {colRows.map((r) => (
-                              <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                              <div
+                                key={r.id}
+                                className="border rounded-lg p-3"
+                                style={{ borderColor: T.border, background: T.card }}
+                              >
                                 <div className="min-w-0">
                                   <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
                                     {safeText(r.usina ? clampUpper(r.usina) : null)}
@@ -1814,10 +1957,16 @@ export function SismetroDashPage() {
                                 </div>
 
                                 <div className="mt-2 flex flex-wrap gap-2">
-                                  <span className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md" style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}>
+                                  <span
+                                    className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                  >
                                     {safeText(r.tipo)}
                                   </span>
-                                  <span className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md" style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}>
+                                  <span
+                                    className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                  >
                                     {safeText(r.status)}
                                   </span>
                                 </div>
@@ -1838,10 +1987,7 @@ export function SismetroDashPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto" style={isFull ? undefined : { height: kanbanH }}>
-                    <div
-                      className={cx("flex gap-4 pr-2", isFull ? "w-full items-start" : "items-start")}
-                      style={isFull ? { minWidth: 1200 } : { minWidth: 340 }}
-                    >
+                    <div className={cx("flex gap-4 pr-2", isFull ? "w-full items-start" : "items-start")} style={isFull ? { minWidth: 1200 } : { minWidth: 340 }}>
                       {KANBAN_COLS.map((col) => {
                         const colRows = groupedKanban.get(col) || [];
                         return (
@@ -1851,13 +1997,9 @@ export function SismetroDashPage() {
                             style={{
                               borderColor: T.border,
                               background: T.card,
-
-                              // ✅ fullscreen: distribui e ocupa a largura
                               flex: isFull ? "1 1 0" : "0 0 auto",
                               width: isFull ? "auto" : 337,
                               minWidth: isFull ? 300 : 335,
-
-                              // ✅ fullscreen: sem limite de altura
                               height: isFull ? "auto" : kanbanH,
                             }}
                           >
@@ -1879,19 +2021,25 @@ export function SismetroDashPage() {
                               </span>
                             </div>
 
-                            {/* ✅ fullscreen: sem scroll interno (rola a tela). normal: scroll interno */}
                             <div
                               className={cx("p-2 grid gap-2", isFull ? "" : "overflow-auto sismetro-scroll")}
                               style={isFull ? undefined : { flex: 1, minHeight: 0 }}
                             >
                               {colRows.length === 0 && (
-                                <div className="border rounded-lg p-3 text-xs" style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}>
+                                <div
+                                  className="border rounded-lg p-3 text-xs"
+                                  style={{ borderColor: T.border, background: T.mutedBg, color: T.text3 }}
+                                >
                                   Sem Ordens de Serviço no período filtrado.
                                 </div>
                               )}
 
                               {colRows.map((r) => (
-                                <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
+                                <div
+                                  key={r.id}
+                                  className="border rounded-lg p-3"
+                                  style={{ borderColor: T.border, background: T.card }}
+                                >
                                   <div className="min-w-0">
                                     <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
                                       {safeText(r.usina ? clampUpper(r.usina) : null)}
@@ -1912,10 +2060,16 @@ export function SismetroDashPage() {
                                   </div>
 
                                   <div className="mt-2 flex flex-wrap gap-2">
-                                    <span className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md" style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}>
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    >
                                       {safeText(r.tipo)}
                                     </span>
-                                    <span className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md" style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}>
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    >
                                       {safeText(r.status)}
                                     </span>
                                   </div>
@@ -1942,27 +2096,21 @@ export function SismetroDashPage() {
             if (isFull) {
               return (
                 <FullscreenShell
-                  title="Status"
+                  title="Evolução por Solicitação de Serviço"
                   hint={<>Clique no número da SS para abrir no Sistema</>}
                   count={count}
                   filtersOpen={fsFiltersOpen}
                   onToggleFilters={() => setFsFiltersOpen((v) => !v)}
                   onClose={() => setFull(null)}
                   filters={FiltersBody}
-                  actions={
-                    <Btn
-                      tone="secondary"
-                      onClick={() => setOpenKanban((p) => !p)}
-                      className="h-9 px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
-                      title={openKanban ? "Ocultar Kanban" : "Mostrar Kanban"}
-                    >
-                      {openKanban ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{openKanban ? "Ocultar" : "Mostrar"}</span>
-                    </Btn>
-                  }
                 >
-                  {openKanban ? content : (
-                    <div className="border rounded-xl p-4 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
+                  {openKanban ? (
+                    content
+                  ) : (
+                    <div
+                      className="border rounded-xl p-4 text-sm"
+                      style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}
+                    >
                       Kanban oculto.
                     </div>
                   )}
@@ -1971,26 +2119,22 @@ export function SismetroDashPage() {
             }
 
             return (
-              <div className={cx(UI.section, "p-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+              <div className={cx(UI.section, " rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
                 <SectionHeader
                   title="Evolução por Solicitação de Serviço"
                   hint={<>Clique no número da SS para abrir no Sistema</>}
                   right={
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap ">
                       <Btn
                         tone="secondary"
                         onClick={() => setOpenKanban((p) => !p)}
-                        className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                        className={cx(isMobile ? "h-9 px-4 text-xs" : "")}
                         title={openKanban ? "Ocultar Kanban" : "Mostrar Kanban"}
                       >
                         {openKanban ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Btn>
 
-                      <FullscreenToggle
-                        active={false}
-                        compact={isMobile}
-                        onToggle={() => toggleFull("kanban")}
-                      />
+                      <FullscreenToggle active={false} compact={isMobile} onToggle={() => toggleFull("kanban")} />
                     </div>
                   }
                 />
@@ -2004,90 +2148,88 @@ export function SismetroDashPage() {
             const isFull = full === "charts";
 
             const content = (
-              <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                {/* Left */}
-                <div className="lg:col-span-6 border rounded-lg p-3 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
-                  <div className={UI.cardTitle} style={{ color: T.text }}>Tipos de SS por usina</div>
-                  <LegendPills items={ssByUsinaTipo.legends} onClickItem={toggleTipo} active={tipo} />
+              <div className="p-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                  <div className="lg:col-span-7 border rounded-lg p-4 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
+                    <div className={UI.cardTitle} style={{ color: T.text }}>Evolução por usina</div>
+                    <LegendPills items={ssByUsinaEvolucao.legends} onClickItem={(lbl) => toggleKanban(lbl as KanbanCol)} active={kanbanFilter} />
 
-                  <div className="mt-3 grid gap-2">
-                    {!ssByUsinaTipo.usinas.length && (
-                      <div className="border rounded-lg p-3 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
-                        Sem dados.
-                      </div>
-                    )}
-
-                    {ssByUsinaTipo.usinas.map((u) => (
-                      <button
-                        key={u.usina}
-                        type="button"
-                        className={cx("text-left border rounded-lg p-3", isMobile ? "grid gap-2" : "flex items-center gap-3")}
-                        onClick={() => applyUsinaFromChart(u.usina)}
-                        title="Clique para filtrar por usina"
-                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-                      >
-                        <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
-                          <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }} title={u.usina}>
-                            {u.usina}
-                          </div>
-                          <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                            Total: {u.total}
-                          </div>
+                    <div className="mt-3 grid gap-2">
+                      {!ssByUsinaEvolucao.usinas.length && (
+                        <div className="border rounded-lg p-3 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
+                          Sem dados no período selecionado.
                         </div>
+                      )}
 
-                        <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}>
-                          {ssByUsinaTipo.tipos.map((tp) => {
-                            const v = u.byTipo[tp] || 0;
-                            if (!v) return null;
-                            const w = (v / Math.max(1, u.total)) * 100;
-                            return <div key={tp} style={{ width: `${w}%`, background: tipoColor(tp) }} title={`${tp}: ${v}`} />;
-                          })}
-                        </div>
-                      </button>
-                    ))}
+                      {ssByUsinaEvolucao.usinas.map((u) => (
+                        <button
+                          key={u.usina}
+                          type="button"
+                          className={cx("text-left border rounded-lg p-3", isMobile ? "grid gap-2" : "flex items-center gap-3")}
+                          onClick={() => applyUsinaFromChart(u.usina)}
+                          title="Clique para filtrar por usina"
+                          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                        >
+                          <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
+                            <div className="text-[12px] font-semibold truncate" style={{ color: T.text }} title={u.usina}>
+                              {u.usina}
+                            </div>
+                            {/* <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                              Total: {u.total}
+                            </div> */}
+                          </div>
+                          <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 20 }}>
+                            {ssByUsinaEvolucao.cols.map((col) => {
+                              const v = u.byEvo[col] || 0;
+                              if (!v) return null;
+                              const w = (v / Math.max(1, u.total)) * 100;
+                              return <div key={col} style={{ width: `${w}%`, background: KANBAN_COLORS[col] }} title={`${col}: ${v}`} />;
+                            })}
+                          </div>{u.total}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                  <div className="lg:col-span-5 border rounded-lg p-4 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
+                    <div className={UI.cardTitle} style={{ color: T.text }}>Tipos de SS por usina</div>
+                    <LegendPills items={ssByUsinaTipo.legends} onClickItem={toggleTipo} active={tipo} />
 
-                {/* Right */}
-                <div className="lg:col-span-6 border rounded-lg p-3 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
-                  <div className={UI.cardTitle} style={{ color: T.text }}>Evolução por usina</div>
-                  <LegendPills items={ssByUsinaEvolucao.legends} onClickItem={(lbl) => toggleKanban(lbl as KanbanCol)} active={kanbanFilter} />
-
-                  <div className="mt-3 grid gap-2">
-                    {!ssByUsinaEvolucao.usinas.length && (
-                      <div className="border rounded-lg p-3 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
-                        Sem dados no período selecionado.
-                      </div>
-                    )}
-
-                    {ssByUsinaEvolucao.usinas.map((u) => (
-                      <button
-                        key={u.usina}
-                        type="button"
-                        className={cx("text-left border rounded-lg p-3", isMobile ? "grid gap-2" : "flex items-center gap-3")}
-                        onClick={() => applyUsinaFromChart(u.usina)}
-                        title="Clique para filtrar por usina"
-                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-                      >
-                        <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
-                          <div className="text-[12px] font-extrabold truncate" style={{ color: T.text }} title={u.usina}>
-                            {u.usina}
-                          </div>
-                          <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                            Total: {u.total}
-                          </div>
+                    <div className="mt-3 grid gap-2">
+                      {!ssByUsinaTipo.usinas.length && (
+                        <div className="border rounded-lg p-3 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
+                          Sem dados.
                         </div>
+                      )}
 
-                        <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 28 }}>
-                          {ssByUsinaEvolucao.cols.map((col) => {
-                            const v = u.byEvo[col] || 0;
-                            if (!v) return null;
-                            const w = (v / Math.max(1, u.total)) * 100;
-                            return <div key={col} style={{ width: `${w}%`, background: KANBAN_COLORS[col] }} title={`${col}: ${v}`} />;
-                          })}
-                        </div>
-                      </button>
-                    ))}
+                      {ssByUsinaTipo.usinas.map((u) => (
+                        <button
+                          key={u.usina}
+                          type="button"
+                          className={cx("text-left border rounded-lg p-3", isMobile ? "grid gap-2" : "flex items-center gap-3")}
+                          onClick={() => applyUsinaFromChart(u.usina)}
+                          title="Clique para filtrar por usina"
+                          style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
+                        >
+                          <div className={cx("min-w-0", isMobile ? "" : "w-56")}>
+                            <div className="text-[12px] font-semibold  truncate" style={{ color: T.text }} title={u.usina}>
+                              {u.usina}
+                            </div>
+                            {/* <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                              Total: {u.total}
+                            </div> */}
+                          </div>
+
+                          <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 20 }}>
+                            {ssByUsinaTipo.tipos.map((tp) => {
+                              const v = u.byTipo[tp] || 0;
+                              if (!v) return null;
+                              const w = (v / Math.max(1, u.total)) * 100;
+                              return <div key={tp} style={{ width: `${w}%`, background: tipoColor(tp) }} title={`${tp}: ${v}`} />;
+                            })}
+                          </div>{u.total}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2103,7 +2245,6 @@ export function SismetroDashPage() {
                   onToggleFilters={() => setFsFiltersOpen((v) => !v)}
                   onClose={() => setFull(null)}
                   filters={FiltersBody}
-                  // ✅ sem actions: não aparece o botão "Ocultar"
                 >
                   {content}
                 </FullscreenShell>
@@ -2111,7 +2252,7 @@ export function SismetroDashPage() {
             }
 
             return (
-              <div className={cx(UI.section, "p-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+              <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
                 <SectionHeader
                   title="Resumo por usina"
                   hint={<>Clique nos itens para filtrar (tipo, usina e evolução).</>}
@@ -2135,7 +2276,7 @@ export function SismetroDashPage() {
             );
           })()}
 
-          {/* TABELA (mantida como você enviou) */}
+          {/* TABELA (agora com SectionHeader também) */}
           {(() => {
             const isFull = full === "table";
 
@@ -2149,7 +2290,6 @@ export function SismetroDashPage() {
                   title="Exportar"
                 >
                   <FileDown className="w-4 h-4" />
-                  <span className={cx(isMobile ? "hidden" : "")}>Exportar</span>
                   <ChevronDown className="w-4 h-4" />
                 </Btn>
 
@@ -2208,7 +2348,9 @@ export function SismetroDashPage() {
                         r={r}
                         onFilterUsina={() => applyUsinaFromChart(safeUpper(r.usina))}
                         onFilterTecnico={() =>
-                          setTecnico((p) => (clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")))
+                          setTecnico((p) =>
+                            clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")
+                          )
                         }
                       />
                     ))}
@@ -2371,8 +2513,8 @@ export function SismetroDashPage() {
               </div>
             );
 
-            const actions = (
-              <>
+            const rightActions = (
+              <div className="flex items-center gap-2 flex-wrap">
                 {exportMenu}
 
                 <Btn
@@ -2382,7 +2524,6 @@ export function SismetroDashPage() {
                   className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  <span className={cx(isMobile ? "hidden" : "")}>Anterior</span>
                 </Btn>
 
                 <Btn
@@ -2391,23 +2532,26 @@ export function SismetroDashPage() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                 >
-                  <span className={cx(isMobile ? "hidden" : "")}>Próxima</span>
                   <ChevronRight className="w-4 h-4" />
                 </Btn>
-              </>
+
+                {!isFull && (
+                  <FullscreenToggle active={false} compact={isMobile} onToggle={() => toggleFull("table")} />
+                )}
+              </div>
             );
 
             if (isFull) {
               return (
                 <FullscreenShell
-                  title="Lista de SS"
-                  hint={<>Exporta sempre o conjunto filtrado (não só a página).</>}
+                  title="Lista de Ordens de Serviços"
+                  hint={<>Exporta o conjunto filtrado.</>}
                   count={count}
                   filtersOpen={fsFiltersOpen}
                   onToggleFilters={() => setFsFiltersOpen((v) => !v)}
                   onClose={() => setFull(null)}
                   filters={FiltersBody}
-                  actions={actions}
+                  actions={rightActions}
                 >
                   {tableContent}
                 </FullscreenShell>
@@ -2416,38 +2560,11 @@ export function SismetroDashPage() {
 
             return (
               <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-                <div className="px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style={{ borderColor: T.border }}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Pill>Lista de SS</Pill>
-                    <Pill tone="accent">{count}</Pill>
-                  </div>
-
-                  <div className="flex items-center gap-2 justify-between sm:justify-end flex-wrap">
-                    {exportMenu}
-
-                    <Btn
-                      tone="secondary"
-                      disabled={loading || pageSafe === 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                      <span className={cx(isMobile ? "hidden" : "")}>Anterior</span>
-                    </Btn>
-
-                    <Btn
-                      tone="secondary"
-                      disabled={loading || pageSafe >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                    >
-                      <span className={cx(isMobile ? "hidden" : "")}>Próxima</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </Btn>
-
-                    <FullscreenToggle active={false} compact={isMobile} onToggle={() => toggleFull("table")} />
-                  </div>
-                </div>
+                <SectionHeader
+                  title="Lista de Ordens de Serviço"
+                  hint={<>Exporta sempre o conjunto filtrado (não só a página).</>}
+                  right={rightActions}
+                />
 
                 <div className="p-4">{tableContent}</div>
               </div>

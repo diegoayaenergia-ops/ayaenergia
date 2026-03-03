@@ -20,6 +20,9 @@ import {
   FileDown,
   ImageDown,
   FileSpreadsheet,
+  Eye,
+  EyeOff,
+  Eraser,
 } from "lucide-react";
 
 const cx = (...p: Array<string | false | null | undefined>) =>
@@ -192,25 +195,39 @@ function SectionHeader({
   title,
   hint,
   right,
+  divider = true,
 }: {
   title: ReactNode;
   hint?: ReactNode;
   right?: ReactNode;
+  divider?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 flex-wrap">
-      <div>
-        <div className={UI.sectionTitle} style={{ color: T.text }}>
-          {title}
-        </div>
-        {hint ? (
-          <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
-            {hint}
+    <>
+      <div className="flex items-start justify-between gap-3 flex-wrap px-4 py-3">
+        <div>
+          <div className={UI.sectionTitle} style={{ color: T.text }}>
+            {title}
           </div>
-        ) : null}
+          {hint ? (
+            <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
+              {hint}
+            </div>
+          ) : null}
+        </div>
+        {right}
       </div>
-      {right}
-    </div>
+
+      {divider && (
+        <div
+          style={{
+            height: 1,
+            background: T.border,
+            opacity: 0.8,
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -514,10 +531,18 @@ function LegendPills({
               className="inline-block w-2.5 h-2.5 rounded-sm"
               style={{ background: colorForClient(x.label) }}
             />
-            <span className={cx(compact ? "max-w-[110px]" : "max-w-[140px]", "truncate")}>
+            <span
+              className={cx(
+                compact ? "max-w-[110px]" : "max-w-[140px]",
+                "truncate"
+              )}
+            >
               {x.label}
             </span>
-            <span className={UI.mono} style={{ color: isActive ? T.accent : T.text3 }}>
+            <span
+              className={UI.mono}
+              style={{ color: isActive ? T.accent : T.text3 }}
+            >
               {x.total}
             </span>
           </button>
@@ -658,7 +683,7 @@ function StackedBarsCard({
           )}
         </div>
 
-        <span
+        {/* <span
           className={cx(
             "inline-flex items-center h-6 px-2 text-[11px] font-extrabold border rounded-md",
             UI.mono
@@ -666,8 +691,8 @@ function StackedBarsCard({
           style={{ borderColor: T.border, background: T.card, color: T.text }}
           title="Itens distintos"
         >
-          {groups.length}
-        </span>
+           {groups.length} 
+        </span> */}
       </div>
 
       <LegendPills
@@ -678,7 +703,7 @@ function StackedBarsCard({
         compact={compact}
       />
 
-      <div className="mt-3 relative">
+      {/* <div className="mt-3 relative">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -692,7 +717,7 @@ function StackedBarsCard({
         >
           <Search className="w-4 h-4" />
         </div>
-      </div>
+      </div> */}
 
       <div
         className={cx(
@@ -805,7 +830,11 @@ function StackedBarsCard({
               </div>
 
               <div
-                className={cx(compact ? "text-[11px]" : "text-xs", "text-right", UI.mono)}
+                className={cx(
+                  compact ? "text-[11px]" : "text-xs",
+                  "text-right",
+                  UI.mono
+                )}
                 style={{ color: T.text, fontWeight: 900 }}
               >
                 {g.total}
@@ -827,7 +856,10 @@ function MobileField({ label, value }: { label: string; value: ReactNode }) {
       <div className="col-span-4 text-[11px] font-semibold" style={{ color: T.text3 }}>
         {label}
       </div>
-      <div className="col-span-8 text-[11px] whitespace-pre-wrap break-words" style={{ color: T.text2 }}>
+      <div
+        className="col-span-8 text-[11px] whitespace-pre-wrap break-words"
+        style={{ color: T.text2 }}
+      >
         {value}
       </div>
     </div>
@@ -859,7 +891,10 @@ function MobileRowCard({
           className="min-w-0 text-left"
           title="Filtrar por esta usina"
         >
-          <div className="text-[12px] font-extrabold leading-4 truncate" style={{ color: T.text }}>
+          <div
+            className="text-[12px] font-extrabold leading-4 truncate"
+            style={{ color: T.text }}
+          >
             {safeText(r.usina, "—")}
           </div>
           <div className="mt-1 text-[11px] leading-4 line-clamp-2" style={{ color: T.text2 }}>
@@ -967,18 +1002,9 @@ function MobileRowCard({
           style={{ borderColor: T.border, background: T.cardSoft }}
         >
           <div className="grid gap-2">
-            <MobileField
-              label="Problema"
-              value={safeText(r.problemaIdentificado, "—")}
-            />
-            <MobileField
-              label="Atividade"
-              value={safeText(r.solucaoImediata, "—")}
-            />
-            <MobileField
-              label="Solução def."
-              value={safeText(r.solucaoDefinitiva, "—")}
-            />
+            <MobileField label="Problema" value={safeText(r.problemaIdentificado, "—")} />
+            <MobileField label="Atividade" value={safeText(r.solucaoImediata, "—")} />
+            <MobileField label="Solução def." value={safeText(r.solucaoDefinitiva, "—")} />
           </div>
         </div>
       )}
@@ -1026,15 +1052,109 @@ export function AcionamentosDashPage() {
   // =========================
   // EXPORT (PNG / PDF)
   // =========================
-  const chartsRef = useRef<HTMLDivElement | null>(null);
-  const tableRef = useRef<HTMLDivElement | null>(null);
+  const PDF_BRAND = {
+    companyName: "AYA ENERGIA",
+    reportTitle: "Relatório de Acionamentos",
+    green: [17, 89, 35] as [number, number, number], // #115923
+    black: [11, 18, 32] as [number, number, number],
+    gray: [107, 114, 128] as [number, number, number],
+    lightGray: [244, 246, 248] as [number, number, number],
+    borderGray: [209, 213, 219] as [number, number, number],
+    logoUrl: "/logo-aya.png",
+  };
+
+  function brDateTimeNow() {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+  }
+
+  async function fetchAsDataUrl(url: string): Promise<string | null> {
+    try {
+      const res = await fetch(url, { cache: "force-cache" });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(String(fr.result || ""));
+        fr.onerror = () => reject(new Error("Falha ao ler imagem"));
+        fr.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  function imageTypeFromDataUrl(d: string): "PNG" | "JPEG" {
+    const s = String(d || "").toLowerCase();
+    if (s.startsWith("data:image/jpeg") || s.startsWith("data:image/jpg")) return "JPEG";
+    return "PNG";
+  }
+
+  function drawImageContain(opts: {
+    doc: any;
+    dataUrl: string;
+    format: "PNG" | "JPEG";
+    x: number;
+    y: number;
+    boxW: number;
+    boxH: number;
+  }) {
+    const { doc, dataUrl, format, x, y, boxW, boxH } = opts;
+    const p = doc.getImageProperties(dataUrl);
+    const iw = Number(p?.width || 1);
+    const ih = Number(p?.height || 1);
+    const scale = Math.min(boxW / iw, boxH / ih);
+    const w = iw * scale;
+    const h = ih * scale;
+    const dx = x + (boxW - w) / 2;
+    const dy = y + (boxH - h) / 2;
+    doc.addImage(dataUrl, format, dx, dy, w, h, undefined, "FAST");
+  }
+
+  // ------- refs de export corretos (sem conflito) -------
+  const chartsExportRef = useRef<HTMLDivElement | null>(null);
+  const tableExportRef = useRef<HTMLDivElement | null>(null);
+
+  // menus separados (sem conflito)
+  const [exportChartsOpen, setExportChartsOpen] = useState(false);
+  const [exportTableOpen, setExportTableOpen] = useState(false);
+  const exportChartsMenuRef = useRef<HTMLDivElement | null>(null);
+  const exportTableMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [exporting, setExporting] = useState(false);
   const [exportAllTable, setExportAllTable] = useState(false);
-
-  const tableOnlyRef = useRef<HTMLDivElement | null>(null);
-  const chartsOnlyRef = useRef<HTMLDivElement | null>(null);
   const [exportChartsOnly, setExportChartsOnly] = useState(false);
+
+  // fecha menus ao clicar fora / ESC (sem bug de ref duplicada)
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+
+      if (exportChartsMenuRef.current && !exportChartsMenuRef.current.contains(t)) {
+        setExportChartsOpen(false);
+      }
+      if (exportTableMenuRef.current && !exportTableMenuRef.current.contains(t)) {
+        setExportTableOpen(false);
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setExportChartsOpen(false);
+        setExportTableOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   const wait2Frames = () =>
     new Promise<void>((resolve) =>
@@ -1066,12 +1186,10 @@ export function AcionamentosDashPage() {
       backgroundColor: "#FFFFFF",
       useCORS: true,
       logging: false,
-
       width: el.scrollWidth,
       height: el.scrollHeight,
       windowWidth: el.scrollWidth,
       windowHeight: el.scrollHeight,
-
       scrollX: -window.scrollX,
       scrollY: -window.scrollY,
     });
@@ -1097,37 +1215,6 @@ export function AcionamentosDashPage() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  }
-
-  async function downloadPDFPaged(
-    el: HTMLElement,
-    filename: string,
-    orientation: "p" | "l" = "p"
-  ) {
-    const canvas = await elementToCanvas(el);
-    const imgData = canvas.toDataURL("image/png", 1.0);
-
-    const { jsPDF } = await import("jspdf");
-    const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
-
-    const pageW = pdf.internal.pageSize.getWidth();
-    const pageH = pdf.internal.pageSize.getHeight();
-
-    const margin = 24;
-    const usableW = pageW - margin * 2;
-    const usableH = pageH - margin * 2;
-
-    const imgW = usableW;
-    const imgH = (canvas.height * imgW) / canvas.width;
-
-    let y = 0;
-    while (y < imgH) {
-      if (y > 0) pdf.addPage();
-      pdf.addImage(imgData, "PNG", margin, margin - y, imgW, imgH);
-      y += usableH;
-    }
-
-    pdf.save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
   }
 
   async function downloadPDFFitA4(
@@ -1186,12 +1273,13 @@ export function AcionamentosDashPage() {
     URL.revokeObjectURL(url);
   }
 
+  // ---- EXPORT: gráficos ----
   const exportChartsOnlyPNG = useCallback(async () => {
     await withExportMode(async () => {
       setExportChartsOnly(true);
       await wait2Frames();
 
-      const el = chartsOnlyRef.current;
+      const el = chartsExportRef.current;
       if (el) await downloadPNG(el, `acionamentos-graficos_${start}_${end}.png`);
 
       setExportChartsOnly(false);
@@ -1204,21 +1292,17 @@ export function AcionamentosDashPage() {
       setExportChartsOnly(true);
       await wait2Frames();
 
-      const el = chartsOnlyRef.current;
-      if (el)
-        await downloadPDFFitA4(
-          el,
-          `acionamentos-graficos_${start}_${end}.pdf`,
-          "l"
-        );
+      const el = chartsExportRef.current;
+      if (el) await downloadPDFFitA4(el, `acionamentos-graficos_${start}_${end}.pdf`, "l");
 
       setExportChartsOnly(false);
       await wait2Frames();
     });
   }, [withExportMode, start, end]);
 
+  // ---- EXPORT: tabela PNG (opcional, mas deixei pronto) ----
   const exportTablePNG = useCallback(async () => {
-    const el = tableOnlyRef.current;
+    const el = tableExportRef.current;
     if (!el) return;
 
     await withExportMode(async () => {
@@ -1233,22 +1317,9 @@ export function AcionamentosDashPage() {
     });
   }, [withExportMode, start, end]);
 
-  const exportTablePDF = useCallback(async () => {
-    const el = tableOnlyRef.current;
-    if (!el) return;
-
-    await withExportMode(async () => {
-      setExportAllTable(true);
-      await wait2Frames();
-      try {
-        await downloadPDFPaged(el, `acionamentos-tabela_${start}_${end}.pdf`);
-      } finally {
-        setExportAllTable(false);
-        await wait2Frames();
-      }
-    });
-  }, [withExportMode, start, end]);
-
+  // =========================
+  // PRESETS
+  // =========================
   const applyPreset = useCallback((p: typeof periodPreset) => {
     const now = new Date();
 
@@ -1324,6 +1395,9 @@ export function AcionamentosDashPage() {
     return s.getTime() > e.getTime();
   }, [start, end]);
 
+  // =========================
+  // LOAD DATA
+  // =========================
   const normalizeRows = (data: any): AcRow[] => {
     const cand = Array.isArray(data?.rows)
       ? data.rows
@@ -1343,79 +1417,36 @@ export function AcionamentosDashPage() {
           toISODateMaybe(r?.criadoEm) ||
           "";
 
-        const ssNum =
-          r?.ss ?? r?.SS ?? r?.idSs ?? r?.numeroSs ?? r?.numero_ss ?? null;
+        const ssNum = r?.ss ?? r?.SS ?? r?.idSs ?? r?.numeroSs ?? r?.numero_ss ?? null;
 
         const cli =
-          r?.cliente ??
-          r?.Cliente ??
-          r?.solicitante ??
-          r?.empresa ??
-          r?.company ??
-          r?.customer ??
-          null;
+          r?.cliente ?? r?.Cliente ?? r?.solicitante ?? r?.empresa ?? r?.company ?? r?.customer ?? null;
 
         const eq =
-          r?.equipamento ??
-          r?.equip ??
-          r?.equipment ??
-          r?.device ??
-          r?.ativo ??
-          r?.componente ??
-          null;
+          r?.equipamento ?? r?.equip ?? r?.equipment ?? r?.device ?? r?.ativo ?? r?.componente ?? null;
 
         const al =
-          r?.alarme ??
-          r?.alarm ??
-          r?.alarmeDescricao ??
-          r?.descricaoAlarme ??
-          r?.fault ??
-          null;
+          r?.alarme ?? r?.alarm ?? r?.alarmeDescricao ?? r?.descricaoAlarme ?? r?.fault ?? null;
 
         return {
-          id: String(
-            r?.id ??
-            r?._id ??
-            r?.uuid ??
-            r?.ID ??
-            `${iso}-${ssNum ?? Math.random()}`
-          ),
-
+          id: String(r?.id ?? r?._id ?? r?.uuid ?? r?.ID ?? `${iso}-${ssNum ?? Math.random()}`),
           data: iso,
           cliente: cli ? String(cli).trim() : null,
           usina: r?.usina ?? r?.UFV ?? r?.ufv ?? r?.localizacao ?? null,
-
           ss:
-            ssNum !== null &&
-              ssNum !== undefined &&
-              String(ssNum).trim() !== ""
+            ssNum !== null && ssNum !== undefined && String(ssNum).trim() !== ""
               ? Number(ssNum)
               : null,
-
           equipamento: eq ? String(eq).trim() : null,
           alarme: al ? String(al).trim() : null,
-
           motivoMobilizacao:
-            r?.motivoMobilizacao ??
-            r?.motivo_mobilizacao ??
-            r?.motivo ??
-            r?.motivoAcionamento ??
-            null,
+            r?.motivoMobilizacao ?? r?.motivo_mobilizacao ?? r?.motivo ?? r?.motivoAcionamento ?? null,
           problemaIdentificado:
-            r?.problemaIdentificado ??
-            r?.problema_identificado ??
-            r?.problema ??
-            null,
+            r?.problemaIdentificado ?? r?.problema_identificado ?? r?.problema ?? null,
           solucaoImediata:
-            r?.solucaoImediata ??
-            r?.solucao_imediata ??
-            r?.acaoImediata ??
-            null,
+            r?.solucaoImediata ?? r?.solucao_imediata ?? r?.acaoImediata ?? null,
           solucaoDefinitiva:
-            r?.solucaoDefinitiva ??
-            r?.solucao_definitiva ??
-            r?.acaoDefinitiva ??
-            null,
+            r?.solucaoDefinitiva ?? r?.solucao_definitiva ?? r?.acaoDefinitiva ?? null,
         } as AcRow;
       })
       .filter((x: AcRow) => Boolean(x.data));
@@ -1459,9 +1490,7 @@ export function AcionamentosDashPage() {
       }
 
       if (!res.ok)
-        throw new Error(
-          data?.error || raw || `Erro ao carregar (HTTP ${res.status}).`
-        );
+        throw new Error(data?.error || raw || `Erro ao carregar (HTTP ${res.status}).`);
 
       return normalizeRows(data);
     },
@@ -1470,8 +1499,8 @@ export function AcionamentosDashPage() {
 
   const buildOptionsFromRows = useCallback((rows: AcRow[]) => {
     const uniq = (arr: string[]) =>
-      Array.from(new Set(arr.map((x) => clampUpper(x)).filter(Boolean))).sort(
-        (a, b) => a.localeCompare(b)
+      Array.from(new Set(arr.map((x) => clampUpper(x)).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b)
       );
 
     setClientesList(uniq(rows.map((r) => String(r.cliente ?? "").trim())));
@@ -1481,13 +1510,9 @@ export function AcionamentosDashPage() {
 
   const loadAll = useCallback(async () => {
     setMsg(null);
-    if (!start || !end)
-      return setMsg({ type: "err", text: "Selecione início e fim." });
+    if (!start || !end) return setMsg({ type: "err", text: "Selecione início e fim." });
     if (invalidRange)
-      return setMsg({
-        type: "err",
-        text: "A data inicial não pode ser maior que a data final.",
-      });
+      return setMsg({ type: "err", text: "A data inicial não pode ser maior que a data final." });
 
     abortRef.current?.abort();
     const ac = new AbortController();
@@ -1533,18 +1558,11 @@ export function AcionamentosDashPage() {
       setAllRows(byDate);
       buildOptionsFromRows(byDate);
 
-      if (byDate.length === 0)
-        setMsg({
-          type: "err",
-          text: "Nenhum acionamento no período selecionado.",
-        });
+      if (byDate.length === 0) setMsg({ type: "err", text: "Nenhum acionamento no período selecionado." });
     } catch (e: any) {
       if (e?.name === "AbortError") return;
       setAllRows([]);
-      setMsg({
-        type: "err",
-        text: e?.message || "Erro ao carregar acionamentos.",
-      });
+      setMsg({ type: "err", text: e?.message || "Erro ao carregar acionamentos." });
     } finally {
       setLoading(false);
       setLoadingOptions(false);
@@ -1558,30 +1576,21 @@ export function AcionamentosDashPage() {
   const filteredRows = useMemo(() => {
     let r = allRows;
 
-    if (start && end)
-      r = r.filter((x) => x.data && inRangeISO(String(x.data).slice(0, 10), start, end));
-
-    if (cliente)
-      r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(cliente));
-
-    if (clienteQuick)
-      r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick));
-
+    if (start && end) r = r.filter((x) => x.data && inRangeISO(String(x.data).slice(0, 10), start, end));
+    if (cliente) r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(cliente));
+    if (clienteQuick) r = r.filter((x) => clampUpper(String(x.cliente ?? "")) === clampUpper(clienteQuick));
     if (usina) r = r.filter((x) => includesLoose(x.usina ?? "", usina));
-
-    if (equipamento)
-      r = r.filter((x) => clampUpper(String(x.equipamento ?? "")) === clampUpper(equipamento));
-
+    if (equipamento) r = r.filter((x) => clampUpper(String(x.equipamento ?? "")) === clampUpper(equipamento));
     if (alarme) r = r.filter((x) => includesLoose(x.alarme ?? "", alarme));
 
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       r = r.filter((x) => {
         const blob =
-          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${x.equipamento ?? ""
-          } ${x.alarme ?? ""} ` +
-          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${x.solucaoImediata ?? ""
-            } ${x.solucaoDefinitiva ?? ""}`.toLowerCase();
+          `${x.data} ${x.cliente ?? ""} ${x.usina ?? ""} ${x.ss ?? ""} ${x.equipamento ?? ""} ${x.alarme ?? ""
+          } ` +
+          `${x.motivoMobilizacao ?? ""} ${x.problemaIdentificado ?? ""} ${x.solucaoImediata ?? ""} ${x.solucaoDefinitiva ?? ""
+            }`.toLowerCase();
         return blob.includes(q);
       });
     }
@@ -1596,6 +1605,163 @@ export function AcionamentosDashPage() {
 
     return copy;
   }, [allRows, start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText]);
+
+  // =========================
+  // EXPORT TABLE PDF
+  // =========================
+  const exportTablePDF = useCallback(async () => {
+    await withExportMode(async () => {
+      setMsg(null);
+
+      if (!filteredRows.length) {
+        setMsg({ type: "err", text: "Não há registros para exportar." });
+        return;
+      }
+
+      try {
+        const { jsPDF } = await import("jspdf");
+        const autoTableMod: any = await import("jspdf-autotable");
+        const autoTable = autoTableMod.default || autoTableMod.autoTable || autoTableMod;
+
+        const issuedAt = brDateTimeNow();
+        const logoDataUrl = await fetchAsDataUrl(PDF_BRAND.logoUrl);
+
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+
+        const HEADER_H = 64;
+        const MARGIN_X = 30;
+
+        const drawHeader = () => {
+          doc.setFillColor(...PDF_BRAND.green);
+          doc.rect(0, 0, pageW, HEADER_H, "F");
+
+          const logoBoxW = 48;
+          const logoBoxH = 48;
+          const logoX = MARGIN_X;
+          const logoY = (HEADER_H - logoBoxH) / 2;
+
+          if (logoDataUrl) {
+            const fmt = imageTypeFromDataUrl(logoDataUrl);
+            drawImageContain({
+              doc,
+              dataUrl: logoDataUrl,
+              format: fmt,
+              x: logoX,
+              y: logoY,
+              boxW: logoBoxW,
+              boxH: logoBoxH,
+            });
+          }
+
+          const textX = logoX + logoBoxW + 12;
+
+          doc.setTextColor(255, 255, 255);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.text(PDF_BRAND.companyName, textX, 30);
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(PDF_BRAND.reportTitle, textX, 46);
+
+          doc.setFontSize(9);
+          const rightText = `Emitido em: ${issuedAt}`;
+          const rtW = doc.getTextWidth(rightText);
+          doc.text(rightText, pageW - MARGIN_X - rtW, 30);
+        };
+
+        const drawFooter = () => {
+          doc.setDrawColor(...PDF_BRAND.borderGray);
+          doc.setLineWidth(1);
+          doc.line(MARGIN_X, pageH - 26, pageW - MARGIN_X, pageH - 26);
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(...PDF_BRAND.gray);
+
+          doc.text(`Período: ${brDate(start)} - ${brDate(end)}`, MARGIN_X, pageH - 12);
+
+          const pageNum = doc.getNumberOfPages();
+          const footerRight = `Página ${pageNum}`;
+          const frW = doc.getTextWidth(footerRight);
+          doc.text(footerRight, pageW - MARGIN_X - frW, pageH - 12);
+        };
+
+        drawHeader();
+
+        const head = [
+          [
+            "Data",
+            "Usina",
+            "Motivo",
+            "Problema Identificado",
+            "Atividade Realizada",
+            "Solução Definitiva",
+            "OS/SS",
+          ],
+        ];
+
+        const body = filteredRows.map((r) => [
+          brDate(r.data),
+          safeUpper(r.usina, "—"),
+          safeText(r.motivoMobilizacao, "—"),
+          safeText(r.problemaIdentificado, "—"),
+          safeText(r.solucaoImediata, "—"),
+          safeText(r.solucaoDefinitiva, "—"),
+          typeof r.ss === "number" && Number.isFinite(r.ss) ? String(r.ss) : "—",
+        ]);
+
+        autoTable(doc, {
+          head,
+          body,
+          startY: HEADER_H + 18,
+          margin: { left: MARGIN_X, right: MARGIN_X, top: HEADER_H + 18, bottom: 34 },
+
+          styles: {
+            font: "helvetica",
+            fontSize: 7.2,
+            cellPadding: 4,
+            overflow: "linebreak",
+            textColor: PDF_BRAND.black,
+            lineColor: PDF_BRAND.borderGray,
+            lineWidth: 0.6,
+            valign: "top",
+          },
+
+          headStyles: {
+            fillColor: PDF_BRAND.green,
+            textColor: 255,
+            fontStyle: "bold",
+            halign: "left",
+          },
+
+          alternateRowStyles: { fillColor: PDF_BRAND.lightGray },
+
+          columnStyles: {
+            0: { cellWidth: 56 },
+            1: { cellWidth: 110 },
+            2: { cellWidth: 120 },
+            3: { cellWidth: 150 },
+            4: { cellWidth: 130 },
+            5: { cellWidth: 150 },
+            6: { cellWidth: 60 },
+          },
+
+          didDrawPage: () => {
+            drawHeader();
+            drawFooter();
+          },
+        });
+
+        doc.save(`Relatorio_de_Acionamentos_${start}-${end}.pdf`);
+      } catch (e: any) {
+        console.error("PDF export error:", e);
+        setMsg({ type: "err", text: `Falha ao exportar PDF: ${String(e?.message || e)}` });
+      }
+    });
+  }, [withExportMode, filteredRows, start, end]);
 
   const exportTableExcelFixed = useCallback(() => {
     const header = [
@@ -1618,20 +1784,10 @@ export function AcionamentosDashPage() {
       csvCell(typeof r.ss === "number" && Number.isFinite(r.ss) ? r.ss : ""),
     ]);
 
-    downloadCSV(`acionamentos-tabela_${start}_${end}.csv`, [header.map(csvCell), ...body]);
+    downloadCSV(`Relatorio_de_acionamentos_${start}-${end}.csv`, [header.map(csvCell), ...body]);
   }, [filteredRows, start, end]);
 
-  useEffect(() => setPage(1), [
-    start,
-    end,
-    cliente,
-    clienteQuick,
-    usina,
-    equipamento,
-    alarme,
-    searchText,
-    pageSize,
-  ]);
+  useEffect(() => setPage(1), [start, end, cliente, clienteQuick, usina, equipamento, alarme, searchText, pageSize]);
 
   const count = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(count / pageSize));
@@ -1639,17 +1795,15 @@ export function AcionamentosDashPage() {
   const offset = (pageSafe - 1) * pageSize;
   const tableRows = filteredRows.slice(offset, offset + pageSize);
 
-  // UI vs Export (no mobile, UI continua paginada; export captura tudo)
   const rowsForExport = exportAllTable ? filteredRows : tableRows;
-  const rowsForUI = isMobile ? tableRows : rowsForExport;
+  const rowsForUI = tableRows; // UI sempre paginada
 
   const stackedByUsina = useMemo(
     () => buildStacked(filteredRows, (r) => safeUpper(r.usina, ""), (r) => safeUpper(r.cliente, "")),
     [filteredRows]
   );
   const stackedByEquip = useMemo(
-    () =>
-      buildStacked(filteredRows, (r) => safeUpper(r.equipamento, ""), (r) => safeUpper(r.cliente, "")),
+    () => buildStacked(filteredRows, (r) => safeUpper(r.equipamento, ""), (r) => safeUpper(r.cliente, "")),
     [filteredRows]
   );
   const stackedByAlarm = useMemo(
@@ -1660,7 +1814,6 @@ export function AcionamentosDashPage() {
   const toggleClienteQuick = useCallback((lbl: string) => {
     setClienteQuick((p) => (clampUpper(p) === clampUpper(lbl) ? "" : lbl));
   }, []);
-
   const toggleUsina = useCallback((lbl: string) => {
     setUsina((p) => (clampUpper(p) === clampUpper(lbl) ? "" : lbl));
   }, []);
@@ -1673,7 +1826,6 @@ export function AcionamentosDashPage() {
 
   const [expandedId, setExpandedId] = useState<string>("");
 
-  // MARKUP REUSÁVEL DA TABELA (desktop e export)
   const DesktopTable = ({ rows }: { rows: AcRow[] }) => (
     <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border, background: "#fff" }}>
       <div className="overflow-x-auto w-full min-w-0">
@@ -1774,23 +1926,18 @@ export function AcionamentosDashPage() {
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
       <div className={UI.container}>
         {/* HEADER */}
-        <div
-          className={cx(UI.header, "p-4 sm:p-5 rounded-lg")}
-          style={{ borderColor: T.border, background: T.card }}
-        >
+        <div className={cx(UI.header, "p-4 sm:p-5 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className={UI.headerTitle} style={{ color: T.text }}>
-                Dashboard de Acionamentos
+                Painel de Acionamentos
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Pill tone="accent">Registros: {count}</Pill>
                 <Pill>
                   Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}
                 </Pill>
                 <Pill>Cliente: {cliente ? clampUpper(cliente) : "Todos"}</Pill>
-                <Pill>Cliente rápido: {clienteQuick ? clampUpper(clienteQuick) : "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
                 <Pill>Equipamento: {equipamento ? clampUpper(equipamento) : "Todos"}</Pill>
                 <Pill>Alarme: {alarme ? clampUpper(alarme) : "Todos"}</Pill>
@@ -1800,58 +1947,42 @@ export function AcionamentosDashPage() {
             <div className="flex items-center gap-2">
               <Btn tone="secondary" onClick={loadAll} disabled={loading}>
                 <RefreshCw className="w-4 h-4" />
-                Recarregar
               </Btn>
             </div>
           </div>
         </div>
 
-        {/* FILTROS */}
-        <div
-          className={cx(UI.section, "mt-4 rounded-lg")}
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div
-            className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap"
-            style={{ borderColor: T.border }}
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <Pill>Filtros</Pill>
-            </div>
+        {/* FILTROS (padronizado com SectionHeader) */}
+        <div className={cx(UI.section, "mt-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+          <SectionHeader
+            title="Filtros"
+            hint={<>Selecione os filtros desejados.</>}
+            right={
+              <div className="flex items-center gap-2">
+                <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)} disabled={loading}>
+                  {filtersOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Btn>
 
-            <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={() => setFiltersOpen((p) => !p)} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
-                {filtersOpen ? (
-                  <>
-                    <ChevronUp className="w-4 h-4" /> Ocultar
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="w-4 h-4" /> Mostrar
-                  </>
-                )}
-              </Btn>
-
-              <Btn
-                tone="secondary"
-                onClick={() => {
-                  setCliente("");
-                  setClienteQuick("");
-                  setUsina("");
-                  setEquipamento("");
-                  setAlarme("");
-                  setSearchText("");
-                  setPeriodPreset("thisMonth");
-                  applyPreset("thisMonth");
-                  setMsg(null);
-                }}
-                disabled={loading}
-                className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-              >
-                Limpar
-              </Btn>
-            </div>
-          </div>
+                <Btn
+                  tone="secondary"
+                  onClick={() => {
+                    setCliente("");
+                    setClienteQuick("");
+                    setUsina("");
+                    setEquipamento("");
+                    setAlarme("");
+                    setSearchText("");
+                    setPeriodPreset("thisMonth");
+                    applyPreset("thisMonth");
+                    setMsg(null);
+                  }}
+                  disabled={loading}
+                >
+                  <Eraser className="w-4 h-4" />
+                </Btn>
+              </div>
+            }
+          />
 
           {filtersOpen && (
             <div className="p-4">
@@ -1880,7 +2011,6 @@ export function AcionamentosDashPage() {
                   </select>
                 </div>
 
-                {/* Início */}
                 <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Início
@@ -1894,7 +2024,6 @@ export function AcionamentosDashPage() {
                   />
                 </div>
 
-                {/* Fim */}
                 <div className="lg:col-span-3 min-w-0">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Fim
@@ -1907,6 +2036,7 @@ export function AcionamentosDashPage() {
                     style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
                   />
                 </div>
+
                 <div className="lg:col-span-3">
                   <label className={UI.label} style={{ color: T.text2 }}>
                     Busca (geral)
@@ -1919,10 +2049,7 @@ export function AcionamentosDashPage() {
                       style={{ borderColor: T.border }}
                       placeholder="Ex: ITU, SS 7056, inversor…"
                     />
-                    <div
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2"
-                      style={{ color: T.text3 }}
-                    >
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: T.text3 }}>
                       <Search className="w-4 h-4" />
                     </div>
                   </div>
@@ -1989,190 +2116,232 @@ export function AcionamentosDashPage() {
         {/* MAIN */}
         <main className="mt-4 grid gap-4">
           {/* GRÁFICOS */}
-          <div
-            id="export-graficos"
-            ref={chartsRef}
-            className={cx(UI.section, "p-4 rounded-lg")}
-            style={{ borderColor: T.border, background: T.card }}
-          >
+          <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
             <SectionHeader
               title="Resumo por acionamentos"
-              hint={
-                <>
-                  Clique na <b>legenda</b> para filtrar por cliente e clique na{" "}
-                  <b>linha</b> para filtrar por usina/equipamento/alarme.
-                </>
-              }
+              hint={<>Clique na legenda para filtrar por cliente.</>}
               right={
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Pill tone="accent">{count} registros (filtro)</Pill>
-
+                <div ref={exportChartsMenuRef} className="relative">
                   <Btn
                     tone="secondary"
-                    onClick={exportChartsOnlyPNG}
-                    disabled={loading || exporting}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                    title="Exportar gráficos em PNG"
-                  >
-                    <ImageDown className="w-4 h-4" />
-                    {isMobile ? "PNG" : "PNG"}
-                  </Btn>
-
-                  <Btn
-                    tone="secondary"
-                    onClick={exportChartsOnlyPDF}
-                    disabled={loading || exporting}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                    title="Exportar gráficos em PDF "
+                    disabled={loading || exporting || filteredRows.length === 0}
+                    onClick={() => setExportChartsOpen((v) => !v)}
+                    title="Exportar gráficos"
                   >
                     <FileDown className="w-4 h-4" />
-                    {isMobile ? "PDF" : "PDF"}
+                    <ChevronDown className="w-4 h-4" />
                   </Btn>
+
+                  {exportChartsOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-48 border rounded-lg shadow-sm overflow-hidden z-[160]"
+                      style={{ borderColor: T.border, background: T.card }}
+                    >
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm font-semibold hover:bg-black/[0.03] flex items-center gap-2"
+                        onClick={async () => {
+                          setExportChartsOpen(false);
+                          await exportChartsOnlyPNG();
+                        }}
+                        disabled={loading || exporting}
+                      >
+                        <ImageDown className="w-4 h-4" />
+                        PNG
+                      </button>
+
+                      <div style={{ height: 1, background: "rgba(17,24,39,0.06)" }} />
+
+                      <button
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm font-semibold hover:bg-black/[0.03] flex items-center gap-2"
+                        onClick={async () => {
+                          setExportChartsOpen(false);
+                          await exportChartsOnlyPDF();
+                        }}
+                        disabled={loading || exporting}
+                      >
+                        <FileDown className="w-4 h-4" />
+                        PDF
+                      </button>
+                    </div>
+                  )}
                 </div>
               }
             />
 
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-              <div className="lg:col-span-4">
-                <StackedBarsCard
-                  title="Acionamentos por usina"
-                  hint={<>Barra segmentada por cliente.</>}
-                  groups={stackedByUsina.groups}
-                  segs={stackedByUsina.segs}
-                  segActive={clienteQuick}
-                  onClickSeg={toggleClienteQuick}
-                  onClickGroup={toggleUsina}
-                  groupActive={usina}
-                  searchPlaceholder="Buscar usina no gráfico…"
-                  maxSegs={6}
-                  maxHeight={2000}
-                  compact={isMobile}
-                />
-              </div>
-
-              <div className="lg:col-span-4">
-                <StackedBarsCard
-                  title="Acionamentos por equipamento"
-                  hint={<>Barra segmentada por cliente.</>}
-                  groups={stackedByEquip.groups}
-                  segs={stackedByEquip.segs}
-                  segActive={clienteQuick}
-                  onClickSeg={toggleClienteQuick}
-                  onClickGroup={toggleEquip}
-                  groupActive={equipamento}
-                  searchPlaceholder="Buscar equipamento no gráfico…"
-                  maxSegs={6}
-                  maxHeight={2000}
-                  compact={isMobile}
-                />
-              </div>
-
-              <div className="lg:col-span-4">
-                <StackedBarsCard
-                  title="Acionamentos por alarme"
-                  hint={<>Barra segmentada por cliente.</>}
-                  groups={stackedByAlarm.groups}
-                  segs={stackedByAlarm.segs}
-                  segActive={clienteQuick}
-                  onClickSeg={toggleClienteQuick}
-                  onClickGroup={toggleAlarm}
-                  groupActive={alarme}
-                  searchPlaceholder="Buscar alarme no gráfico…"
-                  maxSegs={6}
-                  maxHeight={2000}
-                  compact={isMobile}
-                />
-              </div>
-            </div>
-
-            {(clienteQuick || usina || equipamento || alarme) && (
-              <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Pill tone="accent">Filtros rápidos</Pill>
-                  {clienteQuick ? <Pill>Cliente: {clampUpper(clienteQuick)}</Pill> : null}
-                  {usina ? <Pill>Usina: {clampUpper(usina)}</Pill> : null}
-                  {equipamento ? <Pill>Equip.: {clampUpper(equipamento)}</Pill> : null}
-                  {alarme ? <Pill>Alarme: {clampUpper(alarme)}</Pill> : null}
+            <div className="p-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="lg:col-span-4">
+                  <StackedBarsCard
+                    title="Acionamentos por usina"
+                    hint={<>Barra segmentada por cliente.</>}
+                    groups={stackedByUsina.groups}
+                    segs={stackedByUsina.segs}
+                    segActive={clienteQuick}
+                    onClickSeg={toggleClienteQuick}
+                    onClickGroup={toggleUsina}
+                    groupActive={usina}
+                    searchPlaceholder="Buscar usina no gráfico…"
+                    maxSegs={6}
+                    maxHeight={2000}
+                    compact={isMobile}
+                  />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setClienteQuick("");
-                    setUsina("");
-                    setEquipamento("");
-                    setAlarme("");
-                  }}
-                  className="inline-flex items-center gap-2 text-[11px] font-semibold underline"
-                  style={{ color: T.accent }}
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Limpar filtros rápidos
-                </button>
+                <div className="lg:col-span-4">
+                  <StackedBarsCard
+                    title="Acionamentos por equipamento"
+                    hint={<>Barra segmentada por cliente.</>}
+                    groups={stackedByEquip.groups}
+                    segs={stackedByEquip.segs}
+                    segActive={clienteQuick}
+                    onClickSeg={toggleClienteQuick}
+                    onClickGroup={toggleEquip}
+                    groupActive={equipamento}
+                    searchPlaceholder="Buscar equipamento no gráfico…"
+                    maxSegs={6}
+                    maxHeight={2000}
+                    compact={isMobile}
+                  />
+                </div>
+
+                <div className="lg:col-span-4">
+                  <StackedBarsCard
+                    title="Acionamentos por alarme"
+                    hint={<>Barra segmentada por cliente.</>}
+                    groups={stackedByAlarm.groups}
+                    segs={stackedByAlarm.segs}
+                    segActive={clienteQuick}
+                    onClickSeg={toggleClienteQuick}
+                    onClickGroup={toggleAlarm}
+                    groupActive={alarme}
+                    searchPlaceholder="Buscar alarme no gráfico…"
+                    maxSegs={6}
+                    maxHeight={2000}
+                    compact={isMobile}
+                  />
+                </div>
               </div>
-            )}
+
+              {(clienteQuick || usina || equipamento || alarme) && (
+                <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Pill tone="accent">Filtros rápidos</Pill>
+                    {clienteQuick ? <Pill>Cliente: {clampUpper(clienteQuick)}</Pill> : null}
+                    {usina ? <Pill>Usina: {clampUpper(usina)}</Pill> : null}
+                    {equipamento ? <Pill>Equip.: {clampUpper(equipamento)}</Pill> : null}
+                    {alarme ? <Pill>Alarme: {clampUpper(alarme)}</Pill> : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClienteQuick("");
+                      setUsina("");
+                      setEquipamento("");
+                      setAlarme("");
+                    }}
+                    className="inline-flex items-center gap-2 text-[11px] font-semibold underline"
+                    style={{ color: T.accent }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Limpar filtros rápidos
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* TABELA */}
-          <div
-            ref={tableRef}
-            className={cx(UI.section, "rounded-lg")}
-            style={{ borderColor: T.border, background: T.card }}
-          >
-            {/* HEADER DA TABELA (mobile-friendly) */}
-            <div
-              className="px-4 py-3 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              style={{ borderColor: T.border }}
-            >
-              <div className="flex items-center gap-2 flex-wrap">
-                <Pill>Lista de Acionamentos</Pill>
-              </div>
+          <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+            <SectionHeader
+              title="Lista de Acionamentos"
+              hint={<>Clique no número da Ordem de Serviço para abrir no Sistema</>}
+              right={
+                <div className="flex items-center gap-2">
+                  {/* EXPORT */}
+                  <div ref={exportTableMenuRef} className="relative">
+                    <Btn
+                      tone="secondary"
+                      disabled={loading || exporting || filteredRows.length === 0}
+                      onClick={() => setExportTableOpen((v) => !v)}
+                      title="Exportar tabela"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
+                    </Btn>
 
-              <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Btn
-                    tone="secondary"
-                    onClick={exportTableExcelFixed}
-                    disabled={loading}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    {isMobile ? "Excel" : "Excel"}
-                  </Btn>
+                    {exportTableOpen && (
+                      <div
+                        className="absolute right-0 mt-2 w-48 border rounded-lg shadow-sm overflow-hidden z-[160]"
+                        style={{ borderColor: T.border, background: T.card }}
+                      >
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm font-semibold hover:bg-black/[0.03] flex items-center gap-2"
+                          onClick={() => {
+                            setExportTableOpen(false);
+                            exportTableExcelFixed();
+                          }}
+                          disabled={loading || exporting}
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          Excel (.csv)
+                        </button>
 
-                  <Btn
-                    tone="secondary"
-                    onClick={exportTablePDF}
-                    disabled={loading}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                  >
-                    <FileDown className="w-4 h-4" />
-                    {isMobile ? "PDF" : "PDF"}
-                  </Btn>
-                </div>
+                        <div style={{ height: 1, background: "rgba(17,24,39,0.06)" }} />
 
-                <div className="flex items-center gap-2 justify-between sm:justify-end">
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm font-semibold hover:bg-black/[0.03] flex items-center gap-2"
+                          onClick={async () => {
+                            setExportTableOpen(false);
+                            await exportTablePDF();
+                          }}
+                          disabled={loading || exporting}
+                        >
+                          <FileDown className="w-4 h-4" />
+                          PDF
+                        </button>
+
+                        {/* opcional: PNG da tabela */}
+                        <div style={{ height: 1, background: "rgba(17,24,39,0.06)" }} />
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm font-semibold hover:bg-black/[0.03] flex items-center gap-2"
+                          onClick={async () => {
+                            setExportTableOpen(false);
+                            await exportTablePNG();
+                          }}
+                          disabled={loading || exporting}
+                        >
+                          <ImageDown className="w-4 h-4" />
+                          PNG
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PAGINAÇÃO */}
                   <Btn
                     tone="secondary"
                     disabled={loading || pageSafe === 1}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    {isMobile ? "Anterior" : "Anterior"}
                   </Btn>
+
                   <Btn
                     tone="secondary"
                     disabled={loading || pageSafe >= totalPages}
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
                   >
-                    {isMobile ? "Próxima" : "Próxima"}
                     <ChevronRight className="w-4 h-4" />
                   </Btn>
                 </div>
-              </div>
-            </div>
+              }
+            />
 
             <div className="p-4">
               {!loading && tableRows.length === 0 && (
@@ -2188,7 +2357,7 @@ export function AcionamentosDashPage() {
                 </div>
               )}
 
-              {/* MOBILE: cards (sem scroll horizontal) */}
+              {/* MOBILE: cards */}
               {rowsForUI.length > 0 && isMobile && (
                 <div className="grid gap-2">
                   {rowsForUI.map((r) => (
@@ -2203,99 +2372,8 @@ export function AcionamentosDashPage() {
                 </div>
               )}
 
-              {/* DESKTOP: tabela completa */}
-              {rowsForUI.length > 0 && !isMobile && (
-                <div ref={tableOnlyRef}>
-                  <DesktopTable rows={rowsForUI} />
-                </div>
-              )}
-
-              {/* EXPORT TABLE (sempre renderiza off-screen, inclusive no mobile) */}
-              <div
-                style={{
-                  position: "fixed",
-                  left: -10000,
-                  top: 0,
-                  width: 1200,
-                  background: "#fff",
-                  padding: 16,
-                  zIndex: -1,
-                }}
-              >
-                <div ref={tableOnlyRef}>
-                  <DesktopTable rows={rowsForExport} />
-                </div>
-              </div>
-
-              {/* EXPORT ONLY (3 gráficos) — off-screen */}
-              {exportChartsOnly && (
-                <div
-                  style={{
-                    position: "fixed",
-                    left: -10000,
-                    top: 0,
-                    width: 1480,
-                    background: "#fff",
-                    padding: 16,
-                    zIndex: -1,
-                  }}
-                >
-                  <div ref={chartsOnlyRef}>
-                    <div className="grid grid-cols-12 gap-4 items-start">
-                      <div className="col-span-4">
-                        <StackedBarsCard
-                          title="Acionamentos por usina"
-                          hint={<>Barra segmentada por cliente.</>}
-                          groups={stackedByUsina.groups}
-                          segs={stackedByUsina.segs}
-                          segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
-                          groupActive={usina}
-                          searchPlaceholder="Buscar usina no gráfico…"
-                          maxSegs={6}
-                          maxHeight={999999}
-                          exportMode
-                        />
-                      </div>
-
-                      <div className="col-span-4">
-                        <StackedBarsCard
-                          title="Acionamentos por equipamento"
-                          hint={<>Barra segmentada por cliente.</>}
-                          groups={stackedByEquip.groups}
-                          segs={stackedByEquip.segs}
-                          segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
-                          groupActive={equipamento}
-                          searchPlaceholder="Buscar equipamento no gráfico…"
-                          maxSegs={6}
-                          maxHeight={999999}
-                          exportMode
-                        />
-                      </div>
-
-                      <div className="col-span-4">
-                        <StackedBarsCard
-                          title="Acionamentos por alarme"
-                          hint={<>Barra segmentada por cliente.</>}
-                          groups={stackedByAlarm.groups}
-                          segs={stackedByAlarm.segs}
-                          segActive={clienteQuick}
-                          onClickSeg={() => { }}
-                          onClickGroup={() => { }}
-                          groupActive={alarme}
-                          searchPlaceholder="Buscar alarme no gráfico…"
-                          maxSegs={6}
-                          maxHeight={999999}
-                          exportMode
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* DESKTOP: tabela */}
+              {rowsForUI.length > 0 && !isMobile && <DesktopTable rows={rowsForUI} />}
 
               <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
                 <div className="text-[11px]" style={{ color: T.text3 }}>
@@ -2330,6 +2408,92 @@ export function AcionamentosDashPage() {
           </div>
         </main>
       </div>
+
+      {/* OFF-SCREEN EXPORTS */}
+      {/* TABELA (sempre renderiza off-screen) */}
+      <div
+        style={{
+          position: "fixed",
+          left: -10000,
+          top: 0,
+          width: 1200,
+          background: "#fff",
+          padding: 16,
+          zIndex: -1,
+        }}
+      >
+        <div ref={tableExportRef}>
+          <DesktopTable rows={rowsForExport} />
+        </div>
+      </div>
+
+      {/* GRÁFICOS (somente quando exportChartsOnly = true) */}
+      {exportChartsOnly && (
+        <div
+          style={{
+            position: "fixed",
+            left: -10000,
+            top: 0,
+            width: 1480,
+            background: "#fff",
+            padding: 16,
+            zIndex: -1,
+          }}
+        >
+          <div ref={chartsExportRef}>
+            <div className="grid grid-cols-12 gap-4 items-start">
+              <div className="col-span-4">
+                <StackedBarsCard
+                  title="Acionamentos por usina"
+                  hint={<>Barra segmentada por cliente.</>}
+                  groups={stackedByUsina.groups}
+                  segs={stackedByUsina.segs}
+                  segActive={clienteQuick}
+                  onClickSeg={() => { }}
+                  onClickGroup={() => { }}
+                  groupActive={usina}
+                  searchPlaceholder="Buscar usina no gráfico…"
+                  maxSegs={6}
+                  maxHeight={999999}
+                  exportMode
+                />
+              </div>
+              <div className="col-span-4">
+                <StackedBarsCard
+                  title="Acionamentos por equipamento"
+                  hint={<>Barra segmentada por cliente.</>}
+                  groups={stackedByEquip.groups}
+                  segs={stackedByEquip.segs}
+                  segActive={clienteQuick}
+                  onClickSeg={() => { }}
+                  onClickGroup={() => { }}
+                  groupActive={equipamento}
+                  searchPlaceholder="Buscar equipamento no gráfico…"
+                  maxSegs={6}
+                  maxHeight={999999}
+                  exportMode
+                />
+              </div>
+              <div className="col-span-4">
+                <StackedBarsCard
+                  title="Acionamentos por alarme"
+                  hint={<>Barra segmentada por cliente.</>}
+                  groups={stackedByAlarm.groups}
+                  segs={stackedByAlarm.segs}
+                  segActive={clienteQuick}
+                  onClickSeg={() => { }}
+                  onClickGroup={() => { }}
+                  groupActive={alarme}
+                  searchPlaceholder="Buscar alarme no gráfico…"
+                  maxSegs={6}
+                  maxHeight={999999}
+                  exportMode
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* focus ring + scrollbar */}
       <style jsx global>{`
