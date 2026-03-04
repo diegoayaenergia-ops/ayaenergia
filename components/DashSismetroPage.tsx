@@ -235,7 +235,10 @@ function SectionHeader({
             {title}
           </div>
           {hint ? (
-            <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
+            <div
+              className={cx(UI.sectionHint, "mt-1")}
+              style={{ color: T.text3 }}
+            >
               {hint}
             </div>
           ) : null}
@@ -463,6 +466,15 @@ type SsItem = {
   idSs: number;
   tipoSs?: string | null;
   dataAbertura?: string | null;
+
+  // ✅ possíveis campos de finalização (depende do seu endpoint)
+  dataFechamento?: string | null;
+  dataFinalizacao?: string | null;
+  dataConclusao?: string | null;
+  dataEncerramento?: string | null;
+  dataHoraConclusao?: string | null;
+  dataHoraFinalizacao?: string | null;
+
   solicitante?: string | null;
   localizacao?: string | null;
   descricaoSs?: string | null;
@@ -487,6 +499,9 @@ type Row = {
   idSs: number;
   data: string;
   dataHora?: string | null;
+
+  // ✅ finalização
+  dataFechamento?: string | null;
 
   cliente: string | null;
   usina: string | null;
@@ -516,6 +531,105 @@ function normalizeTecnico(it: SsItem): {
   const name = String(it.tecnicoDesignado || "").trim();
   const mat = String(it.matriculaTecnicoDesignado || "").trim();
   return { tecnico: name ? clampUpper(name) : null, matricula: mat ? mat : null };
+}
+
+/* =========================================================
+   TEMPO / FINALIZAÇÃO
+========================================================= */
+function pickFechamento(it: SsItem): string | null {
+  const cand =
+    (it as any).dataFechamento ??
+    (it as any).dataFinalizacao ??
+    (it as any).dataConclusao ??
+    (it as any).dataEncerramento ??
+    (it as any).dataHoraConclusao ??
+    (it as any).dataHoraFinalizacao ??
+    (it as any).dt_conclusao ??
+    (it as any).dt_finalizacao ??
+    (it as any).data_conclusao ??
+    null;
+
+  const s = String(cand ?? "").trim();
+  return s ? s : null;
+}
+
+function parseSismetroLocalDateTime(dt?: string | null): Date | null {
+  const s = String(dt || "").trim();
+  if (!s) return null;
+  const m = s.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (!m) return null;
+
+  const yy = Number(m[1]);
+  const mm = Number(m[2]);
+  const dd = Number(m[3]);
+  const hh = Number(m[4]);
+  const mi = Number(m[5]);
+  const ss = Number(m[6] || 0);
+
+  if (![yy, mm, dd, hh, mi, ss].every((n) => Number.isFinite(n))) return null;
+  return new Date(yy, mm - 1, dd, hh, mi, ss, 0);
+}
+
+function formatDurationPt(ms: number) {
+  if (!Number.isFinite(ms) || ms < 0) return "—";
+  const totalMin = Math.floor(ms / 60000);
+  const d = Math.floor(totalMin / (60 * 24));
+  const h = Math.floor((totalMin % (60 * 24)) / 60);
+  const m = totalMin % 60;
+
+  const parts: string[] = [];
+  if (d) parts.push(`${d}d`);
+  if (h || d) parts.push(`${h}h`);
+  parts.push(`${m}m`);
+  return parts.join(" ");
+}
+
+function avgCloseMs(rows: Row[]) {
+  let sum = 0;
+  let n = 0;
+
+  for (const r of rows) {
+    const open = parseSismetroLocalDateTime(r.dataHora || null);
+    const close = parseSismetroLocalDateTime(r.dataFechamento || null);
+    if (!open || !close) continue;
+    const delta = close.getTime() - open.getTime();
+    if (delta < 0) continue;
+    sum += delta;
+    n += 1;
+  }
+
+  return { n, ms: n ? sum / n : null };
+}
+
+function isConcluidoRow(r: { evolucao?: string | null; status?: string | null }) {
+  // prioridade: evolução do kanban
+  const evo = normalizeKanban(r.evolucao);
+  if (evo === "CONCLUÍDO") return true;
+
+  // fallback: status textual
+  const st = clampUpper(String(r.status || ""));
+  return st.includes("CONCLU");
+}
+
+function rowTiming(r: Row, nowMs: number) {
+  const open = parseSismetroLocalDateTime(r.dataHora || null);
+  const close = parseSismetroLocalDateTime(r.dataFechamento || null);
+
+  const isConcluido = isConcluidoRow(r);
+
+  // tempo só “fecha” se tiver close; se não tiver, só faz sentido para abertas
+  const tempoMs = open
+    ? (close ? close.getTime() : nowMs) - open.getTime()
+    : NaN;
+
+  const tempoLabel =
+    open && (!isConcluido || !!close) ? formatDurationPt(tempoMs) : "—";
+
+  const fimLabel = close ? brDateTimeFromSismetro(r.dataFechamento || null) : "—";
+
+  return { open, close, isConcluido, tempoLabel, fimLabel };
 }
 
 /* =========================================================
@@ -579,27 +693,31 @@ function exportFileBaseName(args: {
   tipo?: string;
   tecnico?: string;
 }) {
-  const parts = [
-    "Relatorio de SS_",
-    args.start || "SEM_INICIO",
-    "-",
-    args.end || "SEM_FIM",
-  ].filter(Boolean);
+  const parts = ["Relatorio de SS_", args.start || "SEM_INICIO", "-", args.end || "SEM_FIM"].filter(Boolean);
   return fileSafeName(parts.join(""));
 }
-function rowsToExportData(rows: Row[]) {
-  return rows.map((r) => ({
-    SS: r.idSs,
-    "Data/Hora": brDateTimeFromSismetro(r.dataHora || null),
-    Cliente: safeUpper(r.cliente),
-    Usina: safeUpper(r.usina),
-    Tipo: safeUpper(r.tipo),
-    Status: safeUpper(r.status),
-    Evolucao: safeUpper(r.evolucao),
-    Tecnico: safeUpper(r.tecnico),
-    Descricao: safeText(r.descricao, ""),
-    Conclusao: r.conclusaoTexto ? safeText(r.conclusaoTexto, "") : "",
-  }));
+
+function rowsToExportData(rows: Row[], nowMs = Date.now()) {
+  return rows.map((r) => {
+    const t = rowTiming(r, nowMs);
+
+    return {
+      SS: r.idSs,
+      Abertura: brDateTimeFromSismetro(r.dataHora || null),
+      Finalizacao: brDateTimeFromSismetro(r.dataFechamento || null),
+      Tempo: t.tempoLabel,
+
+      Cliente: safeUpper(r.cliente),
+      Usina: safeUpper(r.usina),
+      Tipo: safeUpper(r.tipo),
+      Status: safeUpper(r.status),
+      Evolucao: safeUpper(r.evolucao),
+      Tecnico: safeUpper(r.tecnico),
+
+      Descricao: safeText(r.descricao, ""),
+      Conclusao: r.conclusaoTexto ? safeText(r.conclusaoTexto, "") : "",
+    };
+  });
 }
 
 /* =========================================================
@@ -608,12 +726,7 @@ function rowsToExportData(rows: Row[]) {
 const TIPO_BAN = new Set(["INCONFORMIDADE"]);
 const STATUS_BAN = new Set(["EXCLUÍDA", "CANCELADA"]);
 
-const KANBAN_COLS = [
-  "AGUARDANDO AGENDAMENTO",
-  "EM EXECUÇÃO",
-  "PENDENTE",
-  "CONCLUÍDO",
-] as const;
+const KANBAN_COLS = ["AGUARDANDO AGENDAMENTO", "EM EXECUÇÃO", "PENDENTE", "CONCLUÍDO"] as const;
 type KanbanCol = (typeof KANBAN_COLS)[number];
 
 const TYPE_PALETTE = [
@@ -657,11 +770,9 @@ function tipoColor(tpRaw?: string | null) {
 function normalizeKanban(evoRaw?: string | null): KanbanCol | "OUTROS" {
   const e = clampUpper(String(evoRaw || ""));
   if (e === "AGUARDANDO AGENDAMENTO") return "AGUARDANDO AGENDAMENTO";
-  if (e === "EM EXECUCAO" || e === "EM EXECUÇÃO" || e.includes("EXECU"))
-    return "EM EXECUÇÃO";
+  if (e === "EM EXECUCAO" || e === "EM EXECUÇÃO" || e.includes("EXECU")) return "EM EXECUÇÃO";
   if (e.includes("PENDENTE")) return "PENDENTE";
-  if (e === "CONCLUIDO" || e === "CONCLUÍDO" || e.includes("CONCLU"))
-    return "CONCLUÍDO";
+  if (e === "CONCLUIDO" || e === "CONCLUÍDO" || e.includes("CONCLU")) return "CONCLUÍDO";
   return "OUTROS";
 }
 
@@ -845,13 +956,17 @@ function LegendPills({
 ========================================================= */
 function MobileSSCard({
   r,
+  nowMs,
   onFilterUsina,
   onFilterTecnico,
 }: {
   r: Row;
+  nowMs: number;
   onFilterUsina: () => void;
   onFilterTecnico: () => void;
 }) {
+  const t = rowTiming(r, nowMs);
+
   return (
     <div className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
       <div className="flex items-start justify-between gap-3">
@@ -868,6 +983,30 @@ function MobileSSCard({
 
           <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
             {brDateTimeFromSismetro(r.dataHora || null)}
+          </div>
+
+          <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+            {t.isConcluido ? (
+              t.close ? (
+                <>
+                  Fim: <span className={UI.mono}>{t.fimLabel}</span> •{" "}
+                  <span className={UI.mono} style={{ color: T.text }}>
+                    Tempo: {t.tempoLabel}
+                  </span>
+                </>
+              ) : (
+                <span className={UI.mono} style={{ color: T.text3 }}>
+                  Tempo: —
+                </span>
+              )
+            ) : (
+              <span className={UI.mono} style={{ color: T.text3 }}>
+                Aberta há:{" "}
+                <span className={UI.mono} style={{ color: T.text }}>
+                  {t.tempoLabel}
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -994,6 +1133,13 @@ export function SismetroDashPage() {
   useEffect(() => {
     const t = window.setTimeout(() => setBootOverlay(false), 5000);
     return () => window.clearTimeout(t);
+  }, []);
+
+  // ✅ relógio (para “Aberta há: …” atualizar)
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(t);
   }, []);
 
   const applyPreset = useCallback(
@@ -1173,12 +1319,15 @@ export function SismetroDashPage() {
           const iso = toISODateFromSismetro(it.dataAbertura);
           const tech = normalizeTecnico(it);
           const concl = pickConclusao(it);
+          const fechamento = pickFechamento(it);
 
           return {
             id: String(it.idSs),
             idSs: Number(it.idSs),
             data: iso || "",
             dataHora: it.dataAbertura || null,
+
+            dataFechamento: fechamento, // ✅
 
             cliente: it.solicitante ?? null,
             usina: it.localizacao ?? null,
@@ -1286,6 +1435,12 @@ export function SismetroDashPage() {
   const pageSafe = Math.min(Math.max(1, page), totalPages);
   const offset = (pageSafe - 1) * limit;
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
+
+  // ✅ KPI médio até conclusão (somente SS com abertura + finalização)
+  const avg = useMemo(() => {
+    const r = avgCloseMs(filteredRows);
+    return { n: r.n, label: r.ms != null ? formatDurationPt(r.ms) : "—" };
+  }, [filteredRows]);
 
   const ssByUsinaTipo = useMemo(() => {
     const byUsina: Record<string, { total: number; byTipo: Record<string, number> }> = {};
@@ -1396,22 +1551,25 @@ export function SismetroDashPage() {
         return;
       }
 
-      const XLSX = await import("xlsx");
+      const XLSXMod: any = await import("xlsx");
+      const XLSX = XLSXMod?.default ?? XLSXMod;
 
-      const data = rowsToExportData(filteredRows);
+      const data = rowsToExportData(filteredRows, Date.now());
       const ws = XLSX.utils.json_to_sheet(data);
 
       ws["!cols"] = [
-        { wch: 8 },
-        { wch: 18 },
-        { wch: 22 },
-        { wch: 28 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 22 },
-        { wch: 22 },
-        { wch: 46 },
-        { wch: 46 },
+        { wch: 8 },  // SS
+        { wch: 18 }, // Abertura
+        { wch: 18 }, // Finalização
+        { wch: 10 }, // Tempo
+        { wch: 22 }, // Cliente
+        { wch: 28 }, // Usina
+        { wch: 14 }, // Tipo
+        { wch: 14 }, // Status
+        { wch: 18 }, // Evolução
+        { wch: 22 }, // Técnico
+        { wch: 46 }, // Descrição
+        { wch: 46 }, // Conclusão
       ];
 
       const wb = XLSX.utils.book_new();
@@ -1456,12 +1614,17 @@ export function SismetroDashPage() {
 
       const HEADER_H = 64;
       const MARGIN_X = 30;
-      const TOP_MARGIN_TABLE = HEADER_H + 18;
-      const FIRST_PAGE_START_Y = HEADER_H + 18;
+
+      // ✅ meta logo abaixo do header
+      const TOP_MARGIN_TABLE = HEADER_H + 34;
+      const FIRST_PAGE_START_Y = TOP_MARGIN_TABLE;
 
       const issuedAt = brDateTimeNow();
-
       const base = exportFileBaseName({ cliente, start, end, usina, tipo, tecnico });
+
+      // ✅ média do próprio relatório
+      const avgReport = avgCloseMs(filteredRows);
+      const avgLabel = avgReport.ms != null ? formatDurationPt(avgReport.ms) : "—";
 
       function drawImageContain(opts: {
         doc: any;
@@ -1533,6 +1696,17 @@ export function SismetroDashPage() {
         doc.text(rightText, pageW - MARGIN_X - rtW, 30);
       };
 
+      const drawMeta = () => {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...PDF_BRAND.gray);
+        doc.text(
+          `Tempo médio até conclusão: ${avgLabel}`,
+          MARGIN_X,
+          HEADER_H + 16
+        );
+      };
+
       const drawFooter = () => {
         doc.setDrawColor(...PDF_BRAND.borderGray);
         doc.setLineWidth(1);
@@ -1552,12 +1726,15 @@ export function SismetroDashPage() {
       };
 
       drawHeader();
+      drawMeta();
 
-      const data = rowsToExportData(filteredRows);
+      const data = rowsToExportData(filteredRows, Date.now());
 
       const head = [[
         "SS",
-        "Data/Hora",
+        "Abertura",
+        "Finalização",
+        "Tempo",
         "Cliente",
         "Usina",
         "Tipo",
@@ -1569,7 +1746,9 @@ export function SismetroDashPage() {
 
       const body = data.map((d) => [
         String(d.SS),
-        d["Data/Hora"],
+        d.Abertura,
+        d.Finalizacao,
+        d.Tempo,
         d.Cliente,
         d.Usina,
         d.Tipo,
@@ -1587,7 +1766,7 @@ export function SismetroDashPage() {
 
         styles: {
           font: "helvetica",
-          fontSize: 7.2,
+          fontSize: 7.1,
           cellPadding: 4,
           overflow: "linebreak",
           textColor: PDF_BRAND.black,
@@ -1605,20 +1784,24 @@ export function SismetroDashPage() {
 
         alternateRowStyles: { fillColor: PDF_BRAND.lightGray },
 
+        // ✅ soma = 782 (A4 landscape com margem 30/30)
         columnStyles: {
-          0: { cellWidth: 48 },
-          1: { cellWidth: 78 },
-          2: { cellWidth: 82 },
-          3: { cellWidth: 112 },
-          4: { cellWidth: 65 },
-          5: { cellWidth: 90 },
-          6: { cellWidth: 90 },
-          7: { cellWidth: 113 },
-          8: { cellWidth: 114 },
+          0: { cellWidth: 40 }, // SS
+          1: { cellWidth: 72 }, // Abertura
+          2: { cellWidth: 72 }, // Finalização
+          3: { cellWidth: 48 }, // Tempo
+          4: { cellWidth: 66 }, // Cliente
+          5: { cellWidth: 96 }, // Usina
+          6: { cellWidth: 52 }, // Tipo
+          7: { cellWidth: 76 }, // Evolução
+          8: { cellWidth: 76 }, // Técnico
+          9: { cellWidth: 92 }, // Descrição
+          10: { cellWidth: 92 }, // Conclusão
         },
 
         didDrawPage: () => {
           drawHeader();
+          drawMeta();
           drawFooter();
         },
       };
@@ -1822,10 +2005,14 @@ export function SismetroDashPage() {
               <div className={UI.headerTitle} style={{ color: T.text }}>
                 Painel de Ordens de Serviços
               </div>
+
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Pill>Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}</Pill>
                 <Pill>Cliente: {cliente || "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
+                <Pill tone="accent">
+                  Tempo médio até conclusão: {avg.label}{avg.n ? ` ` : ""}
+                </Pill>
               </div>
             </div>
 
@@ -1835,6 +2022,7 @@ export function SismetroDashPage() {
                 onClick={load}
                 disabled={loading}
                 className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                title="Recarregar"
               >
                 <RefreshCw className="w-4 h-4" />
               </Btn>
@@ -1842,7 +2030,7 @@ export function SismetroDashPage() {
           </div>
         </div>
 
-        {/* FILTROS (padronizado com SectionHeader) */}
+        {/* FILTROS */}
         <div className={cx(UI.section, "mt-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
           <SectionHeader
             title="Filtros"
@@ -1853,7 +2041,7 @@ export function SismetroDashPage() {
                   tone="secondary"
                   onClick={() => setFiltersOpen((p) => !p)}
                   className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                  title={filtersOpen ? "Ocultar filtros" : ""}
+                  title={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}
                 >
                   {filtersOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </Btn>
@@ -1932,54 +2120,63 @@ export function SismetroDashPage() {
                               </div>
                             )}
 
-                            {colRows.map((r) => (
-                              <div
-                                key={r.id}
-                                className="border rounded-lg p-3"
-                                style={{ borderColor: T.border, background: T.card }}
-                              >
-                                <div className="min-w-0">
-                                  <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
-                                    {safeText(r.usina ? clampUpper(r.usina) : null)}
+                            {colRows.map((r) => {
+                              const t = rowTiming(r, nowMs);
+                              return (
+                                <div
+                                  key={r.id}
+                                  className="border rounded-lg p-3"
+                                  style={{ borderColor: T.border, background: T.card }}
+                                >
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
+                                      {safeText(r.usina ? clampUpper(r.usina) : null)}
+                                    </div>
+                                    <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                                      {brDate(r.data)} •{" "}
+                                      <a
+                                        href={ssLink(r.idSs)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="underline font-extrabold"
+                                        style={{ color: T.accent }}
+                                      >
+                                        #{r.idSs}
+                                      </a>
+                                    </div>
+                                    <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+                                      Fim: <span className={UI.mono}>{t.fimLabel}</span> •{" "}
+                                      <span className={UI.mono} style={{ color: T.text }}>
+                                        {t.close ? "Tempo:" : "Aberta há:"} {t.tempoLabel}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                                    {brDate(r.data)} •{" "}
-                                    <a
-                                      href={ssLink(r.idSs)}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="underline font-extrabold"
-                                      style={{ color: T.accent }}
+
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
                                     >
-                                      #{r.idSs}
-                                    </a>
+                                      {safeText(r.tipo)}
+                                    </span>
+                                    <span
+                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                    >
+                                      {safeText(r.status)}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-2 text-[11px] truncate" style={{ color: T.text3 }}>
+                                    Técnico: <span className={UI.mono}>{safeText(r.tecnico, "-")}</span>
+                                  </div>
+
+                                  <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
+                                    {safeText(r.descricao)}
                                   </div>
                                 </div>
-
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <span
-                                    className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
-                                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                                  >
-                                    {safeText(r.tipo)}
-                                  </span>
-                                  <span
-                                    className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
-                                    style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                                  >
-                                    {safeText(r.status)}
-                                  </span>
-                                </div>
-
-                                <div className="mt-2 text-[11px] truncate" style={{ color: T.text3 }}>
-                                  Técnico: <span className={UI.mono}>{safeText(r.tecnico, "-")}</span>
-                                </div>
-
-                                <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
-                                  {safeText(r.descricao)}
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       );
@@ -2034,55 +2231,79 @@ export function SismetroDashPage() {
                                 </div>
                               )}
 
-                              {colRows.map((r) => (
-                                <div
-                                  key={r.id}
-                                  className="border rounded-lg p-3"
-                                  style={{ borderColor: T.border, background: T.card }}
-                                >
-                                  <div className="min-w-0">
-                                    <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
-                                      {safeText(r.usina ? clampUpper(r.usina) : null)}
+                              {colRows.map((r) => {
+                                const t = rowTiming(r, nowMs);
+                                return (
+                                  <div
+                                    key={r.id}
+                                    className="border rounded-lg p-3"
+                                    style={{ borderColor: T.border, background: T.card }}
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="text-xs font-extrabold truncate" style={{ color: T.text }}>
+                                        {safeText(r.usina ? clampUpper(r.usina) : null)}
+                                      </div>
+
+                                      <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                                        Início: {brDate(r.data)} •{" "}
+                                        <a
+                                          href={ssLink(r.idSs)}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="underline font-semibold"
+                                          style={{ color: T.accent }}
+                                        >
+                                          #{r.idSs}
+                                        </a>
+                                      </div>
+
+                                      <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+                                        {t.isConcluido ? (
+                                          t.close ? (
+                                            <>
+                                              Fim: <span className={UI.mono}>{t.fimLabel}</span> •{" "}
+                                              <span className={UI.mono} style={{ color: T.text3 }}>
+                                                Tempo: {t.tempoLabel}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className={UI.mono} style={{ color: T.text3 }}>
+                                              Tempo: —
+                                            </span>
+                                          )
+                                        ) : (
+                                          <span className={UI.mono} style={{ color: T.text3 }}>
+                                            Aberta há: {t.tempoLabel}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
 
-                                    <div className={cx("mt-1 text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                                      {brDate(r.data)} •{" "}
-                                      <a
-                                        href={ssLink(r.idSs)}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="underline font-extrabold"
-                                        style={{ color: T.accent }}
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <span
+                                        className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                        style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
                                       >
-                                        #{r.idSs}
-                                      </a>
+                                        {safeText(r.tipo)}
+                                      </span>
+                                      <span
+                                        className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
+                                        style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+                                      >
+                                        {safeText(r.status)}
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-2 text-[11px] truncate" style={{ color: T.text3 }}>
+                                      Técnico: <span className={UI.mono}>{safeText(r.tecnico, "-")}</span>
+                                    </div>
+
+                                    <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
+                                      {safeText(r.descricao)}
                                     </div>
                                   </div>
-
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    <span
-                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
-                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                                    >
-                                      {safeText(r.tipo)}
-                                    </span>
-                                    <span
-                                      className="inline-flex items-center h-6 px-2 text-[11px] font-semibold border rounded-md"
-                                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                                    >
-                                      {safeText(r.status)}
-                                    </span>
-                                  </div>
-
-                                  <div className="mt-2 text-[11px] truncate" style={{ color: T.text3 }}>
-                                    Técnico: <span className={UI.mono}>{safeText(r.tecnico, "-")}</span>
-                                  </div>
-
-                                  <div className="mt-2 text-[11px] line-clamp-3" style={{ color: T.text2 }}>
-                                    {safeText(r.descricao)}
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -2174,9 +2395,6 @@ export function SismetroDashPage() {
                             <div className="text-[12px] font-semibold truncate" style={{ color: T.text }} title={u.usina}>
                               {u.usina}
                             </div>
-                            {/* <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                              Total: {u.total}
-                            </div> */}
                           </div>
                           <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 20 }}>
                             {ssByUsinaEvolucao.cols.map((col) => {
@@ -2185,11 +2403,15 @@ export function SismetroDashPage() {
                               const w = (v / Math.max(1, u.total)) * 100;
                               return <div key={col} style={{ width: `${w}%`, background: KANBAN_COLORS[col] }} title={`${col}: ${v}`} />;
                             })}
-                          </div>{u.total}
+                          </div>
+                          <span className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                            {u.total}
+                          </span>
                         </button>
                       ))}
                     </div>
                   </div>
+
                   <div className="lg:col-span-5 border rounded-lg p-4 min-w-0" style={{ borderColor: T.border, background: T.cardSoft }}>
                     <div className={UI.cardTitle} style={{ color: T.text }}>Tipos de SS por usina</div>
                     <LegendPills items={ssByUsinaTipo.legends} onClickItem={toggleTipo} active={tipo} />
@@ -2214,9 +2436,6 @@ export function SismetroDashPage() {
                             <div className="text-[12px] font-semibold  truncate" style={{ color: T.text }} title={u.usina}>
                               {u.usina}
                             </div>
-                            {/* <div className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
-                              Total: {u.total}
-                            </div> */}
                           </div>
 
                           <div className="flex-1 min-w-0 border rounded-md overflow-hidden flex" style={{ borderColor: T.border, background: T.mutedBg, height: 20 }}>
@@ -2226,7 +2445,10 @@ export function SismetroDashPage() {
                               const w = (v / Math.max(1, u.total)) * 100;
                               return <div key={tp} style={{ width: `${w}%`, background: tipoColor(tp) }} title={`${tp}: ${v}`} />;
                             })}
-                          </div>{u.total}
+                          </div>
+                          <span className={cx("text-[11px]", UI.mono)} style={{ color: T.text3 }}>
+                            {u.total}
+                          </span>
                         </button>
                       ))}
                     </div>
@@ -2276,7 +2498,7 @@ export function SismetroDashPage() {
             );
           })()}
 
-          {/* TABELA (agora com SectionHeader também) */}
+          {/* TABELA */}
           {(() => {
             const isFull = full === "table";
 
@@ -2346,6 +2568,7 @@ export function SismetroDashPage() {
                       <MobileSSCard
                         key={r.id}
                         r={r}
+                        nowMs={nowMs}
                         onFilterUsina={() => applyUsinaFromChart(safeUpper(r.usina))}
                         onFilterTecnico={() =>
                           setTecnico((p) =>
@@ -2370,12 +2593,12 @@ export function SismetroDashPage() {
                             color: T.text2,
                             display: "grid",
                             gridTemplateColumns:
-                              "90px 160px minmax(280px, 1.4fr) minmax(240px, 1fr) minmax(180px, 0.8fr) 64px",
+                              "90px 180px minmax(280px, 1.4fr) minmax(240px, 1fr) minmax(200px, 0.9fr) 64px",
                             gap: 0,
                           }}
                         >
                           <div>SS</div>
-                          <div>Data/Hora</div>
+                          <div>Datas</div>
                           <div>Usina + Descrição</div>
                           <div>Conclusão</div>
                           <div>Técnico + Evolução</div>
@@ -2385,6 +2608,7 @@ export function SismetroDashPage() {
                         {tableRows.map((r) => {
                           const tecnicoActive = tecnico && clampUpper(tecnico) === safeUpper(r.tecnico);
                           const usinaActive = usina && clampUpper(usina) === safeUpper(r.usina);
+                          const t = rowTiming(r, nowMs);
 
                           return (
                             <div
@@ -2395,7 +2619,7 @@ export function SismetroDashPage() {
                                 background: T.card,
                                 display: "grid",
                                 gridTemplateColumns:
-                                  "90px 160px minmax(280px, 1.4fr) minmax(240px, 1fr) minmax(180px, 0.8fr) 64px",
+                                  "90px 180px minmax(280px, 1.4fr) minmax(240px, 1fr) minmax(200px, 0.9fr) 64px",
                                 gap: 0,
                               }}
                             >
@@ -2404,7 +2628,7 @@ export function SismetroDashPage() {
                                   href={ssLink(r.idSs)}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className={cx("font-extrabold", UI.mono)}
+                                  className={cx("font-semiabold", UI.mono)}
                                   style={{ color: T.accent }}
                                   title="Abrir SS no Sismetro"
                                 >
@@ -2412,8 +2636,31 @@ export function SismetroDashPage() {
                                 </a>
                               </div>
 
-                              <div className={UI.mono} style={{ color: T.text2 }}>
-                                {brDateTimeFromSismetro(r.dataHora || null)}
+                              <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+                                Inicio: {brDateTimeFromSismetro(r.dataHora || null)}
+                                <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+                                  {t.isConcluido ? (
+                                    t.close ? (
+                                      <>
+                                        Fim: <span className={UI.mono}>{t.fimLabel}</span>
+                                        <div className={UI.mono} style={{ color: T.text }}>
+                                          Tempo: {t.tempoLabel}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className={UI.mono} style={{ color: T.text3 }}>
+                                        Tempo: —
+                                      </div>
+                                    )
+                                  ) : (
+                                    <>
+                                      Aberta há:{" "}
+                                      <span className={UI.mono} style={{ color: T.text }}>
+                                        {t.tempoLabel}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
 
                               <div className="min-w-0">
@@ -2522,6 +2769,7 @@ export function SismetroDashPage() {
                   disabled={loading || pageSafe === 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title="Anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Btn>
@@ -2531,6 +2779,7 @@ export function SismetroDashPage() {
                   disabled={loading || pageSafe >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title="Próxima"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Btn>

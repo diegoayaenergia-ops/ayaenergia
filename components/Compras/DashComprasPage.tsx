@@ -812,7 +812,7 @@ export function ComprasDashPage() {
   const exportBaseName = () => {
     const s = start || "inicio";
     const e = end || "fim";
-    return safeFileName(`compras_${s}_a_${e}`);
+    return safeFileName(`Relatorio_de_Compras_${s}-${e}`);
   };
 
   const toExportData = (rows: Row[]) =>
@@ -867,7 +867,7 @@ export function ComprasDashPage() {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
 
-        const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.xlsx`;
+        const name = `${exportBaseName()}.xlsx`;
         downloadBlob(blob, name);
 
         setMsg({ type: "ok", text: `Exportado Excel (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
@@ -1045,7 +1045,7 @@ export function ComprasDashPage() {
           },
         });
 
-        const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.pdf`;
+        const name = `${exportBaseName()}.pdf`;
         doc.save(name);
 
         setMsg({ type: "ok", text: `Exportado PDF (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
