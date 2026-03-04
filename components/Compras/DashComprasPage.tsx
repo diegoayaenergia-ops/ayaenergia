@@ -1,20 +1,34 @@
 // app/financeiro/visualizacao/page.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Search,
   RefreshCw,
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Download,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Eraser,
+  FileDown,
+  FileSpreadsheet,
 } from "lucide-react";
 
-const cx = (...p: Array<string | false | null | undefined>) => p.filter(Boolean).join(" ");
+const cx = (...p: Array<string | false | null | undefined>) =>
+  p.filter(Boolean).join(" ");
 
 /* =========================================================
-   TOKENS (seu padrão)
+   TOKENS (padrão)
 ========================================================= */
 const T = {
   bg: "#F4F6F8",
@@ -31,6 +45,7 @@ const T = {
   accent2: "#2E7B41",
   accentSoft: "rgba(17, 89, 35, 0.08)",
   accentRing: "rgba(17, 89, 35, 0.18)",
+  accentBorder: "rgba(17, 89, 35, 0.30)",
 
   okBg: "rgba(16, 185, 129, 0.10)",
   okBd: "rgba(16, 185, 129, 0.30)",
@@ -44,9 +59,8 @@ const T = {
 const UI = {
   page: "w-full min-w-0",
   container: "mx-auto w-full max-w-[1480px] px-4 sm:px-6 py-6",
-
-  header: "border bg-white",
-  section: "border bg-white",
+  header: "border bg-white min-w-0",
+  section: "border bg-white min-w-0",
 
   headerTitle: "text-base sm:text-lg font-semibold tracking-tight",
   headerSub: "text-xs",
@@ -54,12 +68,33 @@ const UI = {
   sectionHint: "text-xs",
   label: "text-[11px] font-medium",
 
-  input: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
-  select: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2",
+  input: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0",
+  select: "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0",
+
+  mono: "tabular-nums",
 } as const;
 
 /* =========================================================
-   UI COMPONENTS
+   HOOK: MOBILE
+========================================================= */
+function useIsMobile(maxWidth = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${maxWidth - 1}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", onChange);
+      else mq.removeListener(onChange);
+    };
+  }, [maxWidth]);
+  return isMobile;
+}
+
+/* =========================================================
+   UI PRIMITIVES
 ========================================================= */
 function Btn({
   tone = "primary",
@@ -74,17 +109,24 @@ function Btn({
 }) {
   const base =
     "inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold border rounded-md " +
-    "disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
+    "whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
+
+  const style =
+    tone === "primary"
+      ? { background: T.accent, borderColor: "rgba(17, 89, 35, 0.45)", color: "#fff" }
+      : tone === "danger"
+        ? {
+          background: "rgba(239, 68, 68, 0.10)",
+          borderColor: "rgba(239, 68, 68, 0.35)",
+          color: T.errTx,
+        }
+        : { background: T.card, borderColor: T.border, color: T.text };
 
   return (
     <button
       className={cx(base, className)}
       disabled={disabled || loading}
-      style={
-        tone === "primary"
-          ? { background: T.accent, borderColor: "rgba(17, 89, 35, 0.45)", color: "#fff" }
-          : { background: T.card, borderColor: T.border, color: T.text }
-      }
+      style={style}
       {...props}
     >
       {loading ? (
@@ -99,11 +141,24 @@ function Btn({
   );
 }
 
-function Pill({ children }: { children: ReactNode }) {
+function Pill({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "accent";
+}) {
   return (
     <span
-      className="inline-flex items-center h-7 px-2.5 text-[11px] font-medium border rounded-md"
-      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
+      className={cx(
+        "inline-flex items-center h-7 px-2.5 text-[11px] font-medium border rounded-md",
+        UI.mono
+      )}
+      style={{
+        borderColor: T.border,
+        background: tone === "accent" ? T.accentSoft : T.cardSoft,
+        color: tone === "accent" ? T.accent : T.text2,
+      }}
     >
       {children}
     </span>
@@ -124,6 +179,46 @@ function MsgBox({ m }: { m: { type: "ok" | "err"; text: string } | null }) {
   );
 }
 
+function SectionHeader({
+  title,
+  hint,
+  right,
+  divider = true,
+}: {
+  title: ReactNode;
+  hint?: ReactNode;
+  right?: ReactNode;
+  divider?: boolean;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3 flex-wrap px-4 py-3">
+        <div className="min-w-0">
+          <div className={UI.sectionTitle} style={{ color: T.text }}>
+            {title}
+          </div>
+          {hint ? (
+            <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
+              {hint}
+            </div>
+          ) : null}
+        </div>
+        {right}
+      </div>
+
+      {divider && (
+        <div
+          style={{
+            height: 1,
+            background: T.border,
+            opacity: 0.8,
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 function MobileAccordion({
   title,
   count,
@@ -138,7 +233,10 @@ function MobileAccordion({
   children: ReactNode;
 }) {
   return (
-    <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border, background: T.cardSoft }}>
+    <div
+      className="border rounded-lg overflow-hidden"
+      style={{ borderColor: T.border, background: T.cardSoft }}
+    >
       <button
         type="button"
         onClick={onToggle}
@@ -179,6 +277,71 @@ function brDate(iso?: string | null) {
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return String(iso);
   return `${m[3]}/${m[2]}/${m[1]}`;
+}
+/* =========================================================
+   PDF — PADRÃO EMPRESARIAL (AYA)
+========================================================= */
+const PDF_BRAND = {
+  companyName: "AYA ENERGIA",
+  reportTitle: "Relatório de Compras",
+  green: [17, 89, 35] as [number, number, number], // #115923
+  black: [11, 18, 32] as [number, number, number],
+  gray: [107, 114, 128] as [number, number, number],
+  lightGray: [244, 246, 248] as [number, number, number],
+  borderGray: [209, 213, 219] as [number, number, number],
+  logoUrl: "/logo-aya.png",
+};
+
+function brDateTimeNow() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
+async function fetchAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { cache: "force-cache" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result || ""));
+      fr.onerror = () => reject(new Error("Falha ao ler imagem"));
+      fr.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function imageTypeFromDataUrl(d: string): "PNG" | "JPEG" {
+  const s = String(d || "").toLowerCase();
+  if (s.startsWith("data:image/jpeg") || s.startsWith("data:image/jpg")) return "JPEG";
+  return "PNG";
+}
+
+// Desenha imagem SEM distorcer (contain)
+function drawImageContain(opts: {
+  doc: any;
+  dataUrl: string;
+  format: "PNG" | "JPEG";
+  x: number;
+  y: number;
+  boxW: number;
+  boxH: number;
+}) {
+  const { doc, dataUrl, format, x, y, boxW, boxH } = opts;
+  const p = doc.getImageProperties(dataUrl);
+  const iw = Number(p?.width || 1);
+  const ih = Number(p?.height || 1);
+  const scale = Math.min(boxW / iw, boxH / ih);
+  const w = iw * scale;
+  const h = ih * scale;
+  const dx = x + (boxW - w) / 2;
+  const dy = y + (boxH - h) / 2;
+  doc.addImage(dataUrl, format, dx, dy, w, h, undefined, "FAST");
 }
 function monthRangeISO(d = new Date()) {
   const y = d.getFullYear();
@@ -247,6 +410,7 @@ function downloadBlob(blob: Blob, filename: string) {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
 /* =========================================================
    TYPES
 ========================================================= */
@@ -323,7 +487,7 @@ function UsinaAutocomplete({
   }, [open, filtered.length]);
 
   return (
-    <div ref={ref} className={cx("relative", className)}>
+    <div ref={ref} className={cx("relative min-w-0", className)}>
       <div className="relative">
         <input
           value={value}
@@ -393,7 +557,7 @@ function UsinaAutocomplete({
                   borderColor: "rgba(17,24,39,0.06)",
                   background: i === highlight ? T.accentSoft : "transparent",
                   color: i === highlight ? T.accent : T.text2,
-                  fontWeight: i === highlight ? 600 : 400,
+                  fontWeight: i === highlight ? 700 : 500,
                 }}
               >
                 {u}
@@ -406,13 +570,18 @@ function UsinaAutocomplete({
 }
 
 /* =========================================================
-   PAGE
+   NEXT PAGE EXPORT
 ========================================================= */
 export default function Page() {
   return <ComprasDashPage />;
 }
 
+/* =========================================================
+   PAGE
+========================================================= */
 export function ComprasDashPage() {
+  const isMobile = useIsMobile(640);
+
   const CLIENTES = ["INEER", "KAMAI", "ÉLIS"] as const;
   const STATUS_AYA = ["PENDENTE APROVAÇÃO", "APROVADO", "PAGAMENTO EFETUADO", "REPROVADO", "CANCELADO"] as const;
   const STATUS_CLIENTE = ["REEMBOLSO PENDENTE", "REEMBOLSO EFETUADO"] as const;
@@ -420,6 +589,7 @@ export function ComprasDashPage() {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   // filtros
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [periodPreset, setPeriodPreset] = useState<"thisMonth" | "lastMonth" | "last30" | "last7" | "today">("thisMonth");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -428,6 +598,7 @@ export function ComprasDashPage() {
   const [usina, setUsina] = useState("");
   const [statusAya, setStatusAya] = useState("");
   const [statusCliente, setStatusCliente] = useState("");
+  const [searchText, setSearchText] = useState("");
 
   // usinas
   const [usinasList, setUsinasList] = useState<string[]>([]);
@@ -437,15 +608,15 @@ export function ComprasDashPage() {
   const [loading, setLoading] = useState(false);
   const [allRows, setAllRows] = useState<Row[]>([]);
 
-  // paginação tabela (client-side)
-  const limit = 14;
+  // paginação
+  const limit = isMobile ? 8 : 14;
   const [page, setPage] = useState(1);
 
   // UI
   const [openAya, setOpenAya] = useState(true);
   const [openCliente, setOpenCliente] = useState(true);
 
-  // MOBILE accordion state (por status)
+  // MOBILE accordion state
   const [ayaOpenMap, setAyaOpenMap] = useState<Record<string, boolean>>({});
   const [cliOpenMap, setCliOpenMap] = useState<Record<string, boolean>>({});
 
@@ -469,7 +640,7 @@ export function ComprasDashPage() {
     };
   }, []);
 
-  const applyPreset = (p: typeof periodPreset) => {
+  const applyPreset = useCallback((p: typeof periodPreset) => {
     const now = new Date();
     const toISO = (x: Date) => {
       const yy = x.getFullYear();
@@ -513,7 +684,7 @@ export function ComprasDashPage() {
       setEnd(toISO(e));
       return;
     }
-  };
+  }, []);
 
   useEffect(() => {
     applyPreset("thisMonth");
@@ -528,32 +699,37 @@ export function ComprasDashPage() {
     return s.getTime() > e.getTime();
   }, [start, end]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setMsg(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/compras/dash", { method: "GET" });
+      const res = await fetch("/api/compras/dash", { method: "GET", cache: "no-store" });
       const data: DashResponse = await res.json().catch(() => ({} as any));
-      if (!res.ok || !data?.ok) return setMsg({ type: "err", text: data?.error || "Erro ao carregar dashboard." });
+      if (!res.ok || !data?.ok) {
+        setAllRows([]);
+        return setMsg({ type: "err", text: data?.error || "Erro ao carregar dashboard." });
+      }
 
       const list = Array.isArray(data?.lista) ? (data.lista as Row[]) : [];
       setAllRows(list);
 
       setUsinasLoading(true);
-      const u = Array.from(new Set(list.map((r) => clampUpper(r.usina || "")).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      const u = Array.from(new Set(list.map((r) => clampUpper(r.usina || "")).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b)
+      );
       setUsinasList(u);
       setUsinasLoading(false);
     } catch {
+      setAllRows([]);
       setMsg({ type: "err", text: "Erro de conexão." });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
   // aplica filtros no FRONT
   const filteredRows = useMemo(() => {
@@ -565,13 +741,20 @@ export function ComprasDashPage() {
     if (statusAya) r = r.filter((x) => String(x.status_aya || "") === String(statusAya));
     if (statusCliente) r = r.filter((x) => String(x.status_cliente || "") === String(statusCliente));
 
-    return r;
-  }, [allRows, start, end, cliente, usina, statusAya, statusCliente]);
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      r = r.filter((x) => {
+        const blob = `${x.id_compra ?? ""} ${x.data ?? ""} ${x.usina ?? ""} ${x.cliente ?? ""} ${x.servico ?? ""} ${x.status_aya ?? ""} ${x.status_cliente ?? ""} ${x.forma_de_pag ?? ""} ${x.impacto ?? ""}`.toLowerCase();
+        return blob.includes(q);
+      });
+    }
 
-  // reset page quando filtro mudar
+    return r;
+  }, [allRows, start, end, cliente, usina, statusAya, statusCliente, searchText]);
+
   useEffect(() => {
     setPage(1);
-  }, [start, end, cliente, usina, statusAya, statusCliente]);
+  }, [start, end, cliente, usina, statusAya, statusCliente, searchText, limit]);
 
   const count = filteredRows.length;
 
@@ -580,19 +763,15 @@ export function ComprasDashPage() {
   const offset = (pageSafe - 1) * limit;
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
 
-  // dashboard (baseado nos filtrados)
-  const dash = useMemo(() => {
+  // fluxo mensal (conforme filtros)
+  const monthSeries = useMemo(() => {
     const byMonth: Record<string, number> = {};
     for (const r of filteredRows) {
       const v = Number(r.valor) || 0;
       const m = r.data ? isoMonth(r.data) : "";
       if (m) byMonth[m] = (byMonth[m] || 0) + v;
     }
-    return { byMonth };
-  }, [filteredRows]);
-
-  const monthSeries = useMemo(() => {
-    const entries = Object.entries(dash.byMonth || {});
+    const entries = Object.entries(byMonth);
     entries.sort((a, b) => a[0].localeCompare(b[0]));
     const vals = entries.map(([, v]) => Number(v || 0));
     const max = Math.max(1, ...vals);
@@ -602,7 +781,7 @@ export function ComprasDashPage() {
       value: Number(v || 0),
       pct: (Number(v || 0) / max) * 100,
     }));
-  }, [dash.byMonth]);
+  }, [filteredRows]);
 
   const groupedAya = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -614,7 +793,7 @@ export function ComprasDashPage() {
       else map.get("OUTROS")!.push(r);
     }
     return map;
-  }, [filteredRows]);
+  }, [filteredRows, STATUS_AYA]);
 
   const groupedCliente = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -626,7 +805,7 @@ export function ComprasDashPage() {
       else map.get("OUTROS")!.push(r);
     }
     return map;
-  }, [filteredRows]);
+  }, [filteredRows, STATUS_CLIENTE]);
 
   const exportRows = (scope: "filtered" | "page") => (scope === "filtered" ? filteredRows : tableRows);
 
@@ -651,170 +830,246 @@ export function ComprasDashPage() {
       "Nota/Comprovante": r.nota_fiscal || "",
     }));
 
-  const exportExcel = async (scope: "filtered" | "page" = "filtered") => {
-    const rows = exportRows(scope);
-    if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
+  const exportExcel = useCallback(
+    async (scope: "filtered" | "page" = "filtered") => {
+      const rows = exportRows(scope);
+      if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
 
-    setExporting("xlsx");
-    setMsg(null);
+      setExporting("xlsx");
+      setMsg(null);
 
-    try {
-      const XLSXMod = await import("xlsx");
-      const XLSX = (XLSXMod as any).default ?? XLSXMod; // ✅ funciona em ESM/CJS
+      try {
+        const XLSXMod = await import("xlsx");
+        const XLSX = (XLSXMod as any).default ?? XLSXMod;
 
-      const data = toExportData(rows);
-      const ws = XLSX.utils.json_to_sheet(data);
+        const data = toExportData(rows);
+        const ws = XLSX.utils.json_to_sheet(data);
 
-      ws["!cols"] = [
-        { wch: 10 }, // ID
-        { wch: 16 }, // Usina
-        { wch: 12 }, // Data
-        { wch: 10 }, // Cliente
-        { wch: 40 }, // Serviço
-        { wch: 14 }, // Valor
-        { wch: 22 }, // Status AYA
-        { wch: 18 }, // Status Cliente
-        { wch: 12 }, // Pagamento
-        { wch: 12 }, // Impacto
-        { wch: 44 }, // Nota
-      ];
+        ws["!cols"] = [
+          { wch: 10 }, // ID
+          { wch: 18 }, // Usina
+          { wch: 12 }, // Data
+          { wch: 12 }, // Cliente
+          { wch: 42 }, // Serviço
+          { wch: 14 }, // Valor
+          { wch: 22 }, // Status AYA
+          { wch: 18 }, // Status Cliente
+          { wch: 16 }, // Pagamento
+          { wch: 12 }, // Impacto
+          { wch: 48 }, // Nota
+        ];
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Compras");
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Compras");
 
-      const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([out], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+        const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        const blob = new Blob([out], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
 
-      const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.xlsx`;
-      downloadBlob(blob, name); // ✅ sem file-saver
+        const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.xlsx`;
+        downloadBlob(blob, name);
 
-      setMsg({ type: "ok", text: `Exportado Excel (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
-    } catch {
-      setMsg({ type: "err", text: "Falha ao exportar Excel." });
-    } finally {
-      setExporting("");
-    }
-  };
+        setMsg({ type: "ok", text: `Exportado Excel (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
+      } catch {
+        setMsg({ type: "err", text: "Falha ao exportar Excel." });
+      } finally {
+        setExporting("");
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredRows, tableRows, start, end]
+  );
 
-  const exportPDF = async (scope: "filtered" | "page" = "filtered") => {
-    const rows = exportRows(scope);
-    if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
+  const exportPDF = useCallback(
+    async (scope: "filtered" | "page" = "filtered") => {
+      const rows = exportRows(scope);
+      if (!rows.length) return setMsg({ type: "err", text: "Não há dados para exportar." });
 
-    setExporting("pdf");
-    setMsg(null);
+      setExporting("pdf");
+      setMsg(null);
 
-    try {
-      const { jsPDF } = await import("jspdf");
-      const autoTable = (await import("jspdf-autotable")).default;
+      try {
+        const { jsPDF } = await import("jspdf");
+        const autoTableMod: any = await import("jspdf-autotable");
+        const autoTable = autoTableMod.default || autoTableMod.autoTable || autoTableMod;
 
-      // Retrato A4 (5 colunas)
-      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+        // Logo
+        const logoDataUrl = await fetchAsDataUrl(PDF_BRAND.logoUrl);
 
-      // ✅ evita “P e r i o d o ...”
-      // (algum lugar pode ter setado charSpace; garante normal)
-      // @ts-ignore
-      doc.setCharSpace?.(0);
+        // Igual ao padrão dos outros: A4 LANDSCAPE
+        const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
 
-      const marginX = 32;
-      const pageW = doc.internal.pageSize.getWidth();
-      const usableW = pageW - marginX * 2;
+        // @ts-ignore
+        doc.setCharSpace?.(0);
 
-      const title = "Compras";
-      const subtitle = `Período: ${start && end ? `${brDate(start)} - ${brDate(end)}` : "—"
-        }`;
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(0);
-      doc.text(title, marginX, 38);
+        const HEADER_H = 64;
+        const MARGIN_X = 30;
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
+        const issuedAt = brDateTimeNow();
 
-      // ✅ quebra linha corretamente e não estoura a largura
-      const subLines = doc.splitTextToSize(subtitle, usableW);
-      doc.text(subLines, marginX, 58);
+        const drawHeader = () => {
+          doc.setFillColor(...PDF_BRAND.green);
+          doc.rect(0, 0, pageW, HEADER_H, "F");
 
-      const startY = 58 + subLines.length * 14 + 8;
+          // Logo (contain)
+          const logoBoxW = 48;
+          const logoBoxH = 48;
+          const logoX = MARGIN_X;
+          const logoY = (HEADER_H - logoBoxH) / 2;
 
-      // ✅ larguras que cabem (somam usableW)
-      const wUsina = 90;
-      const wData = 68;
-      const wCliente = 80;
-      const wValor = 78;
-      const wServico = Math.max(160, usableW - (wUsina + wData + wCliente + wValor)); // resto da página
+          if (logoDataUrl) {
+            const fmt = imageTypeFromDataUrl(logoDataUrl);
+            drawImageContain({
+              doc,
+              dataUrl: logoDataUrl,
+              format: fmt,
+              x: logoX,
+              y: logoY,
+              boxW: logoBoxW,
+              boxH: logoBoxH,
+            });
+          } else {
+            // fallback discreto
+            doc.setDrawColor(255, 255, 255);
+            doc.setLineWidth(1);
+            doc.roundedRect(logoX, logoY, logoBoxW, logoBoxH, 8, 8, "S");
+          }
 
-      const head = [["Usina", "Data", "Cliente", "Serviço/Produto", "Valor"]];
+          const textX = logoX + logoBoxW + 12;
 
-      const body = rows.map((r) => [
-        r.usina ? clampUpper(r.usina) : "—",
-        brDate(r.data),
-        r.cliente || "—",
-        String(r.servico || "—"),
-        r.valor != null ? formatBRL(r.valor) : "—",
-      ]);
-
-      autoTable(doc, {
-        head,
-        body,
-        startY,
-        margin: { left: marginX, right: marginX, bottom: 36 },
-        styles: {
-          fontSize: 9,
-          cellPadding: 4,
-          overflow: "linebreak",
-          valign: "middle",
-        },
-        headStyles: { fillColor: [17, 89, 35], textColor: 255, fontStyle: "bold" },
-        alternateRowStyles: { fillColor: [248, 250, 249] },
-        columnStyles: {
-          0: { cellWidth: wUsina },
-          1: { cellWidth: wData },
-          2: { cellWidth: wCliente },
-          3: { cellWidth: wServico },
-          4: { cellWidth: wValor, halign: "right" },
-        },
-        didDrawPage: () => {
-          // @ts-ignore
-          doc.setCharSpace?.(0);
-          const pageCount = doc.getNumberOfPages();
-          const page = (doc as any).internal.getCurrentPageInfo().pageNumber as number;
+          doc.setTextColor(255, 255, 255);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.text(PDF_BRAND.companyName, textX, 30);
 
           doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(PDF_BRAND.reportTitle, textX, 46);
+
+          // Emitido em (direita)
           doc.setFontSize(9);
-          doc.setTextColor(120);
-          doc.text(
-            `Página ${page}/${pageCount}`,
-            doc.internal.pageSize.getWidth() - marginX,
-            doc.internal.pageSize.getHeight() - 18,
-            { align: "right" }
-          );
-        },
-      });
+          const rightText = `Emitido em: ${issuedAt}`;
+          const rtW = doc.getTextWidth(rightText);
+          doc.text(rightText, pageW - MARGIN_X - rtW, 30);
+        };
 
-      const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.pdf`;
-      doc.save(name);
+        const drawFooter = () => {
+          doc.setDrawColor(...PDF_BRAND.borderGray);
+          doc.setLineWidth(1);
+          doc.line(MARGIN_X, pageH - 26, pageW - MARGIN_X, pageH - 26);
 
-      setMsg({ type: "ok", text: `Exportado PDF (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
-    } catch {
-      setMsg({ type: "err", text: "Falha ao exportar PDF." });
-    } finally {
-      setExporting("");
-    }
-  };
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(...PDF_BRAND.gray);
 
-  const clearFilters = () => {
+          doc.text(`Período: ${brDate(start)} - ${brDate(end)}`, MARGIN_X, pageH - 12);
+
+          // padrão dos outros: "Página X"
+          const pageNum = doc.getNumberOfPages();
+          const footerRight = `Página ${pageNum}`;
+          const frW = doc.getTextWidth(footerRight);
+          doc.text(footerRight, pageW - MARGIN_X - frW, pageH - 12);
+        };
+
+        drawHeader();
+
+        const head = [[
+          "ID",
+          "Data",
+          "Usina",
+          "Cliente",
+          "Serviço/Produto",
+          "Status AYA",
+          "Status Cliente",
+          "Valor",
+        ]];
+
+        const body = rows.map((r) => ([
+          fmtCompraId(r.id_compra),
+          brDate(r.data),
+          r.usina ? clampUpper(r.usina) : "—",
+          r.cliente || "—",
+          String(r.servico || "—"),
+          String(r.status_aya || "—"),
+          String(r.status_cliente || "—"),
+          r.valor != null ? formatBRL(r.valor) : "—",
+        ]));
+
+        autoTable(doc, {
+          head,
+          body,
+          startY: HEADER_H + 18,
+          margin: { left: MARGIN_X, right: MARGIN_X, top: HEADER_H + 18, bottom: 34 },
+
+          styles: {
+            font: "helvetica",
+            fontSize: 7.2,
+            cellPadding: 4,
+            overflow: "linebreak",
+            textColor: PDF_BRAND.black,
+            lineColor: PDF_BRAND.borderGray,
+            lineWidth: 0.6,
+            valign: "top",
+          },
+
+          headStyles: {
+            fillColor: PDF_BRAND.green,
+            textColor: 255,
+            fontStyle: "bold",
+            halign: "left",
+          },
+
+          alternateRowStyles: { fillColor: PDF_BRAND.lightGray },
+
+          // A4 landscape: soma <= ~782 (842 - 60)
+          columnStyles: {
+            0: { cellWidth: 44 },  // ID
+            1: { cellWidth: 56 },  // Data
+            2: { cellWidth: 120 }, // Usina
+            3: { cellWidth: 80 },  // Cliente
+            4: { cellWidth: 230 }, // Serviço/Produto
+            5: { cellWidth: 100 }, // Status AYA
+            6: { cellWidth: 100 }, // Status Cliente
+            7: { cellWidth: 52, halign: "right" }, // Valor
+          },
+
+          didDrawPage: () => {
+            // @ts-ignore
+            doc.setCharSpace?.(0);
+            drawHeader();
+            drawFooter();
+          },
+        });
+
+        const name = `${exportBaseName()}_${scope === "filtered" ? "filtrado" : "pagina"}.pdf`;
+        doc.save(name);
+
+        setMsg({ type: "ok", text: `Exportado PDF (${scope === "filtered" ? "filtrado" : "página"}) ✅` });
+      } catch (e: any) {
+        console.error("PDF export error:", e);
+        setMsg({ type: "err", text: `Falha ao exportar PDF: ${String(e?.message || e)}` });
+      } finally {
+        setExporting("");
+      }
+    },
+    [start, end, exportRows, exportBaseName]
+  );
+
+  const clearFilters = useCallback(() => {
     setCliente("");
     setUsina("");
     setStatusAya("");
     setStatusCliente("");
+    setSearchText("");
     setPeriodPreset("thisMonth");
     applyPreset("thisMonth");
     setMsg(null);
-  };
-
+  }, [applyPreset]);
+  const GRID_COLS = "110px 130px 160px minmax(320px, 1fr) 220px 140px";
   return (
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
       <div className={UI.container}>
@@ -823,204 +1078,232 @@ export function ComprasDashPage() {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
               <div className={UI.headerTitle} style={{ color: T.text }}>
-                Visualização
+                Painel de Compras
               </div>
-              <div className={cx(UI.headerSub, "mt-1")} style={{ color: T.text3 }}>
-                Separação por <span style={{ color: T.text2, fontWeight: 600 }}>status AYA</span> e{" "}
-                <span style={{ color: T.text2, fontWeight: 600 }}>status do cliente</span>, fluxo mensal e tabela.
-              </div>
+
+              {/* <div className={cx(UI.headerSub, "mt-1")} style={{ color: T.text3 }}>
+                Status AYA • Status do cliente • Fluxo mensal • Exportação (Excel/PDF)
+              </div> */}
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Pill>Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}</Pill>
                 <Pill>Cliente: {cliente || "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
+                {/* <Pill tone="accent">{count} registros</Pill> */}
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={load} disabled={loading}>
+              <Btn tone="secondary" onClick={load} disabled={loading} className={cx(isMobile ? "h-9 px-3 text-xs" : "")}>
                 <RefreshCw className="w-4 h-4" />
-                Recarregar
               </Btn>
             </div>
           </div>
         </div>
 
-        {/* FILTROS */}
-        <div className={cx(UI.section, "mt-4 p-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <div className={UI.sectionTitle} style={{ color: T.text }}>
-                Filtros
+        {/* FILTROS (padronizado com SectionHeader) */}
+        <div className={cx(UI.section, "mt-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+          <SectionHeader
+            title="Filtros"
+            hint={<>Ajusta e atualiza todas as seções (kanbans, fluxo e tabela).</>}
+            right={
+              <div className="flex items-center gap-2">
+                <Btn
+                  tone="secondary"
+                  onClick={() => setFiltersOpen((p) => !p)}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title={filtersOpen ? "Ocultar filtros" : "Mostrar filtros"}
+                >
+                  {filtersOpen ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Btn>
+
+                <Btn
+                  tone="secondary"
+                  onClick={clearFilters}
+                  disabled={loading}
+                  className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                  title="Limpar filtros"
+                >
+                  <Eraser className="w-4 h-4" />
+                </Btn>
               </div>
-              <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
-                Ajusta e atualiza tudo.
+            }
+          />
+
+          {filtersOpen && (
+            <div className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+                {/* Período preset */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Período
+                  </label>
+                  <select
+                    className={cx(UI.select, "mt-1 rounded-md")}
+                    style={{ borderColor: T.border }}
+                    value={periodPreset}
+                    onChange={(e) => {
+                      const v = e.target.value as any;
+                      setPeriodPreset(v);
+                      applyPreset(v);
+                    }}
+                  >
+                    <option value="today">Hoje</option>
+                    <option value="thisMonth">Este mês</option>
+                    <option value="lastMonth">Mês passado</option>
+                    <option value="last7">Últimos 7 dias</option>
+                    <option value="last30">Últimos 30 dias</option>
+                  </select>
+                </div>
+
+                {/* Datas */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Início
+                  </label>
+                  <input
+                    type="date"
+                    value={start}
+                    onChange={(e) => setStart(e.target.value)}
+                    className={cx(UI.input, "mt-1 rounded-md w-full appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+                  />
+                </div>
+
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Fim
+                  </label>
+                  <input
+                    type="date"
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                    className={cx(UI.input, "mt-1 rounded-md w-full appearance-auto")}
+                    style={{ borderColor: T.border, WebkitAppearance: "auto" as any }}
+                  />
+                </div>
+
+                {/* Busca */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Busca (geral)
+                  </label>
+                  <div className="mt-1 relative min-w-0">
+                    <input
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      className={cx(UI.input, "rounded-md pr-9")}
+                      style={{ borderColor: T.border }}
+                      placeholder="Ex: usina, serviço, status, id…"
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: T.text3 }}>
+                      <Search className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cliente */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Cliente
+                  </label>
+                  <select
+                    value={cliente}
+                    onChange={(e) => setCliente(e.target.value)}
+                    className={cx(UI.select, "mt-1 rounded-md")}
+                    style={{ borderColor: T.border }}
+                  >
+                    <option value="">Todos</option>
+                    {CLIENTES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Usina */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Usina
+                  </label>
+                  <div className="mt-1 min-w-0">
+                    <UsinaAutocomplete
+                      value={usina}
+                      onChange={setUsina}
+                      options={usinasList}
+                      loading={usinasLoading}
+                      placeholder="Buscar usina…"
+                    />
+                  </div>
+                </div>
+
+                {/* Status AYA */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Status AYA
+                  </label>
+                  <select
+                    value={statusAya}
+                    onChange={(e) => setStatusAya(e.target.value)}
+                    className={cx(UI.select, "mt-1 rounded-md")}
+                    style={{ borderColor: T.border }}
+                  >
+                    <option value="">Todos</option>
+                    {STATUS_AYA.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Cliente */}
+                <div className="lg:col-span-3 min-w-0">
+                  <label className={UI.label} style={{ color: T.text2 }}>
+                    Status Cliente
+                  </label>
+                  <select
+                    value={statusCliente}
+                    onChange={(e) => setStatusCliente(e.target.value)}
+                    className={cx(UI.select, "mt-1 rounded-md")}
+                    style={{ borderColor: T.border }}
+                  >
+                    <option value="">Todos</option>
+                    {STATUS_CLIENTE.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="lg:col-span-12">
+                  {invalidRange && (
+                    <div className="text-[11px]" style={{ color: T.errTx }}>
+                      Data inicial maior que a final.
+                    </div>
+                  )}
+                  <div className="mt-2">
+                    <MsgBox m={msg} />
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Btn tone="secondary" onClick={clearFilters} disabled={loading} className="h-9 px-3 text-[12px]">
-                Limpar
-              </Btn>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
-            {/* Período preset */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Período
-              </label>
-              <select
-                className={cx(UI.select, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-                value={periodPreset}
-                onChange={(e) => {
-                  const v = e.target.value as any;
-                  setPeriodPreset(v);
-                  applyPreset(v);
-                }}
-              >
-                <option value="today">Hoje</option>
-                <option value="thisMonth">Este mês</option>
-                <option value="lastMonth">Mês passado</option>
-                <option value="last7">Últimos 7 dias</option>
-                <option value="last30">Últimos 30 dias</option>
-              </select>
-            </div>
-
-            {/* Datas */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Início
-              </label>
-              <input
-                type="date"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                className={cx(UI.input, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-              />
-            </div>
-
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Fim
-              </label>
-              <input
-                type="date"
-                value={end}
-                onChange={(e) => setEnd(e.target.value)}
-                className={cx(UI.input, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-              />
-            </div>
-
-            {/* Cliente */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Cliente
-              </label>
-              <select
-                value={cliente}
-                onChange={(e) => setCliente(e.target.value)}
-                className={cx(UI.select, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-              >
-                <option value="">Todos</option>
-                {CLIENTES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Usina */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Usina
-              </label>
-              <div className="mt-1">
-                <UsinaAutocomplete
-                  value={usina}
-                  onChange={setUsina}
-                  options={usinasList}
-                  loading={usinasLoading}
-                  placeholder="Buscar usina…"
-                />
-              </div>
-            </div>
-
-            {/* Status AYA */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Status AYA
-              </label>
-              <select
-                value={statusAya}
-                onChange={(e) => setStatusAya(e.target.value)}
-                className={cx(UI.select, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-              >
-                <option value="">Todos</option>
-                {STATUS_AYA.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Cliente */}
-            <div className="lg:col-span-3">
-              <label className={UI.label} style={{ color: T.text2 }}>
-                Status Cliente
-              </label>
-              <select
-                value={statusCliente}
-                onChange={(e) => setStatusCliente(e.target.value)}
-                className={cx(UI.select, "mt-1 rounded-md")}
-                style={{ borderColor: T.border }}
-              >
-                <option value="">Todos</option>
-                {STATUS_CLIENTE.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {invalidRange && (
-            <div className="mt-2 text-[11px]" style={{ color: T.errTx }}>
-              Data inicial maior que a final.
             </div>
           )}
-
-          <div className="mt-3">
-            <MsgBox m={msg} />
-          </div>
         </div>
 
         {/* MAIN */}
         <main className="mt-4 grid gap-4">
           {/* FLUXO MENSAL */}
-          <div className={cx(UI.section, "p-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <div className={UI.sectionTitle} style={{ color: T.text }}>
-                  Fluxo mensal
-                </div>
-                <div className={cx(UI.sectionHint, "mt-1")} style={{ color: T.text3 }}>
-                  Soma de valores por mês (conforme filtros).
-                </div>
-              </div>
-              <Pill>{monthSeries.length ? `${monthSeries.length} meses` : "—"}</Pill>
-            </div>
+          <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
+            <SectionHeader
+              title="Fluxo mensal"
+              hint={<>Soma de valores por mês (conforme filtros).</>}
+              
+            />
 
-            <div className="mt-4 grid gap-2">
+            <div className="p-4 grid gap-2">
               {!monthSeries.length && (
                 <div
                   className="border rounded-lg p-4 text-sm"
@@ -1035,6 +1318,7 @@ export function ComprasDashPage() {
                   <div className="w-20 sm:w-28 text-xs" style={{ color: T.text3 }}>
                     {m.label}
                   </div>
+
                   <div className="flex-1 border rounded-md overflow-hidden" style={{ borderColor: T.border, background: T.mutedBg }}>
                     <div
                       className="h-8"
@@ -1044,7 +1328,8 @@ export function ComprasDashPage() {
                       }}
                     />
                   </div>
-                  <div className="w-24 sm:w-28 text-xs text-right" style={{ color: T.text2, fontWeight: 600 }}>
+
+                  <div className={cx("w-24 sm:w-28 text-xs text-right", UI.mono)} style={{ color: T.text, fontWeight: 900 }}>
                     {formatBRL(m.value)}
                   </div>
                 </div>
@@ -1052,17 +1337,25 @@ export function ComprasDashPage() {
             </div>
           </div>
 
-          {/* KANBAN AYA */}
+          {/* STATUS AYA */}
           <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: T.border }}>
-              <div className="flex items-center gap-2">
-                <Pill>Status AYA</Pill>
-                <Pill>{count} registros</Pill>
-              </div>
-              <Btn tone="secondary" onClick={() => setOpenAya((p) => !p)}>
-                {openAya ? "Ocultar" : "Mostrar"}
-              </Btn>
-            </div>
+            <SectionHeader
+              title="Status AYA"
+              hint={<>Separação por status interno (cards por coluna).</>}
+              right={
+                <div className="flex items-center gap-2">
+                  {/* <Pill tone="accent">{count} registros</Pill> */}
+                  <Btn
+                    tone="secondary"
+                    onClick={() => setOpenAya((p) => !p)}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title={openAya ? "Ocultar" : "Mostrar"}
+                  >
+                    {openAya ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Btn>
+                </div>
+              }
+            />
 
             {openAya && (
               <>
@@ -1071,6 +1364,7 @@ export function ComprasDashPage() {
                   {STATUS_AYA.map((s) => {
                     const items = groupedAya.get(s) || [];
                     const isOpen = ayaOpenMap[s] ?? (items.length > 0 && s === "PENDENTE APROVAÇÃO");
+
                     return (
                       <MobileAccordion
                         key={s}
@@ -1157,7 +1451,7 @@ export function ComprasDashPage() {
                           <Pill>{groupedAya.get(s)?.length || 0}</Pill>
                         </div>
 
-                        <div className="p-3 grid gap-2 max-h-[360px] overflow-auto">
+                        <div className="p-3 grid gap-2 max-h-[360px] overflow-auto fin-scroll">
                           {(groupedAya.get(s) || []).slice(0, 100).map((r) => (
                             <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
                               <div className="flex items-center justify-between gap-2">
@@ -1214,17 +1508,25 @@ export function ComprasDashPage() {
             )}
           </div>
 
-          {/* KANBAN CLIENTE */}
+          {/* STATUS CLIENTE */}
           <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: T.border }}>
-              <div className="flex items-center gap-2">
-                <Pill>Status Cliente</Pill>
-                <Pill>{count} registros</Pill>
-              </div>
-              <Btn tone="secondary" onClick={() => setOpenCliente((p) => !p)}>
-                {openCliente ? "Ocultar" : "Mostrar"}
-              </Btn>
-            </div>
+            <SectionHeader
+              title="Status Cliente"
+              hint={<>Separação por status de reembolso do cliente.</>}
+              right={
+                <div className="flex items-center gap-2">
+                  {/* <Pill tone="accent">{count} registros</Pill> */}
+                  <Btn
+                    tone="secondary"
+                    onClick={() => setOpenCliente((p) => !p)}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title={openCliente ? "Ocultar" : "Mostrar"}
+                  >
+                    {openCliente ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Btn>
+                </div>
+              }
+            />
 
             {openCliente && (
               <>
@@ -1233,6 +1535,7 @@ export function ComprasDashPage() {
                   {STATUS_CLIENTE.map((s) => {
                     const items = groupedCliente.get(s) || [];
                     const isOpen = cliOpenMap[s] ?? (items.length > 0 && s === "REEMBOLSO PENDENTE");
+
                     return (
                       <MobileAccordion
                         key={s}
@@ -1304,7 +1607,7 @@ export function ComprasDashPage() {
                           <Pill>{groupedCliente.get(s)?.length || 0}</Pill>
                         </div>
 
-                        <div className="p-3 grid gap-2 max-h-[320px] overflow-auto">
+                        <div className="p-3 grid gap-2 max-h-[320px] overflow-auto fin-scroll">
                           {(groupedCliente.get(s) || []).slice(0, 25).map((r) => (
                             <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
                               <div className="text-xs font-semibold" style={{ color: T.text }}>
@@ -1349,84 +1652,100 @@ export function ComprasDashPage() {
 
           {/* TABELA */}
           <div className={cx(UI.section, "rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: T.border }}>
-              <div className="flex items-center gap-2">
-                <Pill>Lista de compras</Pill>
-              </div>
+            <SectionHeader
+              title="Lista de compras"
+              hint={<>Exporta o conjunto filtrado (Excel/PDF).</>}
+              right={
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Export dropdown */}
+                  <div ref={exportRef} className="relative">
+                    <Btn
+                      tone="secondary"
+                      disabled={loading || !count}
+                      loading={exporting !== ""}
+                      onClick={() => setExportOpen((v) => !v)}
+                      className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                      aria-haspopup="menu"
+                      aria-expanded={exportOpen}
+                      title="Exportar"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
+                    </Btn>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Export dropdown (Excel + PDF) */}
-                <div ref={exportRef} className="relative">
+                    {exportOpen && exporting === "" && (
+                      <div
+                        className="absolute right-0 mt-2 w-52 border rounded-lg shadow-sm bg-white overflow-hidden z-50"
+                        style={{ borderColor: T.border }}
+                        role="menu"
+                      >
+                        <button
+                          type="button"
+                          disabled={loading || !count}
+                          onClick={() => {
+                            setExportOpen(false);
+                            exportExcel("filtered");
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm font-semibold hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          style={{ color: T.text }}
+                          role="menuitem"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                          Excel (.xlsx)
+                        </button>
+
+                        <div style={{ height: 1, background: "rgba(17,24,39,0.06)" }} />
+
+                        <button
+                          type="button"
+                          disabled={loading || !count}
+                          onClick={() => {
+                            setExportOpen(false);
+                            exportPDF("filtered");
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm font-semibold hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                          style={{ color: T.text }}
+                          role="menuitem"
+                        >
+                          <FileDown className="w-4 h-4" />
+                          PDF (.pdf)
+                        </button>
+
+
+
+                      </div>
+                    )}
+                  </div>
+
                   <Btn
                     tone="secondary"
-                    disabled={loading || !count}
-                    loading={exporting !== ""}
-                    onClick={() => setExportOpen((v) => !v)}
-                    className="h-10"
-                    aria-haspopup="menu"
-                    aria-expanded={exportOpen}
-                    title="Exportar registros filtrados"
+                    disabled={loading || pageSafe === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title="Anterior"
                   >
-                    <Download className="w-4 h-4" />
-                    Exportar
-                    <ChevronDown className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" />
                   </Btn>
 
-                  {exportOpen && exporting === "" && (
-                    <div
-                      className="absolute right-0 mt-2 w-48 border rounded-lg shadow-sm bg-white overflow-hidden z-50"
-                      style={{ borderColor: T.border }}
-                      role="menu"
-                    >
-                      <button
-                        type="button"
-                        disabled={loading || !count}
-                        onClick={() => {
-                          setExportOpen(false);
-                          exportExcel("filtered");
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ color: T.text }}
-                        role="menuitem"
-                      >
-                        Excel (.xlsx)
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={loading || !count}
-                        onClick={() => {
-                          setExportOpen(false);
-                          exportPDF("filtered");
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-black/[0.03] disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ color: T.text }}
-                        role="menuitem"
-                      >
-                        PDF (.pdf)
-                      </button>
-
-
-                    </div>
-                  )}
+                  <Btn
+                    tone="secondary"
+                    disabled={loading || pageSafe >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
+                    title="Próxima"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Btn>
                 </div>
-
-                <Btn tone="secondary" disabled={loading || pageSafe === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  Anterior
-                </Btn>
-                <Btn
-                  tone="secondary"
-                  disabled={loading || pageSafe >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Próxima
-                </Btn>
-              </div>
-            </div>
+              }
+            />
 
             <div className="p-4">
               {!loading && tableRows.length === 0 && (
-                <div className="border rounded-lg p-4 text-sm" style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}>
+                <div
+                  className="border rounded-lg p-4 text-sm"
+                  style={{ borderColor: T.border, background: T.mutedBg, color: T.text2 }}
+                >
                   Nenhum registro encontrado para os filtros selecionados.
                 </div>
               )}
@@ -1439,15 +1758,15 @@ export function ComprasDashPage() {
                       <div key={r.id} className="border rounded-lg p-3" style={{ borderColor: T.border, background: T.card }}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold truncate" style={{ color: T.text }}>
+                            <div className="text-sm font-extrabold truncate" style={{ color: T.text }}>
                               {r.usina ? clampUpper(r.usina) : "—"}
                             </div>
                             <div className="mt-0.5 text-[11px] truncate" style={{ color: T.text3 }}>
-                              {brDate(r.data)} • {r.cliente || "—"}
+                              {brDate(r.data)} • {r.cliente || "—"} • ID {fmtCompraId(r.id_compra)}
                             </div>
                           </div>
 
-                          <div className="text-sm font-semibold whitespace-nowrap" style={{ color: T.text }}>
+                          <div className={cx("text-sm font-extrabold whitespace-nowrap", UI.mono)} style={{ color: T.text }}>
                             {formatBRL(r.valor)}
                           </div>
                         </div>
@@ -1458,8 +1777,8 @@ export function ComprasDashPage() {
 
                         <div className="mt-2 flex flex-wrap gap-2">
                           <Pill>AYA: {r.status_aya || "—"}</Pill>
-                          <Pill>CLI: {r.status_cliente || "—"}</Pill>
-                          <Pill>ID: {fmtCompraId(r.id_compra)}</Pill>
+                          <Pill>CLIENTE: {r.status_cliente || "—"}</Pill>
+                          <Pill>Pag.: {r.forma_de_pag || "-"}</Pill>
                         </div>
 
                         {canShowComprovante(r) && (
@@ -1480,60 +1799,134 @@ export function ComprasDashPage() {
 
                   {/* DESKTOP: tabela */}
                   <div className="hidden sm:block border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
-                    <div
-                      className="grid grid-cols-12 gap-0 px-3 py-2 text-[11px] font-semibold border-b"
-                      style={{ borderColor: T.border, background: T.cardSoft, color: T.text2 }}
-                    >
-                      <div className="col-span-2">Usina</div>
-                      <div className="col-span-2">Data</div>
-                      <div className="col-span-4">Serviço/Produto</div>
-                      <div className="col-span-2">Status</div>
-                      <div className="col-span-2 text-right">Valor</div>
-                    </div>
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[1120px]">
+                        <div
+                          className="px-3 py-2 text-[11px] font-semibold border-b sticky top-0 z-10"
+                          style={{
+                            borderColor: T.border,
+                            background: "rgba(251,252,253,0.92)",
+                            backdropFilter: "blur(6px)",
+                            color: T.text2,
+                            display: "grid",
+                            gridTemplateColumns:
+                              "110px 130px 160px minmax(320px, 1fr) 180px 140px",
+                            gap: 0,
+                          }}
+                        >
+                          <div>ID</div>
+                          <div>Data</div>
+                          <div>Usina</div>
+                          <div>Serviço/Produto</div>
+                          <div>Status (AYA/CLIENTE)</div>
+                          <div style={{ textAlign: "right" }}>Valor</div>
+                        </div>
 
-                    {tableRows.map((r) => (
-                      <div
-                        key={r.id}
-                        className="grid grid-cols-12 gap-0 px-3 py-2 text-sm border-b last:border-b-0"
-                        style={{ borderColor: "rgba(17,24,39,0.08)", background: T.card }}
-                      >
-                        <div className="col-span-2 truncate" style={{ color: T.text }}>
-                          {r.usina ? clampUpper(r.usina) : "—"}
-                        </div>
-                        <div className="col-span-2" style={{ color: T.text2 }}>
-                          {brDate(r.data)}
-                        </div>
-                        <div className="col-span-4 truncate" style={{ color: T.text2 }}>
-                          {r.servico || "—"}
-                        </div>
-                        <div className="col-span-2 text-[11px] flex flex-col gap-1" style={{ color: T.text2 }}>
-                          <span className="truncate">AYA: {r.status_aya || "—"}</span>
-                          <span className="truncate">CLI: {r.status_cliente || "—"}</span>
-                        </div>
-                        <div className="col-span-2 text-right font-semibold" style={{ color: T.text }}>
-                          {formatBRL(r.valor)}
-                        </div>
+                        {tableRows.map((r) => (
+                          <div
+                            key={r.id}
+                            className="px-3 py-2 text-sm border-b last:border-b-0 hover:bg-black/[0.02] transition"
+                            style={{
+                              borderColor: "rgba(17,24,39,0.08)",
+                              background: T.card,
+                              display: "grid",
+                              gridTemplateColumns:
+                                "110px 130px 160px minmax(320px, 1fr) 180px 140px",
+                              gap: 0,
+                              alignItems: "start",
+                            }}
+                          >
+                            <div className={UI.mono} style={{ color: T.text }}>
+                              {fmtCompraId(r.id_compra)}
+                            </div>
+
+                            <div className={UI.mono} style={{ color: T.text2 }}>
+                              {brDate(r.data)}
+                            </div>
+
+                            <div className="truncate font-semibold" style={{ color: T.text }}>
+                              {r.usina ? clampUpper(r.usina) : "—"}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="truncate" style={{ color: T.text2 }}>
+                                {r.servico || "—"}
+                              </div>
+                              <div className="mt-1 text-[11px] truncate" style={{ color: T.text3 }}>
+                                {r.cliente || "—"} • {r.forma_de_pag || "—"} • Impacto: {r.impacto || "-"}
+                              </div>
+
+                              {canShowComprovante(r) && (
+                                <a
+                                  href={r.nota_fiscal!}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="mt-2 inline-flex items-center gap-2 text-[11px] font-semibold underline"
+                                  style={{ color: T.accent }}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  Abrir comprovante
+                                </a>
+                              )}
+                            </div>
+
+                            <div className="text-[11px]" style={{ color: T.text2 }}>
+                              <div className="truncate">AYA: {r.status_aya || "—"}</div>
+                              <div className="truncate" style={{ color: T.text3 }}>
+                                CLIENTE: {r.status_cliente || "—"}
+                              </div>
+                            </div>
+
+                            <div className={cx("text-right font-extrabold", UI.mono)} style={{ color: T.text }}>
+                              {formatBRL(r.valor)}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </>
               )}
 
               <div className="mt-3 text-[11px]" style={{ color: T.text3 }}>
-                Total (filtro): {count} registros • Página {pageSafe}/{totalPages}
+                Total (filtro): <span className={UI.mono}>{count}</span> • Página{" "}
+                <span className={UI.mono}>
+                  {pageSafe}/{totalPages}
+                </span>
               </div>
             </div>
           </div>
         </main>
       </div>
 
-      {/* focus ring */}
+      {/* focus ring + scrollbar */}
       <style jsx global>{`
         input:focus,
         textarea:focus,
         select:focus {
           outline: none !important;
           box-shadow: 0 0 0 2px ${T.accentRing} !important;
+        }
+
+        input[type="date"] {
+          -webkit-appearance: auto !important;
+          appearance: auto !important;
+        }
+
+        .fin-scroll::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        .fin-scroll::-webkit-scrollbar-track {
+          background: rgba(17, 24, 39, 0.06);
+          border-radius: 999px;
+        }
+        .fin-scroll::-webkit-scrollbar-thumb {
+          background: rgba(17, 24, 39, 0.28);
+          border-radius: 999px;
+        }
+        .fin-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(17, 24, 39, 0.38);
         }
       `}</style>
     </section>
