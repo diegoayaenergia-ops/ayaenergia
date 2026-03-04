@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs"; // necessário p/ exceljs
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
+export const maxDuration = 60;
 // ===================== CONFIG (ENV) =====================
 const BASE_URL = (process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/").trim();
 const API_KEY = (process.env.TECSCI_API_KEY || "").trim();

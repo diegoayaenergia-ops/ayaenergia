@@ -30,6 +30,7 @@ import {
     RefreshCw,
     Search,
     HelpCircle,
+    Sun,
 } from "lucide-react";
 
 import { CoursesPage } from "@/components/CoursesPage";
@@ -43,7 +44,7 @@ import { ComprasBasePage } from "@/components/Compras/BaseComprasPage";
 import { ComprasDashPage } from "@/components/Compras/DashComprasPage";
 import { SismetroDashPage } from "@/components/DashSismetroPage";
 import { ExtractionPage } from "@/components/ExtractionPage";
-
+import { TecsciPage } from "@/components/DashTecsciPage";
 /* =========================================================
    TYPES / DATA
 ========================================================= */
@@ -896,7 +897,8 @@ export default function PortalClient() {
             src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
         },
         { id: "usinas", title: "Dados das Usinas", group: "Usinas Ineer e Kamai", icon: Info },
-        { id: "extracao", title: "Geração por UC", group: "Usinas Ineer", icon: Info },
+        { id: "extracao", title: "Geração por UC", group: "Usinas Ineer", icon: Sun },
+        { id: "tecsci", title: "Painel Tecsci", group: "Usinas Ineer", icon: Sun },
     ];
 
     const MANUTENCAO: NavItem[] = [
@@ -1175,264 +1177,264 @@ export default function PortalClient() {
 
 
     if (!user) {
-  const accent = UI.accent ?? "#2E7B41";
-  const accentDark = "#115923";
+        const accent = UI.accent ?? "#2E7B41";
+        const accentDark = "#115923";
 
-  const hexToRgb = (hex: string) => {
-    const v = hex.replace("#", "");
-    if (v.length !== 6) return { r: 46, g: 123, b: 65 };
-    const n = parseInt(v, 16);
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-  };
-  const rgb = hexToRgb(accent);
+        const hexToRgb = (hex: string) => {
+            const v = hex.replace("#", "");
+            if (v.length !== 6) return { r: 46, g: 123, b: 65 };
+            const n = parseInt(v, 16);
+            return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        };
+        const rgb = hexToRgb(accent);
 
-  const inputBase =
-    "w-full h-11 rounded-xl bg-white/95 text-slate-900 placeholder:text-slate-400 " +
-    "border border-white/25 outline-none transition " +
-    "focus-visible:ring-4 focus-visible:ring-offset-0";
+        const inputBase =
+            "w-full h-11 rounded-xl bg-white/95 text-slate-900 placeholder:text-slate-400 " +
+            "border border-white/25 outline-none transition " +
+            "focus-visible:ring-4 focus-visible:ring-offset-0";
 
-  return (
-    <div
-      className="relative min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] w-full overflow-hidden"
-      style={
-        {
-          ["--accent" as any]: accent,
-          ["--accentDark" as any]: accentDark,
-          ["--accent-rgb" as any]: `${rgb.r} ${rgb.g} ${rgb.b}`,
-          ["--tw-ring-color" as any]: `rgb(var(--accent-rgb) / 0.28)`,
-        } as React.CSSProperties
-      }
-    >
-      {/* VIDEO FUNDO */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="/video.mp4" type="video/mp4" />
-      </video>
+        return (
+            <div
+                className="relative min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] w-full overflow-hidden"
+                style={
+                    {
+                        ["--accent" as any]: accent,
+                        ["--accentDark" as any]: accentDark,
+                        ["--accent-rgb" as any]: `${rgb.r} ${rgb.g} ${rgb.b}`,
+                        ["--tw-ring-color" as any]: `rgb(var(--accent-rgb) / 0.28)`,
+                    } as React.CSSProperties
+                }
+            >
+                {/* VIDEO FUNDO */}
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 w-full h-full object-cover"
+                >
+                    <source src="/video.mp4" type="video/mp4" />
+                </video>
 
-      {/* overlays (deixa com cara “empresa grande” e legível) */}
-      <div className="absolute inset-0 bg-black/55" />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(70% 60% at 18% 22%, rgb(var(--accent-rgb) / 0.22) 0%, transparent 62%)," +
-            "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.78) 100%)",
-        }}
-      />
+                {/* overlays (deixa com cara “empresa grande” e legível) */}
+                <div className="absolute inset-0 bg-black/55" />
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        background:
+                            "radial-gradient(70% 60% at 18% 22%, rgb(var(--accent-rgb) / 0.22) 0%, transparent 62%)," +
+                            "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.78) 100%)",
+                    }}
+                />
 
-      {/* TOP BAR discreta */}
-      <div className="absolute left-4 right-4 top-4 sm:left-8 sm:right-8 sm:top-6 flex items-center justify-between z-10">
-        <div className="flex items-center gap-3">
-          <div
-            className="h-11 w-11 rounded-2xl grid place-items-center overflow-hidden border"
-            style={{
-              background: "rgba(255,255,255,0.08)",
-              borderColor: "rgba(255,255,255,0.14)",
-              backdropFilter: "blur(10px)",
-              WebkitBackdropFilter: "blur(10px)",
-            }}
-          >
-            <Image src="/logo-aya.png" alt="AYA" width={30} height={30} priority />
-          </div>
-          <div className="leading-tight">
-            <div className="text-[13px] font-semibold text-white">AYA Energia</div>
-            <div className="text-[12px] text-white/65 -mt-[1px]">Portal Operacional</div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowSupport(true)}
-          className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
-        >
-          Suporte
-        </button>
-      </div>
-
-      {/* CAIXA CENTRAL */}
-      <div className="relative z-10 min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-[460px]">
-          {/* glow */}
-          <div
-            className="absolute left-1/2 -translate-x-1/2 -mt-10 h-40 w-[520px] max-w-[92vw] blur-3xl opacity-70 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(55% 55% at 50% 50%, rgb(var(--accent-rgb) / 0.35) 0%, transparent 70%)",
-            }}
-          />
-
-          <div
-            className="relative rounded-3xl border overflow-hidden shadow-[0_35px_90px_-50px_rgba(0,0,0,0.95)]"
-            style={{
-              borderColor: "rgba(255,255,255,0.18)",
-              background: "rgba(8, 16, 12, 0.55)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-            }}
-          >
-            <div className="h-1.5 w-full" style={{ background: "var(--accent)" }} />
-
-            <div className="p-6 sm:p-8">
-              <div className="mb-6">
-                <div className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-white leading-tight">
-                  Entrar no Portal
-                </div>
-                <div className="mt-2 text-[13px] text-white/65">
-                  Use suas credenciais para acessar o ambiente operacional.
-                </div>
-              </div>
-
-              <form
-                className="space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleLogin();
-                }}
-              >
-                <div className="space-y-2">
-                  <label htmlFor="login" className="text-[12px] font-semibold text-white/80">
-                    Login <span className="text-red-400">*</span>
-                  </label>
-
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
-                      <User className="w-4 h-4" />
+                {/* TOP BAR discreta */}
+                <div className="absolute left-4 right-4 top-4 sm:left-8 sm:right-8 sm:top-6 flex items-center justify-between z-10">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="h-11 w-11 rounded-2xl grid place-items-center overflow-hidden border"
+                            style={{
+                                background: "rgba(255,255,255,0.08)",
+                                borderColor: "rgba(255,255,255,0.14)",
+                                backdropFilter: "blur(10px)",
+                                WebkitBackdropFilter: "blur(10px)",
+                            }}
+                        >
+                            <Image src="/logo-aya.png" alt="AYA" width={30} height={30} priority />
+                        </div>
+                        <div className="leading-tight">
+                            <div className="text-[13px] font-semibold text-white">AYA Energia</div>
+                            <div className="text-[12px] text-white/65 -mt-[1px]">Portal Operacional</div>
+                        </div>
                     </div>
-
-                    <input
-                      id="login"
-                      name="login"
-                      value={login}
-                      onChange={(e) => setLogin(e.target.value)}
-                      autoComplete="username"
-                      inputMode="email"
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      required
-                      className={`${inputBase} pl-10 pr-3`}
-                      placeholder="Digite seu login"
-                      aria-invalid={!!error}
-                      aria-describedby={error ? "login-error" : undefined}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="senha" className="text-[12px] font-semibold text-white/80">
-                    Senha <span className="text-red-400">*</span>
-                  </label>
-
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
-                      <Lock className="w-4 h-4" />
-                    </div>
-
-                    <input
-                      id="senha"
-                      name="password"
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      autoComplete="current-password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      className={`${inputBase} pl-10 pr-11`}
-                      placeholder="Digite sua senha"
-                      aria-invalid={!!error}
-                      aria-describedby={error ? "login-error" : undefined}
-                    />
 
                     <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/70 hover:text-white transition active:scale-[0.98]"
-                      style={{
-                        borderColor: "rgba(255,255,255,0.20)",
-                        background: "rgba(255,255,255,0.08)",
-                      }}
-                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                        type="button"
+                        onClick={() => setShowSupport(true)}
+                        className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        Suporte
                     </button>
-                  </div>
                 </div>
 
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <label className="flex items-center gap-2 text-[12px] text-white/70 select-none">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border border-white/25 bg-transparent"
-                      style={{ accentColor: "var(--accent)" }}
-                      defaultChecked
-                    />
-                    Lembrar-me
-                  </label>
+                {/* CAIXA CENTRAL */}
+                <div className="relative z-10 min-h-[100svh] supports-[height:100dvh]:min-h-[100dvh] flex items-center justify-center px-4 py-10">
+                    <div className="w-full max-w-[460px]">
+                        {/* glow */}
+                        <div
+                            className="absolute left-1/2 -translate-x-1/2 -mt-10 h-40 w-[520px] max-w-[92vw] blur-3xl opacity-70 pointer-events-none"
+                            style={{
+                                background:
+                                    "radial-gradient(55% 55% at 50% 50%, rgb(var(--accent-rgb) / 0.35) 0%, transparent 70%)",
+                            }}
+                        />
 
-                  <button
-                    type="button"
-                    onClick={() => setShowSupport(true)}
-                    className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
-                  >
-                    Esqueci minha senha
-                  </button>
+                        <div
+                            className="relative rounded-3xl border overflow-hidden shadow-[0_35px_90px_-50px_rgba(0,0,0,0.95)]"
+                            style={{
+                                borderColor: "rgba(255,255,255,0.18)",
+                                background: "rgba(8, 16, 12, 0.55)",
+                                backdropFilter: "blur(16px)",
+                                WebkitBackdropFilter: "blur(16px)",
+                            }}
+                        >
+                            <div className="h-1.5 w-full" style={{ background: "var(--accent)" }} />
+
+                            <div className="p-6 sm:p-8">
+                                <div className="mb-6">
+                                    <div className="text-[24px] sm:text-[28px] font-semibold tracking-tight text-white leading-tight">
+                                        Entrar no Portal
+                                    </div>
+                                    <div className="mt-2 text-[13px] text-white/65">
+                                        Use suas credenciais para acessar o ambiente operacional.
+                                    </div>
+                                </div>
+
+                                <form
+                                    className="space-y-4"
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleLogin();
+                                    }}
+                                >
+                                    <div className="space-y-2">
+                                        <label htmlFor="login" className="text-[12px] font-semibold text-white/80">
+                                            Login <span className="text-red-400">*</span>
+                                        </label>
+
+                                        <div className="relative">
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
+                                                <User className="w-4 h-4" />
+                                            </div>
+
+                                            <input
+                                                id="login"
+                                                name="login"
+                                                value={login}
+                                                onChange={(e) => setLogin(e.target.value)}
+                                                autoComplete="username"
+                                                inputMode="email"
+                                                autoCapitalize="none"
+                                                spellCheck={false}
+                                                required
+                                                className={`${inputBase} pl-10 pr-3`}
+                                                placeholder="Digite seu login"
+                                                aria-invalid={!!error}
+                                                aria-describedby={error ? "login-error" : undefined}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label htmlFor="senha" className="text-[12px] font-semibold text-white/80">
+                                            Senha <span className="text-red-400">*</span>
+                                        </label>
+
+                                        <div className="relative">
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45">
+                                                <Lock className="w-4 h-4" />
+                                            </div>
+
+                                            <input
+                                                id="senha"
+                                                name="password"
+                                                value={senha}
+                                                onChange={(e) => setSenha(e.target.value)}
+                                                autoComplete="current-password"
+                                                type={showPassword ? "text" : "password"}
+                                                required
+                                                className={`${inputBase} pl-10 pr-11`}
+                                                placeholder="Digite sua senha"
+                                                aria-invalid={!!error}
+                                                aria-describedby={error ? "login-error" : undefined}
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((v) => !v)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-lg border grid place-items-center text-white/70 hover:text-white transition active:scale-[0.98]"
+                                                style={{
+                                                    borderColor: "rgba(255,255,255,0.20)",
+                                                    background: "rgba(255,255,255,0.08)",
+                                                }}
+                                                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                                            >
+                                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 pt-1">
+                                        <label className="flex items-center gap-2 text-[12px] text-white/70 select-none">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border border-white/25 bg-transparent"
+                                                style={{ accentColor: "var(--accent)" }}
+                                                defaultChecked
+                                            />
+                                            Lembrar-me
+                                        </label>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowSupport(true)}
+                                            className="text-[12px] font-semibold text-white/70 hover:text-white underline underline-offset-4"
+                                        >
+                                            Esqueci minha senha
+                                        </button>
+                                    </div>
+
+                                    {error && (
+                                        <div
+                                            id="login-error"
+                                            className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2"
+                                            style={{
+                                                border: "1px solid rgba(239,68,68,0.35)",
+                                                background: "rgba(239,68,68,0.10)",
+                                                color: "#fecaca",
+                                            }}
+                                            role="alert"
+                                        >
+                                            <span className="mt-[6px] inline-block h-2 w-2 rounded-full bg-red-300/90" />
+                                            <span>{error}</span>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={loginLoading}
+                                        className={[
+                                            "w-full h-11 rounded-xl font-semibold text-sm transition",
+                                            "disabled:opacity-60 disabled:cursor-not-allowed",
+                                            "active:scale-[0.99]",
+                                            "hover:brightness-[1.04]",
+                                        ].join(" ")}
+                                        style={{
+                                            background: "linear-gradient(180deg, var(--accent) 0%, var(--accentDark) 100%)",
+                                            color: "#fff",
+                                            boxShadow: "0 16px 40px -18px rgb(var(--accent-rgb) / 0.55)",
+                                        }}
+                                    >
+                                        {loginLoading ? "Entrando..." : "Entrar"}
+                                    </button>
+
+                                    <div className="pt-2 text-[12px] text-white/55 flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4" />
+                                        Ambiente seguro • Acesso monitorado
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 text-center text-[12px] text-white/45">
+                            © {new Date().getFullYear()} AYA Energia
+                        </div>
+                    </div>
                 </div>
 
-                {error && (
-                  <div
-                    id="login-error"
-                    className="rounded-2xl px-4 py-3 text-sm flex items-start gap-2"
-                    style={{
-                      border: "1px solid rgba(239,68,68,0.35)",
-                      background: "rgba(239,68,68,0.10)",
-                      color: "#fecaca",
-                    }}
-                    role="alert"
-                  >
-                    <span className="mt-[6px] inline-block h-2 w-2 rounded-full bg-red-300/90" />
-                    <span>{error}</span>
-                  </div>
-                )}
+                {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
 
-                <button
-                  type="submit"
-                  disabled={loginLoading}
-                  className={[
-                    "w-full h-11 rounded-xl font-semibold text-sm transition",
-                    "disabled:opacity-60 disabled:cursor-not-allowed",
-                    "active:scale-[0.99]",
-                    "hover:brightness-[1.04]",
-                  ].join(" ")}
-                  style={{
-                    background: "linear-gradient(180deg, var(--accent) 0%, var(--accentDark) 100%)",
-                    color: "#fff",
-                    boxShadow: "0 16px 40px -18px rgb(var(--accent-rgb) / 0.55)",
-                  }}
-                >
-                  {loginLoading ? "Entrando..." : "Entrar"}
-                </button>
-
-                <div className="pt-2 text-[12px] text-white/55 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  Ambiente seguro • Acesso monitorado
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div className="mt-4 text-center text-[12px] text-white/45">
-            © {new Date().getFullYear()} AYA Energia
-          </div>
-        </div>
-      </div>
-
-      {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
-
-      <style jsx global>{`
+                <style jsx global>{`
         input:focus-visible,
         textarea:focus-visible,
         select:focus-visible,
@@ -1451,9 +1453,9 @@ export default function PortalClient() {
           border: 1px solid rgba(255, 255, 255, 0.25) !important;
         }
       `}</style>
-    </div>
-  );
-}
+            </div>
+        );
+    }
 
 
     /* =========================================================
@@ -1641,7 +1643,11 @@ export default function PortalClient() {
                         <PerdasBasePage />
                     </div>
                 )}
-
+                {active === "tecsci" && (
+                    <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
+                        <TecsciPage />
+                    </div>
+                )}
                 {active === "compras_cadastro" && (
                     <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
                         <ComprasCadastroPage />
