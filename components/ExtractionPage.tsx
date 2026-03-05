@@ -348,7 +348,7 @@ export function ExtractionPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/extracao?start_date=${start}&end_date=${end}`, { cache: "no-store" });
+      const res = await fetch(`/api/tecsci/uc?start_date=${start}&end_date=${end}`, { cache: "no-store" });
       if (!res.ok) return toast({ type: "err", text: (await res.text()) || "Erro ao gerar Excel." });
 
       const blob = await res.blob();

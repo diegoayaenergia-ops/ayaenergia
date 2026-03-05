@@ -18,6 +18,8 @@ function normBase(u: string) {
 }
 const BASE_URL = normBase(BASE_URL_RAW);
 
+const MAX_DAYS_PER_REQ = 365;
+
 function isIsoDate(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
 }
@@ -39,6 +41,23 @@ function daysBetweenInclusive(start: string, end: string) {
   const e = parseISO(end);
   const out: string[] = [];
   for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) out.push(fmtISO(d));
+  return out;
+}
+function addDaysISO(iso: string, add: number) {
+  const d = parseISO(iso);
+  d.setUTCDate(d.getUTCDate() + add);
+  return fmtISO(d);
+}
+function chunkRange(start: string, end: string, maxDays = MAX_DAYS_PER_REQ) {
+  const out: Array<{ start: string; end: string; days: number }> = [];
+  let cur = start;
+  while (cur <= end) {
+    const chunkEnd = addDaysISO(cur, maxDays - 1); // inclusivo
+    const realEnd = chunkEnd <= end ? chunkEnd : end;
+    const days = daysBetweenInclusive(cur, realEnd).length;
+    out.push({ start: cur, end: realEnd, days });
+    cur = addDaysISO(realEnd, 1);
+  }
   return out;
 }
 function clampRange(aStart: string, aEnd: string, bStart: string, bEnd: string) {
@@ -134,25 +153,56 @@ function mapPerformance(dto: any, ps_id: number) {
   };
 }
 
-async function fetchPerformanceRange(ps_id: number, start_date: string, end_date: string) {
-  const url = `${BASE_URL}${ps_id}/performance?start_date=${encodeURIComponent(start_date)}&end_date=${encodeURIComponent(end_date)}`;
-  const res = await tecFetch(url);
-  const ct = res.headers.get("content-type") || "";
-  const raw = await res.text();
+function mergePerformanceWeighted(parts: Array<{ perf: any; wDays: number }>, ps_id: number) {
+  const sumKeys = new Set([
+    "expected_energy_kwh",
+    "generated_energy_kwh",
+    "projected_energy_kwh",
+    "poa_irradiation_kwh",
+    "projected_irradiation_kwh",
+  ]);
 
-  if (!res.ok) {
-    return { ok: false as const, url, status: res.status, bodyPreview: raw.slice(0, 600), performance: null as any };
+  const avgKeys = new Set([
+    "availability_percentage",
+    "pr_percentage",
+    "capacity_factor_percentage",
+    "specific_yield_kwh",
+    "reference_yield_kwh",
+    "projected_pr",
+    "ac_power_kw",
+    "dc_power_kw",
+  ]);
+
+  const out: any = { ps_id };
+
+  for (const k of sumKeys) {
+    let s = 0;
+    let has = false;
+    for (const p of parts) {
+      const v = toNum(p.perf?.[k]);
+      if (v == null) continue;
+      s += v;
+      has = true;
+    }
+    out[k] = has ? s : null;
   }
 
-  let payload: any = null;
-  try {
-    payload = ct.includes("application/json") ? JSON.parse(raw) : null;
-  } catch {
-    payload = null;
+  for (const k of avgKeys) {
+    let num = 0;
+    let den = 0;
+    for (const p of parts) {
+      const v = toNum(p.perf?.[k]);
+      if (v == null) continue;
+      num += v * p.wDays;
+      den += p.wDays;
+    }
+    out[k] = den > 0 ? num / den : null;
   }
 
-  const dto = payload?.data ?? payload;
-  return { ok: true as const, url, status: 200, performance: mapPerformance(dto, ps_id) };
+  const name = parts.find((p) => p.perf?.ps_name)?.perf?.ps_name;
+  out.ps_name = name != null ? String(name) : null;
+
+  return out;
 }
 
 async function runPool<T, R>(items: T[], concurrency: number, fn: (x: T) => Promise<R>): Promise<R[]> {
@@ -169,6 +219,68 @@ async function runPool<T, R>(items: T[], concurrency: number, fn: (x: T) => Prom
   const workers = Array.from({ length: Math.max(1, concurrency) }, () => worker());
   await Promise.all(workers);
   return res;
+}
+
+async function fetchPerformanceRange(ps_id: number, start_date: string, end_date: string) {
+  const days = daysBetweenInclusive(start_date, end_date);
+
+  // pequeno: 1 request
+  if (days.length <= MAX_DAYS_PER_REQ) {
+    const url = `${BASE_URL}${ps_id}/performance?start_date=${encodeURIComponent(start_date)}&end_date=${encodeURIComponent(end_date)}`;
+    const res = await tecFetch(url);
+    const ct = res.headers.get("content-type") || "";
+    const raw = await res.text();
+
+    if (!res.ok) {
+      return { ok: false as const, url, status: res.status, bodyPreview: raw.slice(0, 600), performance: null as any };
+    }
+
+    let payload: any = null;
+    try {
+      payload = ct.includes("application/json") ? JSON.parse(raw) : null;
+    } catch {
+      payload = null;
+    }
+
+    const dto = payload?.data ?? payload;
+    return { ok: true as const, url, status: 200, performance: mapPerformance(dto, ps_id) };
+  }
+
+  // grande: chunk (profissional)
+  const chunks = chunkRange(start_date, end_date, MAX_DAYS_PER_REQ);
+
+  const results = await runPool(chunks, 3, async (c) => {
+    const url = `${BASE_URL}${ps_id}/performance?start_date=${encodeURIComponent(c.start)}&end_date=${encodeURIComponent(c.end)}`;
+    const res = await tecFetch(url);
+    const ct = res.headers.get("content-type") || "";
+    const raw = await res.text();
+
+    if (!res.ok) {
+      return { ok: false as const, url, status: res.status, bodyPreview: raw.slice(0, 600), days: c.days, perf: null };
+    }
+
+    let payload: any = null;
+    try {
+      payload = ct.includes("application/json") ? JSON.parse(raw) : null;
+    } catch {
+      payload = null;
+    }
+
+    const dto = payload?.data ?? payload;
+    return { ok: true as const, url, status: 200, days: c.days, perf: mapPerformance(dto, ps_id) };
+  });
+
+  const bad = results.find((r: any) => !r.ok);
+  if (bad) {
+    return { ok: false as const, url: bad.url, status: bad.status, bodyPreview: bad.bodyPreview, performance: null as any };
+  }
+
+  const merged = mergePerformanceWeighted(
+    (results as any[]).map((r) => ({ perf: r.perf, wDays: r.days })),
+    ps_id
+  );
+
+  return { ok: true as const, url: "chunked", status: 200, performance: merged };
 }
 
 export async function GET(req: Request) {
@@ -190,17 +302,13 @@ export async function GET(req: Request) {
   if (start_date > end_date) return NextResponse.json({ ok: false, error: "start_date maior que end_date." }, { status: 400 });
 
   const days = daysBetweenInclusive(start_date, end_date);
-  // TecSci indica máximo 365 dias por request
-  if (days.length > 365) {
-    return NextResponse.json({ ok: false, error: "Período máximo suportado é 365 dias." }, { status: 400 });
-  }
 
   // auto => Vercel-safe
   let group: "aggregate" | "day" | "month" | "year" = "month";
   if (groupRaw !== "auto") group = groupRaw;
   else {
     if (days.length <= 45) group = "day";
-    else if (days.length <= 550) group = "month";
+    else if (days.length <= 730) group = "month";
     else group = "year";
   }
 
@@ -256,6 +364,15 @@ export async function GET(req: Request) {
 
   if (group === "month") {
     const months = monthBuckets(start_date, end_date);
+
+    // guard leve (evita request demais em ranges gigantes)
+    if (months.length > 120) {
+      return NextResponse.json(
+        { ok: false, error: "Range muito grande para série mensal. Use group=year (ou deixe auto)." },
+        { status: 400 }
+      );
+    }
+
     const monthly = await runPool(months, 3, async (b) => {
       const r = await fetchPerformanceRange(ps_id, b.start, b.end);
       if (debug) diagnostics.push({ type: "month", key: b.key, ok: r.ok, status: r.status });
@@ -267,6 +384,7 @@ export async function GET(req: Request) {
 
   if (group === "year") {
     const years = yearBuckets(start_date, end_date);
+
     const yearly = await runPool(years, 2, async (b) => {
       const r = await fetchPerformanceRange(ps_id, b.start, b.end);
       if (debug) diagnostics.push({ type: "year", key: b.key, ok: r.ok, status: r.status });
