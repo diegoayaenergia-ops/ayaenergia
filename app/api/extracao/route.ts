@@ -7,7 +7,7 @@ export const revalidate = 0;
 export const maxDuration = 60;
 // ===================== CONFIG (ENV) =====================
 const BASE_URL = (process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/").trim();
-const API_KEY = (process.env.TECSCI_API_KEY || "").trim();
+const API_KEY = "1cW-BJpbTs-U3yIOYq1NcZuxKrej0zFPmpsYlFFBUjLzgsAm7mYYjLRZSTG5iD_XvDE"
 
 // ===================== MAPAS ======================
 const inverter_id_mapping: Record<number, string> = {
@@ -277,7 +277,7 @@ export async function GET(req: Request) {
 
   if (rows.length === 0) {
     return NextResponse.json(
-      { error: "Nenhum dado retornado. Verifique datas, API key e IDs." },
+      { error: "Nenhum dado retornado. Verifique datas, API key e IDs. " },
       { status: 404 }
     );
   }
