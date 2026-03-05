@@ -224,6 +224,7 @@ function downloadTextFile(filename: string, content: string, mime = "text/plain;
   a.click();
   URL.revokeObjectURL(url);
 }
+
 function toCsv(rows: Array<Record<string, unknown>>) {
   const colsSet = new Set<string>();
 
