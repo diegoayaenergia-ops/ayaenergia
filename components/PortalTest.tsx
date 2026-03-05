@@ -44,7 +44,7 @@ import { ComprasBasePage } from "@/components/Compras/BaseComprasPage";
 import { ComprasDashPage } from "@/components/Compras/DashComprasPage";
 import { SismetroDashPage } from "@/components/DashSismetroPage";
 import { ExtractionPage } from "@/components/ExtractionPage";
-import { TecsciPage } from "@/components/DashTecsciPage";
+// import { TecsciPage } from "@/components/DashTecsciPage";
 /* =========================================================
    TYPES / DATA
 ========================================================= */
@@ -1643,11 +1643,11 @@ export default function PortalClient() {
                         <PerdasBasePage />
                     </div>
                 )}
-                {active === "tecsci" && (
+                {/* {active === "tecsci" && (
                     <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
                         <TecsciPage />
                     </div>
-                )}
+                )} */}
                 {active === "compras_cadastro" && (
                     <div className="absolute inset-0 overflow-y-auto" style={{ background: UI.soft }}>
                         <ComprasCadastroPage />
