@@ -6,19 +6,31 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 60;
 
-const API_KEY = String(process.env.TECSCI_API_KEY || "").trim();
-// Deve ser: https://system.tecsci.com.br/openapi/v1/power-stations/
-const BASE_URL_RAW = String(
-  process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/"
-).trim();
+const DEFAULT_BASE = "https://system.tecsci.com.br/openapi/v1/power-stations/";
+const MAX_DAYS_PER_REQ = 365;
 
 function normBase(u: string) {
   const s = (u || "").trim();
   return s.endsWith("/") ? s : s + "/";
 }
-const BASE_URL = normBase(BASE_URL_RAW);
 
-const MAX_DAYS_PER_REQ = 365;
+function getCfg() {
+  const apiKey = String(process.env.TECSCI_API_KEY || "").trim();
+  const baseUrl = normBase(String(process.env.TECSCI_BASE_URL || DEFAULT_BASE).trim());
+  return { apiKey, baseUrl };
+}
+
+// Hoje no fuso de SP (server-safe)
+function todayISOInTZ(tz = "America/Sao_Paulo") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
 
 function isIsoDate(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
@@ -52,7 +64,7 @@ function chunkRange(start: string, end: string, maxDays = MAX_DAYS_PER_REQ) {
   const out: Array<{ start: string; end: string; days: number }> = [];
   let cur = start;
   while (cur <= end) {
-    const chunkEnd = addDaysISO(cur, maxDays - 1); // inclusivo
+    const chunkEnd = addDaysISO(cur, maxDays - 1);
     const realEnd = chunkEnd <= end ? chunkEnd : end;
     const days = daysBetweenInclusive(cur, realEnd).length;
     out.push({ start: cur, end: realEnd, days });
@@ -105,17 +117,11 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms = 20000) {
   }
 }
 
-/**
- * Tenta 3 formatos comuns de auth:
- * - X-API-KEY
- * - x-api-key
- * - Authorization: Bearer
- */
-async function tecFetch(url: string) {
+async function tecFetch(url: string, apiKey: string) {
   const headersCandidates: HeadersInit[] = [
-    { Accept: "application/json", "X-API-KEY": API_KEY },
-    { Accept: "application/json", "x-api-key": API_KEY },
-    { Accept: "application/json", Authorization: `Bearer ${API_KEY}` },
+    { Accept: "application/json", "X-API-KEY": apiKey },
+    { Accept: "application/json", "x-api-key": apiKey },
+    { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
   ];
 
   let last: Response | null = null;
@@ -221,13 +227,12 @@ async function runPool<T, R>(items: T[], concurrency: number, fn: (x: T) => Prom
   return res;
 }
 
-async function fetchPerformanceRange(ps_id: number, start_date: string, end_date: string) {
+async function fetchPerformanceRange(ps_id: number, start_date: string, end_date: string, baseUrl: string, apiKey: string) {
   const days = daysBetweenInclusive(start_date, end_date);
 
-  // pequeno: 1 request
   if (days.length <= MAX_DAYS_PER_REQ) {
-    const url = `${BASE_URL}${ps_id}/performance?start_date=${encodeURIComponent(start_date)}&end_date=${encodeURIComponent(end_date)}`;
-    const res = await tecFetch(url);
+    const url = `${baseUrl}${ps_id}/performance?start_date=${encodeURIComponent(start_date)}&end_date=${encodeURIComponent(end_date)}`;
+    const res = await tecFetch(url, apiKey);
     const ct = res.headers.get("content-type") || "";
     const raw = await res.text();
 
@@ -246,12 +251,11 @@ async function fetchPerformanceRange(ps_id: number, start_date: string, end_date
     return { ok: true as const, url, status: 200, performance: mapPerformance(dto, ps_id) };
   }
 
-  // grande: chunk (profissional)
   const chunks = chunkRange(start_date, end_date, MAX_DAYS_PER_REQ);
 
   const results = await runPool(chunks, 3, async (c) => {
-    const url = `${BASE_URL}${ps_id}/performance?start_date=${encodeURIComponent(c.start)}&end_date=${encodeURIComponent(c.end)}`;
-    const res = await tecFetch(url);
+    const url = `${baseUrl}${ps_id}/performance?start_date=${encodeURIComponent(c.start)}&end_date=${encodeURIComponent(c.end)}`;
+    const res = await tecFetch(url, apiKey);
     const ct = res.headers.get("content-type") || "";
     const raw = await res.text();
 
@@ -270,7 +274,7 @@ async function fetchPerformanceRange(ps_id: number, start_date: string, end_date
     return { ok: true as const, url, status: 200, days: c.days, perf: mapPerformance(dto, ps_id) };
   });
 
-  const bad = results.find((r: any) => !r.ok);
+  const bad = (results as any[]).find((r) => !r.ok);
   if (bad) {
     return { ok: false as const, url: bad.url, status: bad.status, bodyPreview: bad.bodyPreview, performance: null as any };
   }
@@ -284,26 +288,46 @@ async function fetchPerformanceRange(ps_id: number, start_date: string, end_date
 }
 
 export async function GET(req: Request) {
-  if (!API_KEY) return NextResponse.json({ ok: false, error: "Faltou TECSCI_API_KEY." }, { status: 500 });
-
+  const { apiKey, baseUrl } = getCfg();
   const { searchParams } = new URL(req.url);
+  const debug = searchParams.get("debug") === "1";
+
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Faltou TECSCI_API_KEY nas Environment Variables (Vercel).",
+        ...(debug ? { debug: { vercelEnv: process.env.VERCEL_ENV || null, keyLen: apiKey.length, baseUrl } } : {}),
+      },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   const ps_id = Number(searchParams.get("ps_id") || "");
   const start_date = String(searchParams.get("start_date") || "");
   const end_date = String(searchParams.get("end_date") || "");
-
-  // group: auto | day | month | year | aggregate
   const groupRaw = String(searchParams.get("group") || "auto") as "auto" | "day" | "month" | "year" | "aggregate";
-  const debug = searchParams.get("debug") === "1";
 
+  // ✅ valida formato primeiro
   if (!Number.isFinite(ps_id)) return NextResponse.json({ ok: false, error: "ps_id inválido." }, { status: 400 });
   if (!isIsoDate(start_date) || !isIsoDate(end_date)) {
     return NextResponse.json({ ok: false, error: "start_date e end_date devem estar no formato YYYY-MM-DD." }, { status: 400 });
   }
-  if (start_date > end_date) return NextResponse.json({ ok: false, error: "start_date maior que end_date." }, { status: 400 });
 
-  const days = daysBetweenInclusive(start_date, end_date);
+  // ✅ trava no dia atual (SP)
+  const today = todayISOInTZ("America/Sao_Paulo");
+  if (start_date > today) {
+    return NextResponse.json({ ok: false, error: "start_date não pode ser maior que o dia atual." }, { status: 400 });
+  }
 
-  // auto => Vercel-safe
+  const endClamped = end_date > today ? today : end_date;
+  if (start_date > endClamped) {
+    return NextResponse.json({ ok: false, error: "start_date maior que end_date (após ajuste para o dia atual)." }, { status: 400 });
+  }
+
+  // ✅ tudo daqui pra frente usa endClamped
+  const days = daysBetweenInclusive(start_date, endClamped);
+
   let group: "aggregate" | "day" | "month" | "year" = "month";
   if (groupRaw !== "auto") group = groupRaw;
   else {
@@ -312,86 +336,57 @@ export async function GET(req: Request) {
     else group = "year";
   }
 
-  // 1) acumulado do período (sempre)
-  const totalRes = await fetchPerformanceRange(ps_id, start_date, end_date);
+  const totalRes = await fetchPerformanceRange(ps_id, start_date, endClamped, baseUrl, apiKey);
   if (!totalRes.ok) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: `TecSci ${totalRes.status} ao buscar performance.`,
-        ...(debug ? { debug: totalRes } : {}),
-      },
+      { ok: false, error: `TecSci ${totalRes.status} ao buscar performance.`, ...(debug ? { debug: totalRes } : {}) },
       { status: 502, headers: { "Cache-Control": "no-store" } }
     );
   }
 
   if (group === "aggregate") {
     return NextResponse.json(
-      { ok: true, ps_id, start_date, end_date, group, performance: totalRes.performance },
+      { ok: true, ps_id, start_date, end_date: endClamped, group, performance: totalRes.performance },
       { status: 200, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const diagnostics: any[] = [];
   const out: any = {
     ok: true,
     ps_id,
     start_date,
-    end_date,
+    end_date: endClamped,
     group,
     performance: totalRes.performance,
     series: {} as any,
-    ...(debug ? { diagnostics } : {}),
   };
 
   if (group === "day") {
-    // proteção adicional serverless
-    if (days.length > 90) {
-      return NextResponse.json(
-        { ok: false, error: "Período grande demais para série diária. Use group=month (ou deixe auto)." },
-        { status: 400 }
-      );
-    }
+    if (days.length > 90) return NextResponse.json({ ok: false, error: "Período grande demais para série diária. Use group=month (ou auto)." }, { status: 400 });
 
-    const daily = await runPool(days, 3, async (day) => {
-      const r = await fetchPerformanceRange(ps_id, day, day);
-      if (debug) diagnostics.push({ type: "day", key: day, ok: r.ok, status: r.status });
+    out.series.daily = await runPool(days, 3, async (day) => {
+      const r = await fetchPerformanceRange(ps_id, day, day, baseUrl, apiKey);
       return { day, ...(r.ok ? r.performance : {}) };
     });
-
-    out.series.daily = daily;
   }
 
   if (group === "month") {
-    const months = monthBuckets(start_date, end_date);
+    const months = monthBuckets(start_date, endClamped);
+    if (months.length > 120) return NextResponse.json({ ok: false, error: "Range muito grande para série mensal. Use group=year (ou auto)." }, { status: 400 });
 
-    // guard leve (evita request demais em ranges gigantes)
-    if (months.length > 120) {
-      return NextResponse.json(
-        { ok: false, error: "Range muito grande para série mensal. Use group=year (ou deixe auto)." },
-        { status: 400 }
-      );
-    }
-
-    const monthly = await runPool(months, 3, async (b) => {
-      const r = await fetchPerformanceRange(ps_id, b.start, b.end);
-      if (debug) diagnostics.push({ type: "month", key: b.key, ok: r.ok, status: r.status });
+    out.series.monthly = await runPool(months, 3, async (b) => {
+      const r = await fetchPerformanceRange(ps_id, b.start, b.end, baseUrl, apiKey);
       return { month: b.key, ...(r.ok ? r.performance : {}) };
     });
-
-    out.series.monthly = monthly;
   }
 
   if (group === "year") {
-    const years = yearBuckets(start_date, end_date);
+    const years = yearBuckets(start_date, endClamped);
 
-    const yearly = await runPool(years, 2, async (b) => {
-      const r = await fetchPerformanceRange(ps_id, b.start, b.end);
-      if (debug) diagnostics.push({ type: "year", key: b.key, ok: r.ok, status: r.status });
+    out.series.yearly = await runPool(years, 2, async (b) => {
+      const r = await fetchPerformanceRange(ps_id, b.start, b.end, baseUrl, apiKey);
       return { year: b.key, ...(r.ok ? r.performance : {}) };
     });
-
-    out.series.yearly = yearly;
   }
 
   return NextResponse.json(out, { status: 200, headers: { "Cache-Control": "no-store" } });

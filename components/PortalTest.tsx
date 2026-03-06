@@ -31,6 +31,7 @@ import {
     Search,
     HelpCircle,
     Sun,
+    Download,
 } from "lucide-react";
 
 import { CoursesPage } from "@/components/CoursesPage";
@@ -875,30 +876,33 @@ export default function PortalClient() {
     const NAV_COURSES: NavItem = { id: "cursos", title: "Entendendo a Geração Distribuída", group: "Cursos", icon: GraduationCap };
 
     const REPORTS: NavItem[] = [
-        {
-            id: "ineer",
-            title: "Ineer Energia",
-            group: "Geração e Performance",
-            icon: SolarPanel,
-            src: "https://app.powerbi.com/view?r=eyJrIjoiN2I2YjJkOGYtZTU3My00ZTZhLWIzMjQtZjJlYzI3ZDIyOTQ1IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
-        },
+         { id: "usinas", title: "Informações das Usinas", group: "Localização, cnpj, anydesk...", icon: Info },
+        { id: "tecsci", title: "Painel Ineer Energia", group: "Geração e Performance", icon: LayoutDashboard },
+        
         {
             id: "kamai",
-            title: "Kamai Solar",
+            title: "Painel Kamai Solar",
             group: "Geração e Performance",
-            icon: SolarPanel,
+            icon: LayoutDashboard,
             src: "https://app.powerbi.com/view?r=eyJrIjoiNmM4ZjNkODgtNTRiOC00MmNkLTk5MDctMzA1Mzk4YTA5NmFhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
         },
         {
             id: "elis",
-            title: "Élis Energia",
+            title: "Painel Élis Energia",
             group: "Geração e Performance",
-            icon: SolarPanel,
+            icon: LayoutDashboard,
             src: "https://app.powerbi.com/view?r=eyJrIjoiMTBmYTEwMmEtMmU1ZS00ZWE0LWEzM2MtYThhYzIzMmMxMDhhIiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
         },
-        { id: "usinas", title: "Dados das Usinas", group: "Usinas Ineer e Kamai", icon: Info },
-        { id: "extracao", title: "Geração por UC", group: "Usinas Ineer", icon: Sun },
-        { id: "tecsci", title: "Painel Tecsci", group: "Usinas Ineer", icon: Sun },
+       
+        { id: "extracao", title: "Geração por UC", group: "Extração Ineer", icon: Download },
+        {
+            id: "ineer",
+            title: "Power BI Ineer Energia",
+            group: "Geração e Performance",
+            icon: SolarPanel,
+            src: "https://app.powerbi.com/view?r=eyJrIjoiN2I2YjJkOGYtZTU3My00ZTZhLWIzMjQtZjJlYzI3ZDIyOTQ1IiwidCI6ImEzYTY3NjNlLWQyNTMtNDEwYy04MjIzLWMyZDk3NmE0NTMzZSJ9",
+        },
+        
     ];
 
     const MANUTENCAO: NavItem[] = [

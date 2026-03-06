@@ -1,4 +1,3 @@
-// app/api/tecsci/stations/route.ts
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -6,21 +5,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 60;
 
-/**
- * ENV
- * - TECSCI_API_KEY
- * - TECSCI_BASE_URL (ex: https://system.tecsci.com.br/openapi/v1/power-stations/)
- */
-const API_KEY = String(process.env.TECSCI_API_KEY || "").trim();
-const BASE_URL_RAW = String(
-  process.env.TECSCI_BASE_URL || "https://system.tecsci.com.br/openapi/v1/power-stations/"
-).trim();
+const DEFAULT_BASE = "https://system.tecsci.com.br/openapi/v1/power-stations/";
 
 function normBase(u: string) {
   const s = (u || "").trim();
   return s.endsWith("/") ? s : s + "/";
 }
-const BASE_URL = normBase(BASE_URL_RAW);
+
+function getCfg() {
+  const apiKey = String(process.env.TECSCI_API_KEY || "").trim();
+  const baseUrl = normBase(String(process.env.TECSCI_BASE_URL || DEFAULT_BASE).trim());
+  return { apiKey, baseUrl };
+}
 
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 20000) {
   const ctrl = new AbortController();
@@ -32,17 +28,11 @@ async function fetchWithTimeout(url: string, init: RequestInit, ms = 20000) {
   }
 }
 
-/**
- * Tenta 3 formatos comuns de auth:
- * - X-API-KEY
- * - x-api-key
- * - Authorization: Bearer
- */
-async function tecFetch(url: string) {
+async function tecFetch(url: string, apiKey: string) {
   const headersCandidates: HeadersInit[] = [
-    { Accept: "application/json", "X-API-KEY": API_KEY },
-    { Accept: "application/json", "x-api-key": API_KEY },
-    { Accept: "application/json", Authorization: `Bearer ${API_KEY}` },
+    { Accept: "application/json", "X-API-KEY": apiKey },
+    { Accept: "application/json", "x-api-key": apiKey },
+    { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
   ];
 
   let last: Response | null = null;
@@ -50,7 +40,6 @@ async function tecFetch(url: string) {
   for (const headers of headersCandidates) {
     const res = await fetchWithTimeout(url, { headers }, 20000);
     last = res;
-
     if (res.ok) return res;
     if (res.status !== 401 && res.status !== 403) return res;
   }
@@ -58,17 +47,33 @@ async function tecFetch(url: string) {
   return last!;
 }
 
-export async function GET() {
-  if (!API_KEY) {
+export async function GET(req: Request) {
+  const { apiKey, baseUrl } = getCfg();
+  const { searchParams } = new URL(req.url);
+  const debug = searchParams.get("debug") === "1";
+
+  if (!apiKey) {
     return NextResponse.json(
-      { ok: false, error: "Faltou TECSCI_API_KEY nas Environment Variables." },
-      { status: 500 }
+      {
+        ok: false,
+        error: "Faltou TECSCI_API_KEY nas Environment Variables (Vercel).",
+        ...(debug
+          ? {
+              debug: {
+                vercelEnv: process.env.VERCEL_ENV || null,
+                keyLen: apiKey.length,
+                baseUrl,
+              },
+            }
+          : {}),
+      },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const url = `${BASE_URL}`; // lista de power-stations
+  const url = `${baseUrl}`;
 
-  const res = await tecFetch(url);
+  const res = await tecFetch(url, apiKey);
   const ct = res.headers.get("content-type") || "";
   const raw = await res.text();
 
@@ -77,7 +82,7 @@ export async function GET() {
       {
         ok: false,
         error: `TecSci ${res.status} ao buscar usinas.`,
-        debug: { url, bodyPreview: raw.slice(0, 600), contentType: ct },
+        ...(debug ? { debug: { url, bodyPreview: raw.slice(0, 600), contentType: ct } } : {}),
       },
       { status: 502, headers: { "Cache-Control": "no-store" } }
     );
@@ -103,8 +108,5 @@ export async function GET() {
 
   stations.sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-  return NextResponse.json(
-    { ok: true, stations },
-    { status: 200, headers: { "Cache-Control": "no-store" } }
-  );
+  return NextResponse.json({ ok: true, stations }, { status: 200, headers: { "Cache-Control": "no-store" } });
 }

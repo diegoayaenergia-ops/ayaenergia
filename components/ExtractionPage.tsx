@@ -388,7 +388,7 @@ export function ExtractionPage() {
 
       setPreviewLoading(true);
       try {
-        const res = await fetch(`/api/extracao?start_date=${start}&end_date=${end}&format=json`, {
+        const res = await fetch(`/api/tecsci/uc?start_date=${start}&end_date=${end}&format=json`, {
           headers: { Accept: "application/json" },
           cache: "no-store",
           signal: ac.signal,
