@@ -1,7 +1,9 @@
 "use client";
 
 import React, {
+  memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -11,110 +13,121 @@ import React, {
 import {
   Search,
   RefreshCw,
-  Eye,
-  EyeOff,
   Eraser,
   FileDown,
   FileSpreadsheet,
-  FileImage,
   Zap,
   Gauge,
   Activity,
-  ChevronDown,
+  ChevronRight,
+  TrendingUp,
+  CalendarDays,
+  Maximize2,
+  Minimize2,
+  LayoutDashboard,
+  SunMedium,
+  ShieldCheck,
+  Database,
+  BarChart3,
+  Factory,
+  Monitor,
+  LineChart,
+  ClipboardList,
 } from "lucide-react";
 
 const cx = (...p: Array<string | false | null | undefined>) =>
   p.filter(Boolean).join(" ");
 
-/* =========================================================
-   TOKENS
-========================================================= */
 const T = {
-  bg: "#F4F6F8",
-  card: "#FFFFFF",
-  cardSoft: "#FBFCFD",
-  border: "rgba(17, 24, 39, 0.12)",
-  borderStrong: "rgba(17, 24, 39, 0.18)",
-  text: "#0B1220",
-  text2: "rgba(11, 18, 32, 0.70)",
-  text3: "rgba(11, 18, 32, 0.55)",
-  mutedBg: "rgba(17, 24, 39, 0.035)",
+  bg: "#F3F6F8",
+  bg2: "#EEF2F6",
+  pageGlow: "rgba(22, 101, 52, 0.04)",
 
-  accent: "#115923",
-  accent2: "#2E7B41",
-  accentSoft: "rgba(17, 89, 35, 0.08)",
-  accentRing: "rgba(17, 89, 35, 0.18)",
+  card: "#FFFFFF",
+  cardSoft: "#FAFBFC",
+  cardSoft2: "#F6F8FA",
+  cardSoft3: "#F8FAFC",
+
+  border: "rgba(15, 23, 42, 0.10)",
+  borderStrong: "rgba(15, 23, 42, 0.16)",
+  divider: "rgba(15, 23, 42, 0.08)",
+
+  text: "#0F172A",
+  text2: "rgba(15, 23, 42, 0.74)",
+  text3: "rgba(15, 23, 42, 0.56)",
+  text4: "rgba(15, 23, 42, 0.38)",
+  mutedBg: "rgba(15, 23, 42, 0.035)",
+
+  accent: "#166534",
+  accent2: "#14532D",
+  accent3: "#1F7A44",
+  accentSoft: "rgba(22, 101, 52, 0.08)",
+  accentSoft2: "rgba(22, 101, 52, 0.14)",
+  accentRing: "rgba(22, 101, 52, 0.18)",
+
+  blue: "#1D4ED8",
+  blueSoft: "rgba(29, 78, 216, 0.08)",
 
   okBg: "rgba(16, 185, 129, 0.10)",
-  okBd: "rgba(16, 185, 129, 0.30)",
+  okBd: "rgba(16, 185, 129, 0.26)",
   okTx: "#065F46",
 
   warnBg: "rgba(245, 158, 11, 0.10)",
-  warnBd: "rgba(245, 158, 11, 0.30)",
-  warnTx: "#7C4A03",
+  warnBd: "rgba(245, 158, 11, 0.24)",
+  warnTx: "#92400E",
 
   errBg: "rgba(239, 68, 68, 0.10)",
-  errBd: "rgba(239, 68, 68, 0.30)",
-  errTx: "#7F1D1D",
+  errBd: "rgba(239, 68, 68, 0.24)",
+  errTx: "#991B1B",
 
-  grid: "rgba(17,24,39,0.08)",
+  infoBg: "rgba(37, 99, 235, 0.08)",
+  infoBd: "rgba(37, 99, 235, 0.18)",
+  infoTx: "#1D4ED8",
 
-  cGen: "#115923",
-  cLoss: "#EF4444",
-  cP90: "#F59E0B",
+  grid: "rgba(15, 23, 42, 0.08)",
+
+  cGen: "#166534",
+  cLoss: "#DC2626",
+  cP90: "#D97706",
   cTec: "#64748B",
-  cAya: "#111827",
-
-  cPoa: "#F59E0B",
-  cPoaMeta: "#EF4444",
-
+  cAya: "#0F172A",
+  cPoa: "#D97706",
+  cPoaMeta: "#DC2626",
   cPR: "#2563EB",
-  cAvail: "#10B981",
-  cTarget: "#EF4444",
+  cAvail: "#059669",
+  cTarget: "#DC2626",
 } as const;
 
 const UI = {
   page: "w-full min-w-0",
-  container: "mx-auto w-full max-w-[1480px] px-4 sm:px-6 py-6",
-  header:
-    "border bg-white min-w-0 rounded-2xl shadow-[0_1px_2px_rgba(17,24,39,0.04)]",
+  container: "mx-auto w-full max-w-[1560px] px-4 sm:px-6 py-6",
+  hero:
+    "border bg-white min-w-0 rounded-[22px] shadow-[0_2px_12px_rgba(15,23,42,0.04),0_18px_44px_rgba(15,23,42,0.06)]",
   section:
-    "border bg-white min-w-0 rounded-2xl shadow-[0_1px_2px_rgba(17,24,39,0.04)]",
-
-  headerTitle: "text-base sm:text-lg font-semibold tracking-tight",
-  sectionTitle: "text-sm font-semibold",
+    "border bg-white min-w-0 rounded-[20px] shadow-[0_1px_3px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.05)]",
+  sectionTitle: "text-[13px] font-semibold tracking-[0.01em]",
   sectionHint: "text-xs",
-  label: "text-[11px] font-medium",
-
+  headerTitle: "text-[24px] sm:text-[30px] font-semibold tracking-tight",
+  label: "text-[11px] font-semibold uppercase tracking-[0.08em]",
   input:
-    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0 rounded-xl",
+    "w-full h-11 px-3 border bg-white text-sm outline-none transition min-w-0 rounded-xl",
   select:
-    "w-full h-10 px-3 border bg-white text-sm outline-none transition focus:ring-2 min-w-0 rounded-xl",
-
-  cardTitle: "text-xs font-semibold",
-  mono: "tabular-nums",
+    "w-full h-11 px-3 border bg-white text-sm outline-none transition min-w-0 rounded-xl",
 } as const;
 
-/* =========================================================
-   TYPES
-========================================================= */
 type Station = { id: number; code: string; name: string };
 
 type PerformanceDTO = {
   ps_id: number;
   ps_name?: string | null;
-
   availability_percentage?: number | null;
   expected_energy_kwh?: number | null;
   generated_energy_kwh?: number | null;
   projected_energy_kwh?: number | null;
-
   poa_irradiation_kwh?: number | null;
   projected_irradiation_kwh?: number | null;
-
   pr_percentage?: number | null;
   projected_pr?: number | null;
-
   dc_power_kw?: number | null;
 };
 
@@ -140,20 +153,23 @@ type Preset =
   | "custom";
 
 type SeriesType = "bar" | "line";
+
 type ChartSeries = {
   key: string;
   name: string;
   type: SeriesType;
   color: string;
   dashed?: boolean;
+  showPoints?: boolean;
+  pointRadius?: number;
 };
+
 type ChartPoint = Record<string, any>;
 
 type TableRow = {
   periodo: string;
   geracao: number | null;
   perdasAya: number | null;
-  totalEmpilhado: number | null;
   p90: number | null;
   estimadoTec: number | null;
   estimadoAya: number | null;
@@ -165,29 +181,12 @@ type TableRow = {
   disponibilidadeMeta: number | null;
 };
 
-/* =========================================================
-   HELPERS
-========================================================= */
-function useIsMobile(maxWidth = 640) {
-  const [isMobile, setIsMobile] = useState(false);
+type MessageState = {
+  type: "ok" | "warn" | "err";
+  text: string;
+} | null;
 
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${maxWidth - 1}px)`);
-    const onChange = () => setIsMobile(mq.matches);
-    onChange();
-    mq.addEventListener?.("change", onChange);
-    // @ts-ignore
-    mq.addListener?.(onChange);
-
-    return () => {
-      mq.removeEventListener?.("change", onChange);
-      // @ts-ignore
-      mq.removeListener?.(onChange);
-    };
-  }, [maxWidth]);
-
-  return isMobile;
-}
+const PRESENTATION_STATION_SECONDS = 20;
 
 function isIsoDate(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
@@ -198,6 +197,20 @@ function brDate(iso?: string | null) {
   const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return String(iso);
   return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+function brDateTime(iso?: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function brNum(n?: number | null, digits = 2) {
@@ -244,17 +257,17 @@ function yearRangeISO(year: number) {
   return { start: `${year}-01-01`, end: `${year}-12-31` };
 }
 
+function safeNum(v: any): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 function clamp0(n: number) {
   return n < 0 ? 0 : n;
 }
 
 function kwhToUnit(kwh: number, unit: "kWh" | "MWh") {
   return unit === "MWh" ? kwh / 1000 : kwh;
-}
-
-function safeNum(v: any): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
 }
 
 function prToFrac(projectedPr: number | null) {
@@ -281,21 +294,37 @@ function estimatedAyaKwh(
   return poa * pr * pdc;
 }
 
+function pctVs(a: number | null, b: number | null) {
+  if (a == null || b == null || b <= 0) return null;
+  return (a / b) * 100;
+}
+
+function statusTone(pct: number | null) {
+  if (pct == null) return "neutral";
+  if (pct >= 100) return "good";
+  if (pct >= 95) return "warn";
+  return "bad";
+}
+
+function toneStyles(tone: "good" | "warn" | "bad" | "neutral") {
+  if (tone === "good") {
+    return { background: T.okBg, borderColor: T.okBd, color: T.okTx };
+  }
+  if (tone === "warn") {
+    return { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx };
+  }
+  if (tone === "bad") {
+    return { background: T.errBg, borderColor: T.errBd, color: T.errTx };
+  }
+  return { background: T.cardSoft, borderColor: T.border, color: T.text3 };
+}
+
 function sanitizeFileName(name: string) {
   return name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\w.-]+/g, "_")
     .replace(/_+/g, "_");
-}
-
-function downloadBlob(filename: string, blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 function svgToString(el: SVGSVGElement, width: number, height: number) {
@@ -345,45 +374,29 @@ async function svgElementToPng(
   height?: number
 ) {
   const vb = el.viewBox?.baseVal;
-  const w = width || vb?.width || el.clientWidth || 1200;
-  const h = height || vb?.height || el.clientHeight || 400;
+  const w = width || vb?.width || el.clientWidth || 1400;
+  const h = height || vb?.height || el.clientHeight || 420;
   const svg = svgToString(el, w, h);
   return svgStringToPngDataUrl(svg, w, h);
 }
 
-function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  const [size, setSize] = useState({ w: 900, h: 300 });
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const el = ref.current;
-
-    const ro = new ResizeObserver(() => {
-      const r = el.getBoundingClientRect();
-      setSize({
-        w: Math.max(360, Math.floor(r.width)),
-        h: Math.max(220, Math.floor(r.height)),
-      });
-    });
-
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  return { ref, size };
-}
-
 function niceTicks(min: number, max: number, count = 5) {
-  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min)
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
     return [min, max];
+  }
 
   const span = max - min;
   const step0 = span / Math.max(1, count - 1);
   const pow = Math.pow(10, Math.floor(Math.log10(step0)));
   const err = step0 / pow;
   const step =
-    err >= 7.5 ? 10 * pow : err >= 3.5 ? 5 * pow : err >= 1.5 ? 2 * pow : 1 * pow;
+    err >= 7.5
+      ? 10 * pow
+      : err >= 3.5
+      ? 5 * pow
+      : err >= 1.5
+      ? 2 * pow
+      : 1 * pow;
 
   const start = Math.floor(min / step) * step;
   const end = Math.ceil(max / step) * step;
@@ -393,22 +406,234 @@ function niceTicks(min: number, max: number, count = 5) {
   return ticks;
 }
 
-function pctVs(a: number | null, b: number | null) {
-  if (a == null || b == null || b <= 0) return null;
-  return (a / b) * 100;
+function rangeLabel(start: string, end: string) {
+  return `${brDate(start)} — ${brDate(clampEndToToday(end))}`;
 }
 
-function statusTone(pct: number | null) {
-  if (pct == null) return "neutral";
-  if (pct >= 100) return "good";
-  if (pct >= 95) return "warn";
-  return "bad";
+function groupLabel(
+  group: "auto" | "day" | "month" | "year" | "aggregate" | undefined
+) {
+  if (group === "day") return "Diária";
+  if (group === "month") return "Mensal";
+  if (group === "year") return "Anual";
+  if (group === "aggregate") return "Consolidada";
+  return "Automática";
 }
 
-/* =========================================================
-   UI
-========================================================= */
-function Btn({
+function useDebouncedValue<T>(value: T, delay = 350) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(id);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [size, setSize] = useState({ w: 960, h: 300 });
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setSize({
+        w: Math.max(360, Math.floor(r.width)),
+        h: Math.max(220, Math.floor(r.height)),
+      });
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return { ref, size };
+}
+
+function useFullscreen<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggle = useCallback(async () => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (document.fullscreenElement === el) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (el.requestFullscreen) {
+      await el.requestFullscreen();
+    }
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => {
+      setIsFullscreen(document.fullscreenElement === ref.current);
+    };
+
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  return { ref, isFullscreen, toggle };
+}
+
+function useStations() {
+  const [stations, setStations] = useState<Station[]>([]);
+  const [stationsLoading, setStationsLoading] = useState(true);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+
+    (async () => {
+      try {
+        const r = await fetch("/api/tecsci/stations", {
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+        const j = await r.json();
+
+        if (j?.ok) {
+          const items = Array.isArray(j.stations) ? j.stations : [];
+          setStations(
+            items
+              .filter((s: any) => s && Number.isFinite(Number(s.id)))
+              .sort((a: Station, b: Station) =>
+                String(a.name || "").localeCompare(String(b.name || ""), "pt-BR")
+              )
+          );
+        }
+      } catch {
+      } finally {
+        setStationsLoading(false);
+      }
+    })();
+
+    return () => ctrl.abort();
+  }, []);
+
+  return { stations, stationsLoading };
+}
+
+function usePerformanceData({
+  psId,
+  start,
+  end,
+  group,
+  enabled = true,
+}: {
+  psId: number;
+  start: string;
+  end: string;
+  group: "auto" | "day" | "month" | "year";
+  enabled?: boolean;
+}) {
+  const [data, setData] = useState<PerfApiResp | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<MessageState>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  const requestFilters = useMemo(
+    () => ({
+      psId,
+      start,
+      end: clampEndToToday(end),
+      group,
+    }),
+    [psId, start, end, group]
+  );
+
+  const debouncedFilters = useDebouncedValue(requestFilters, 320);
+
+  const fetchData = useCallback(async (filters: typeof requestFilters) => {
+    setMsg(null);
+
+    if (!filters.psId || !Number.isFinite(filters.psId)) {
+      setData(null);
+      setMsg({ type: "err", text: "Selecione uma usina válida." });
+      return;
+    }
+
+    if (!isIsoDate(filters.start) || !isIsoDate(filters.end)) {
+      setData(null);
+      setMsg({ type: "err", text: "As datas informadas são inválidas." });
+      return;
+    }
+
+    if (filters.start > filters.end) {
+      setData(null);
+      setMsg({
+        type: "err",
+        text: "A data inicial não pode ser maior que a final.",
+      });
+      return;
+    }
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setLoading(true);
+
+    try {
+      const url =
+        `/api/tecsci/performance?ps_id=${filters.psId}` +
+        `&start_date=${filters.start}` +
+        `&end_date=${filters.end}` +
+        `&group=${filters.group}`;
+
+      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+      const j: PerfApiResp = await r.json().catch(
+        () => ({ ok: false } as PerfApiResp)
+      );
+
+      if (!r.ok || !j?.ok) {
+        setData(null);
+        setMsg({
+          type: "err",
+          text: j?.error || "Não foi possível carregar os dados de performance.",
+        });
+        return;
+      }
+
+      setData(j);
+      setLastUpdatedAt(new Date().toISOString());
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setData(null);
+      setMsg({
+        type: "err",
+        text: "Erro de conexão ao carregar a performance.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reload = useCallback(() => {
+    if (!enabled) return;
+    void fetchData(requestFilters);
+  }, [enabled, fetchData, requestFilters]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void fetchData(debouncedFilters);
+  }, [enabled, debouncedFilters, fetchData]);
+
+  return { data, loading, msg, setMsg, lastUpdatedAt, reload };
+}
+
+const Btn = memo(function Btn({
   tone = "primary",
   loading,
   disabled,
@@ -420,22 +645,22 @@ function Btn({
   loading?: boolean;
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 h-10 px-4 text-sm font-semibold border rounded-xl " +
-    "whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition active:translate-y-[0.5px]";
+    "inline-flex items-center justify-center gap-2 h-11 px-4 text-sm font-semibold border rounded-2xl whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed transition hover:shadow-sm active:scale-[0.99]";
 
   const style =
     tone === "primary"
       ? {
-        background: T.accent,
-        borderColor: "rgba(17, 89, 35, 0.45)",
-        color: "#fff",
-      }
+          background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
+          borderColor: "rgba(22, 101, 52, 0.34)",
+          color: "#FFFFFF",
+        }
       : tone === "danger"
-        ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
-        : { background: T.card, borderColor: T.border, color: T.text };
+      ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
+      : { background: T.card, borderColor: T.border, color: T.text };
 
   return (
     <button
+      type="button"
       className={cx(base, className)}
       disabled={disabled || loading}
       style={style}
@@ -451,54 +676,62 @@ function Btn({
       )}
     </button>
   );
-}
+});
 
-function Pill({
+const Pill = memo(function Pill({
   children,
-  tone = "neutral",
+  tone = "soft",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "accent";
+  tone?: "soft" | "accent" | "info";
 }) {
+  const style =
+    tone === "accent"
+      ? {
+          borderColor: T.accentSoft2,
+          background: T.accentSoft,
+          color: T.accent,
+        }
+      : tone === "info"
+      ? {
+          borderColor: T.infoBd,
+          background: T.infoBg,
+          color: T.infoTx,
+        }
+      : {
+          borderColor: T.border,
+          background: T.cardSoft,
+          color: T.text2,
+        };
+
   return (
     <span
-      className={cx(
-        "inline-flex items-center h-7 px-2.5 text-[11px] font-medium border rounded-xl",
-        UI.mono
-      )}
-      style={{
-        borderColor: T.border,
-        background: tone === "accent" ? T.accentSoft : T.cardSoft,
-        color: tone === "accent" ? T.accent : T.text2,
-      }}
+      className="inline-flex items-center h-8 px-3 text-[11px] font-semibold border rounded-2xl"
+      style={style}
     >
       {children}
     </span>
   );
-}
+});
 
-function MsgBox({
-  m,
-}: {
-  m: { type: "ok" | "warn" | "err"; text: string } | null;
-}) {
+const MsgBox = memo(function MsgBox({ m }: { m: MessageState }) {
   if (!m) return null;
 
   const s =
     m.type === "ok"
       ? { background: T.okBg, borderColor: T.okBd, color: T.okTx }
       : m.type === "warn"
-        ? { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx }
-        : { background: T.errBg, borderColor: T.errBd, color: T.errTx };
+      ? { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx }
+      : { background: T.errBg, borderColor: T.errBd, color: T.errTx };
 
   return (
-    <div className="text-sm px-3 py-2 border rounded-xl" style={s}>
+    <div className="text-sm px-3 py-2.5 border rounded-2xl" style={s}>
       {m.text}
     </div>
   );
-}
+});
 
-function SectionHeader({
+const SectionHeader = memo(function SectionHeader({
   title,
   hint,
   right,
@@ -522,12 +755,12 @@ function SectionHeader({
         </div>
         {right}
       </div>
-      <div style={{ height: 1, background: T.border, opacity: 0.8 }} />
+      <div style={{ height: 1, background: T.divider }} />
     </>
   );
-}
+});
 
-function Segmented({
+const Segmented = memo(function Segmented({
   value,
   onChange,
   options,
@@ -538,24 +771,22 @@ function Segmented({
 }) {
   return (
     <div
-      className="inline-flex border rounded-xl overflow-hidden"
+      className="inline-flex border rounded-2xl overflow-hidden w-full"
       style={{ borderColor: T.border }}
     >
-      {options.map((o) => {
+      {options.map((o, idx) => {
         const active = o.value === value;
         return (
           <button
             key={o.value}
             type="button"
             onClick={() => onChange(o.value)}
-            className="h-9 px-3 text-sm font-semibold"
+            className="h-10 px-3 text-sm font-semibold flex-1 transition"
             style={{
-              background: active ? T.accentSoft : T.card,
-              color: active ? T.accent : T.text2,
+              background: active ? T.cardSoft2 : T.card,
+              color: active ? T.text : T.text2,
               borderRight:
-                o.value === options[options.length - 1].value
-                  ? "none"
-                  : `1px solid ${T.border}`,
+                idx === options.length - 1 ? "none" : `1px solid ${T.border}`,
             }}
           >
             {o.label}
@@ -564,240 +795,308 @@ function Segmented({
       })}
     </div>
   );
-}
+});
 
-function StatusChip({ pct }: { pct: number | null }) {
-  const tone = statusTone(pct);
-
-  const style =
-    tone === "good"
-      ? { background: T.okBg, borderColor: T.okBd, color: T.okTx }
-      : tone === "warn"
-        ? { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx }
-        : tone === "bad"
-          ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
-          : { background: T.cardSoft, borderColor: T.border, color: T.text3 };
+const StatusChip = memo(function StatusChip({ pct }: { pct: number | null }) {
+  const style = toneStyles(statusTone(pct));
 
   return (
     <span
-      className="inline-flex items-center justify-center h-7 px-2.5 text-[11px] font-semibold border rounded-xl tabular-nums"
+      className="inline-flex items-center justify-center h-8 px-3 text-[11px] font-semibold border rounded-2xl tabular-nums"
       style={style}
     >
       {pct == null ? "—" : `${brNum(pct, 1)}%`}
     </span>
   );
-}
+});
 
-function Skeleton({
-  className,
-  style,
+const ExecutiveMetric = memo(function ExecutiveMetric({
+  label,
+  value,
+  sub,
+  icon,
+  tone = "neutral",
 }: {
-  className?: string;
-  style?: React.CSSProperties;
+  label: string;
+  value: string;
+  sub?: string;
+  icon: ReactNode;
+  tone?: "good" | "warn" | "bad" | "neutral";
 }) {
+  const leftBorder =
+    tone === "good"
+      ? T.accent
+      : tone === "warn"
+      ? "#D97706"
+      : tone === "bad"
+      ? "#DC2626"
+      : T.blue;
+
   return (
     <div
-      className={cx("animate-pulse rounded-xl", className)}
-      style={{ background: "rgba(17,24,39,0.06)", ...style }}
-    />
+      className="rounded-[18px] border px-4 py-4 min-w-0 h-full"
+      style={{
+        borderColor: T.border,
+        background: "linear-gradient(180deg, #FFFFFF 0%, #FBFCFD 100%)",
+        boxShadow: `inset 3px 0 0 ${leftBorder}`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div
+            className="text-[11px] font-semibold uppercase tracking-[0.08em]"
+            style={{ color: T.text3 }}
+          >
+            {label}
+          </div>
+          <div className="mt-1 text-[23px] font-bold truncate" style={{ color: T.text }}>
+            {value}
+          </div>
+          {sub ? (
+            <div className="mt-1 text-[11px] leading-5" style={{ color: T.text3 }}>
+              {sub}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-2xl"
+          style={{ background: T.cardSoft2, color: T.text2 }}
+        >
+          {icon}
+        </div>
+      </div>
+    </div>
   );
-}
+});
 
-/* =========================================================
-   STATION PICKER
-========================================================= */
-const RECENT_KEY = "aya_scada_recent_stations";
-
-function StationPicker({
-  stations,
-  valueId,
-  onChangeId,
-  disabled,
+const OpsStrip = memo(function OpsStrip({
+  stationName,
+  lastUpdatedAt,
+  generated,
+  energyUnit,
+  p90Pct,
+  prPct,
+  availPct,
 }: {
-  stations: Station[];
-  valueId: number;
-  onChangeId: (id: number) => void;
-  disabled?: boolean;
+  stationName: string;
+  lastUpdatedAt: string | null;
+  generated: number | null;
+  energyUnit: "kWh" | "MWh";
+  p90Pct: number | null;
+  prPct: number | null;
+  availPct: number | null;
 }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const [hi, setHi] = useState(0);
-  const [recentIds, setRecentIds] = useState<number[]>([]);
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const status =
+    p90Pct != null && prPct != null && availPct != null
+      ? (p90Pct + prPct + availPct) / 3
+      : null;
 
-  const selected = stations.find((s) => s.id === valueId) || null;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(RECENT_KEY);
-      const ids = raw ? (JSON.parse(raw) as number[]) : [];
-      setRecentIds(ids);
-    } catch {
-      setRecentIds([]);
-    }
-  }, []);
-
-  const recents = useMemo(() => {
-    return recentIds.filter((id) => stations.some((s) => s.id === id)).slice(0, 6);
-  }, [recentIds, stations]);
-
-  const list = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-
-    if (!needle && recents.length) {
-      const recentStations = recents
-        .map((id) => stations.find((s) => s.id === id))
-        .filter(Boolean) as Station[];
-      const rest = stations.filter((s) => !recents.includes(s.id));
-      return [...recentStations, ...rest].slice(0, 100);
-    }
-
-    if (!needle) return stations.slice(0, 100);
-
-    return stations
-      .filter((s) => `${s.name} ${s.code}`.toLowerCase().includes(needle))
-      .slice(0, 150);
-  }, [stations, q, recents]);
-
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    setHi((h) => Math.min(h, Math.max(0, list.length - 1)));
-  }, [open, list.length]);
-
-  const commit = (id: number) => {
-    onChangeId(id);
-    setOpen(false);
-    setQ("");
-
-    try {
-      const next = [id, ...recentIds.filter((x) => x !== id)].slice(0, 12);
-      setRecentIds(next);
-      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-    } catch { }
-  };
+  const tone = statusTone(status);
+  const style = toneStyles(tone);
 
   return (
-    <div ref={wrapRef} className="relative min-w-0">
-      <label className={UI.label} style={{ color: T.text2 }}>
-        Usina
-      </label>
-
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
-        className={cx(UI.input, "flex items-center justify-between gap-2")}
-        style={{ borderColor: T.border, textAlign: "left", opacity: disabled ? 0.6 : 1 }}
-      >
-        <div className="min-w-0">
-          <div className="text-sm font-semibold truncate" style={{ color: T.text }}>
-            {selected ? selected.name : disabled ? "Carregando usinas…" : "Selecione uma usina"}
-          </div>
-        </div>
-        <ChevronDown className="w-4 h-4 shrink-0" style={{ color: T.text3 }} />
-      </button>
-
-      {open && !disabled && (
+    <div
+      className="border rounded-[18px] px-4 py-4"
+      style={{ borderColor: T.border, background: T.cardSoft3 }}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
         <div
-          className="absolute z-[300] mt-2 w-full border rounded-2xl shadow-lg overflow-hidden"
+          className="lg:col-span-4 border rounded-[16px] p-4"
           style={{ borderColor: T.border, background: T.card }}
         >
-          <div className="p-2 border-b" style={{ borderColor: "rgba(17,24,39,0.06)" }}>
-            <div className="relative">
-              <input
-                className={cx(UI.input, "pr-9")}
-                style={{ borderColor: T.border }}
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  setHi(0);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") {
-                    setOpen(false);
-                    return;
-                  }
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHi((h) => Math.min(h + 1, list.length - 1));
-                  }
-                  if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHi((h) => Math.max(h - 1, 0));
-                  }
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    const sel = list[hi];
-                    if (sel) commit(sel.id);
-                  }
-                }}
-                placeholder="Buscar por nome ou código…"
-                autoFocus
-              />
-              <div className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: T.text3 }}>
-                <Search className="w-4 h-4" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className={UI.label} style={{ color: T.text3 }}>
+                Contexto operacional
+              </div>
+              <div className="mt-1 text-base font-semibold truncate" style={{ color: T.text }}>
+                {stationName}
+              </div>
+              <div className="mt-1 text-xs" style={{ color: T.text3 }}>
+                Última atualização: {brDateTime(lastUpdatedAt)}
+              </div>
+            </div>
+            <div
+              className="w-10 h-10 rounded-2xl flex items-center justify-center"
+              style={{ background: T.cardSoft2, color: T.text2 }}
+            >
+              <Monitor className="w-4.5 h-4.5" />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="lg:col-span-2 border rounded-[16px] p-4"
+          style={{ borderColor: T.border, background: T.card }}
+        >
+          <div className={UI.label} style={{ color: T.text3 }}>
+            Geração
+          </div>
+          <div className="mt-1 text-[22px] font-bold" style={{ color: T.text }}>
+            {generated == null ? "—" : brNum(generated, 2)}
+          </div>
+          <div className="text-xs" style={{ color: T.text3 }}>
+            {energyUnit}
+          </div>
+        </div>
+
+        <div
+          className="lg:col-span-2 border rounded-[16px] p-4"
+          style={{ borderColor: T.border, background: T.card }}
+        >
+          <div className={UI.label} style={{ color: T.text3 }}>
+            Atingimento P90
+          </div>
+          <div className="mt-2">
+            <StatusChip pct={p90Pct} />
+          </div>
+        </div>
+
+        <div
+          className="lg:col-span-2 border rounded-[16px] p-4"
+          style={{ borderColor: T.border, background: T.card }}
+        >
+          <div className={UI.label} style={{ color: T.text3 }}>
+            PR / Meta
+          </div>
+          <div className="mt-2">
+            <StatusChip pct={prPct} />
+          </div>
+        </div>
+
+        <div
+          className="lg:col-span-2 border rounded-[16px] p-4"
+          style={{ borderColor: T.border, background: T.card }}
+        >
+          <div className={UI.label} style={{ color: T.text3 }}>
+            Disponibilidade
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <StatusChip pct={availPct} />
+            <span
+              className="inline-flex items-center h-8 px-3 rounded-2xl border text-[11px] font-semibold"
+              style={style}
+            >
+              {tone === "good"
+                ? "Estável"
+                : tone === "warn"
+                ? "Atenção"
+                : tone === "bad"
+                ? "Crítico"
+                : "Neutro"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const CompareKpiCard = memo(function CompareKpiCard({
+  title,
+  aLabel,
+  aValue,
+  bLabel,
+  bValue,
+  fmt,
+  icon,
+}: {
+  title: string;
+  aLabel: string;
+  aValue: number | null;
+  bLabel: string;
+  bValue: number | null;
+  fmt: (n: number) => string;
+  icon: ReactNode;
+}) {
+  const pct = pctVs(aValue, bValue);
+  const dlt = aValue != null && bValue != null ? aValue - bValue : null;
+  const tone = statusTone(pct);
+  const style = toneStyles(tone);
+  const good = pct != null ? pct >= 100 : null;
+  const barColor = good == null ? T.borderStrong : good ? T.accent2 : T.errBd;
+
+  return (
+    <div
+      className="border rounded-[20px] p-4 min-w-0 h-full"
+      style={{
+        borderColor: T.border,
+        background: "linear-gradient(180deg, #FFFFFF 0%, #FBFCFD 100%)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 w-full">
+          <div className={UI.label} style={{ color: T.text2 }}>
+            {title}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[11px]" style={{ color: T.text3 }}>
+                {aLabel}
+              </div>
+              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
+                {aValue == null ? "—" : fmt(aValue)}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[11px]" style={{ color: T.text3 }}>
+                {bLabel}
+              </div>
+              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
+                {bValue == null ? "—" : fmt(bValue)}
               </div>
             </div>
           </div>
 
-          <div className="max-h-80 overflow-auto">
-            {list.length === 0 ? (
-              <div className="px-3 py-3 text-sm" style={{ color: T.text2 }}>
-                Nenhuma usina encontrada.
-              </div>
-            ) : (
-              list.map((s, idx) => {
-                const active = s.id === valueId;
-                const highlight = idx === hi;
+          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            <span
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-2xl border text-[11px] font-semibold"
+              style={style}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              {pct == null ? "Sem referência" : `${brNum(pct, 1)}% da meta`}
+            </span>
 
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onMouseEnter={() => setHi(idx)}
-                    onClick={() => commit(s.id)}
-                    className="w-full px-3 py-2.5 text-left border-b last:border-b-0"
-                    style={{
-                      borderColor: "rgba(17,24,39,0.06)",
-                      background: highlight
-                        ? "rgba(17,89,35,0.08)"
-                        : active
-                          ? T.accentSoft
-                          : "transparent",
-                    }}
-                  >
-                    <div className="text-sm font-semibold" style={{ color: active ? T.accent : T.text }}>
-                      {s.name}
-                    </div>
-                    <div className="text-[11px]" style={{ color: T.text3 }}>
-                      {s.code}
-                    </div>
-                  </button>
-                );
-              })
-            )}
+            <div
+              className="text-[11px] font-semibold"
+              style={{
+                color: good == null ? T.text3 : good ? T.accent : T.errTx,
+              }}
+            >
+              Δ {dlt == null ? "—" : fmt(dlt)}
+            </div>
+          </div>
+
+          <div
+            className="mt-3 border rounded-2xl overflow-hidden"
+            style={{ borderColor: T.border, background: T.mutedBg, height: 10 }}
+          >
+            <div
+              style={{
+                width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`,
+                height: "100%",
+                background: barColor,
+                opacity: 0.95,
+              }}
+            />
           </div>
         </div>
-      )}
+
+        <div
+          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-2xl"
+          style={{ background: T.cardSoft2, color: T.text2 }}
+        >
+          {icon}
+        </div>
+      </div>
     </div>
   );
-}
+});
 
-/* =========================================================
-   MINI CHART
-========================================================= */
-function MiniChart({
+const MiniChart = memo(function MiniChart({
   title,
   subtitle,
   data,
@@ -827,14 +1126,12 @@ function MiniChart({
   const H = height;
 
   const n = Math.max(1, data.length);
-  const M = { l: 56, r: 14, t: 14, b: 40 };
+  const M = { l: 60, r: 16, t: 14, b: 44 };
   const plotW = Math.max(10, W - M.l - M.r);
   const plotH = Math.max(10, H - M.t - M.b);
 
-  const [hidden, setHidden] = useState<Record<string, boolean>>({});
-  const visible = useMemo(() => series.filter((s) => !hidden[s.key]), [series, hidden]);
-  const bars = visible.filter((s) => s.type === "bar");
-  const lines = visible.filter((s) => s.type === "line");
+  const bars = series.filter((s) => s.type === "bar");
+  const lines = series.filter((s) => s.type === "line");
 
   const dom = useMemo(() => {
     let min = Number.POSITIVE_INFINITY;
@@ -842,11 +1139,7 @@ function MiniChart({
 
     for (const p of data) {
       if (stackBars && bars.length) {
-        const stackedTotal = bars.reduce((acc, s) => {
-          const v = safeNum(p[s.key]);
-          return acc + (v ?? 0);
-        }, 0);
-
+        const stackedTotal = bars.reduce((acc, s) => acc + (safeNum(p[s.key]) ?? 0), 0);
         min = Math.min(min, 0);
         max = Math.max(max, stackedTotal);
 
@@ -857,7 +1150,7 @@ function MiniChart({
           max = Math.max(max, v);
         }
       } else {
-        for (const s of visible) {
+        for (const s of series) {
           const v = safeNum(p[s.key]);
           if (v == null) continue;
           min = Math.min(min, v);
@@ -872,8 +1165,8 @@ function MiniChart({
     }
     if (!Number.isFinite(max) || max <= min) max = min + 1;
 
-    return yDomain ? yDomain : ([Math.min(0, min), max * 1.06] as [number, number]);
-  }, [data, visible, bars, lines, yDomain, stackBars]);
+    return yDomain ? yDomain : ([Math.min(0, min), max * 1.08] as [number, number]);
+  }, [data, series, bars, lines, yDomain, stackBars]);
 
   const ticks = useMemo(() => niceTicks(dom[0], dom[1], 5), [dom]);
   const fmt = formatterLeft || ((v: number) => brNum(v, 0));
@@ -885,60 +1178,28 @@ function MiniChart({
   };
 
   const xBand = plotW / n;
-
-  const barCount = Math.max(1, bars.length);
-  const barGap = Math.max(2, Math.min(10, xBand * 0.08));
-  const groupMaxW = Math.min(xBand * 0.72, 56);
-  const barW = Math.max(2, (groupMaxW - barGap * (barCount - 1)) / barCount);
-  const groupW = barW * barCount + barGap * (barCount - 1);
-
   const xCenter = (i: number) => M.l + i * xBand + xBand / 2;
-  const xGroupLeft = (i: number) => xCenter(i) - groupW / 2;
-
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(
-    null
-  );
-
-  const onMove = (e: React.MouseEvent) => {
-    const svg = e.currentTarget as SVGSVGElement;
-    const rect = svg.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-
-    if (px < M.l || px > M.l + plotW || py < M.t || py > M.t + plotH) {
-      setHover(null);
-      return;
-    }
-
-    const i = Math.max(0, Math.min(data.length - 1, Math.floor((px - M.l) / xBand)));
-    setHover({ i, x: px, y: py });
-  };
-
-  const hoverPoint = hover ? data[hover.i] : null;
-  const hoverX = hover ? xCenter(hover.i) : null;
 
   const every = useMemo(() => {
     const maxLabelsByWidth = Math.max(2, Math.floor(plotW / 84));
-    const target = Math.max(2, Math.min(xLabelCount, maxLabelsByWidth, data.length || 2));
+    const target = Math.max(
+      2,
+      Math.min(xLabelCount, maxLabelsByWidth, data.length || 2)
+    );
     return Math.max(1, Math.ceil((data.length || 1) / target));
   }, [plotW, xLabelCount, data.length]);
 
   if (!data.length) {
     return (
       <div ref={ref} className="min-w-0">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <div className={UI.cardTitle} style={{ color: T.text }}>
-              {title}
-            </div>
-            {subtitle ? (
-              <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
-                {subtitle}
-              </div>
-            ) : null}
-          </div>
+        <div className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: T.text }}>
+          {title}
         </div>
-
+        {subtitle ? (
+          <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+            {subtitle}
+          </div>
+        ) : null}
         <div
           className="mt-3 border rounded-2xl h-[260px] flex items-center justify-center text-sm"
           style={{ borderColor: T.border, background: T.card, color: T.text3 }}
@@ -951,43 +1212,30 @@ function MiniChart({
 
   return (
     <div ref={ref} className="min-w-0">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <div className={UI.cardTitle} style={{ color: T.text }}>
-            {title}
-          </div>
-          {subtitle ? (
-            <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
-              {subtitle}
-            </div>
-          ) : null}
-        </div>
+      <div className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: T.text }}>
+        {title}
       </div>
+      {subtitle ? (
+        <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+          {subtitle}
+        </div>
+      ) : null}
 
-      <div className="mt-2 flex flex-wrap gap-2">
-        {series.map((s) => {
-          const off = !!hidden[s.key];
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => setHidden((m) => ({ ...m, [s.key]: !m[s.key] }))}
-              className="inline-flex items-center gap-2 h-7 px-2.5 text-[11px] font-medium border rounded-xl transition"
-              style={{
-                borderColor: off ? T.border : T.borderStrong,
-                background: off ? T.card : T.cardSoft,
-                color: off ? T.text3 : T.text2,
-              }}
-              title="Ocultar/mostrar série"
-            >
-              <span
-                className="w-2.5 h-2.5 rounded-sm"
-                style={{ background: s.color, opacity: off ? 0.35 : 1 }}
-              />
-              <span>{s.name}</span>
-            </button>
-          );
-        })}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {series.map((s) => (
+          <div
+            key={s.key}
+            className="inline-flex items-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-2xl"
+            style={{
+              borderColor: T.border,
+              background: T.cardSoft,
+              color: T.text2,
+            }}
+          >
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
+            <span>{s.name}</span>
+          </div>
+        ))}
       </div>
 
       <div
@@ -999,8 +1247,6 @@ function MiniChart({
           width={W}
           height={H}
           viewBox={`0 0 ${W} ${H}`}
-          onMouseMove={onMove}
-          onMouseLeave={() => setHover(null)}
           style={{ display: "block", width: "100%", height: `${H}px` }}
         >
           <rect x={0} y={0} width={W} height={H} fill={T.card} />
@@ -1008,7 +1254,7 @@ function MiniChart({
           {ticks.map((v, idx) => {
             const yy = y(v);
             return (
-              <g key={`g-${idx}`}>
+              <g key={idx}>
                 <line x1={M.l} y1={yy} x2={M.l + plotW} y2={yy} stroke={T.grid} />
                 <text x={M.l - 8} y={yy + 4} fontSize={10} textAnchor="end" fill={T.text3}>
                   {fmt(v)}
@@ -1019,12 +1265,10 @@ function MiniChart({
 
           {data.map((p, i) => {
             if (i % every !== 0 && i !== data.length - 1) return null;
-            const x = xCenter(i);
-
             return (
               <text
-                key={`xl-${i}`}
-                x={x}
+                key={i}
+                x={xCenter(i)}
                 y={M.t + plotH + 24}
                 fontSize={10}
                 textAnchor="middle"
@@ -1042,17 +1286,16 @@ function MiniChart({
               let acc = 0;
 
               return (
-                <g key={`b-${i}`}>
+                <g key={`stack-${i}`}>
                   {bars.map((s, j) => {
                     const v = safeNum(p[s.key]);
                     if (v == null || v <= 0) return null;
-
                     const yTop = y(acc + v);
                     const yBottom = y(acc);
                     const h = Math.max(0, yBottom - yTop);
-                    const isTopSegment = j === bars.length - 1;
+                    acc += v;
 
-                    const node = (
+                    return (
                       <rect
                         key={`${s.key}-${i}`}
                         x={x}
@@ -1061,42 +1304,45 @@ function MiniChart({
                         height={h}
                         fill={s.color}
                         opacity={0.92}
-                        rx={isTopSegment ? Math.min(4, barWidth / 2) : 0}
-                        ry={isTopSegment ? Math.min(4, barWidth / 2) : 0}
+                        rx={j === bars.length - 1 ? 4 : 0}
+                        ry={j === bars.length - 1 ? 4 : 0}
                       />
                     );
-
-                    acc += v;
-                    return node;
                   })}
                 </g>
               );
             }
 
-            const left = xGroupLeft(i);
+            const groupW = Math.min(xBand * 0.72, 56);
+            const barGap = 4;
+            const barW = Math.max(
+              4,
+              (groupW - barGap * Math.max(0, bars.length - 1)) /
+                Math.max(1, bars.length)
+            );
+            const left =
+              xCenter(i) -
+              (barW * bars.length + barGap * (bars.length - 1)) / 2;
 
             return (
-              <g key={`b-${i}`}>
+              <g key={`bars-${i}`}>
                 {bars.map((s, j) => {
                   const v = safeNum(p[s.key]);
                   if (v == null) return null;
-
                   const y0 = y(0);
                   const yv = y(v);
-                  const h = Math.max(0, y0 - yv);
-                  const x = left + j * (barW + barGap);
 
                   return (
                     <rect
                       key={`${s.key}-${i}`}
-                      x={x}
+                      x={left + j * (barW + barGap)}
                       y={yv}
                       width={barW}
-                      height={h}
+                      height={Math.max(0, y0 - yv)}
                       fill={s.color}
                       opacity={0.92}
-                      rx={Math.min(4, barW / 2)}
-                      ry={Math.min(4, barW / 2)}
+                      rx={4}
+                      ry={4}
                     />
                   );
                 })}
@@ -1117,197 +1363,46 @@ function MiniChart({
 
             return (
               <path
-                key={`l-${s.key}`}
+                key={s.key}
                 d={d || "M 0 0"}
                 fill="none"
                 stroke={s.color}
                 strokeWidth={2.6}
                 strokeDasharray={s.dashed ? "6 6" : undefined}
-                opacity={0.95}
+                opacity={0.96}
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
             );
           })}
 
-          {hover && hoverX != null ? (
-            <line
-              x1={hoverX}
-              y1={M.t}
-              x2={hoverX}
-              y2={M.t + plotH}
-              stroke="rgba(17,24,39,0.18)"
-              strokeDasharray="4 4"
-            />
-          ) : null}
+          {lines.map((s) =>
+            s.showPoints
+              ? data.map((p, i) => {
+                  const v = safeNum(p[s.key]);
+                  if (v == null) return null;
 
-          {hoverPoint && hoverX != null ? (
-            <foreignObject
-              x={Math.min(W - 290, Math.max(8, hoverX + 12))}
-              y={Math.max(8, M.t + 8)}
-              width={280}
-              height={230}
-            >
-              <div
-                style={{
-                  border: `1px solid ${T.border}`,
-                  background: T.card,
-                  borderRadius: 14,
-                  padding: 10,
-                  fontSize: 12,
-                  boxShadow: "0 10px 22px rgba(17,24,39,0.12)",
-                }}
-              >
-                <div style={{ fontWeight: 900, color: T.text, marginBottom: 6 }}>
-                  {String(hoverPoint[xKey])}
-                </div>
-
-                <div style={{ display: "grid", gap: 6 }}>
-                  {visible.map((s) => {
-                    const v = safeNum(hoverPoint[s.key]);
-                    return (
-                      <div
-                        key={`tt-${s.key}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                            color: T.text2,
-                          }}
-                        >
-                          <span
-                            style={{
-                              width: 10,
-                              height: 10,
-                              background: s.color,
-                              borderRadius: 3,
-                            }}
-                          />
-                          <span style={{ fontWeight: 700 }}>{s.name}</span>
-                        </div>
-                        <div style={{ fontWeight: 900, color: T.text }}>
-                          {v == null ? "—" : brNum(v, 2)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </foreignObject>
-          ) : null}
+                  return (
+                    <circle
+                      key={`pt-${s.key}-${i}`}
+                      cx={xCenter(i)}
+                      cy={y(v)}
+                      r={s.pointRadius ?? 3}
+                      fill={T.card}
+                      stroke={s.color}
+                      strokeWidth={2}
+                    />
+                  );
+                })
+              : null
+          )}
         </svg>
       </div>
     </div>
   );
-}
+});
 
-/* =========================================================
-   KPI CARD
-========================================================= */
-function CompareKpiCard({
-  title,
-  aLabel,
-  aValue,
-  bLabel,
-  bValue,
-  fmt,
-  icon,
-}: {
-  title: string;
-  aLabel: string;
-  aValue: number | null;
-  bLabel: string;
-  bValue: number | null;
-  fmt: (n: number) => string;
-  icon: ReactNode;
-}) {
-  const pct = pctVs(aValue, bValue);
-  const dlt = aValue != null && bValue != null ? aValue - bValue : null;
-  const good = pct != null ? pct >= 100 : null;
-  const barColor = good == null ? T.borderStrong : good ? T.accent2 : T.errBd;
-
-  return (
-    <div
-      className="border rounded-2xl p-4 min-w-0 h-full"
-      style={{ borderColor: T.border, background: T.card }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 w-full">
-          <div className={UI.label} style={{ color: T.text2 }}>
-            {title}
-          </div>
-
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-[11px]" style={{ color: T.text3 }}>
-                {aLabel}
-              </div>
-              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
-                {aValue == null ? "—" : fmt(aValue)}
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px]" style={{ color: T.text3 }}>
-                {bLabel}
-              </div>
-              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
-                {bValue == null ? "—" : fmt(bValue)}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <div
-              className="flex items-center justify-between text-[11px]"
-              style={{ color: T.text3 }}
-            >
-              <span>Δ</span>
-              <span
-                className={UI.mono}
-                style={{ color: good == null ? T.text3 : good ? T.accent : T.errTx }}
-              >
-                {dlt == null ? "—" : fmt(dlt)}
-              </span>
-            </div>
-
-            <div
-              className="mt-1 border rounded-xl overflow-hidden"
-              style={{ borderColor: T.border, background: T.mutedBg, height: 10 }}
-            >
-              <div
-                style={{
-                  width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`,
-                  height: "100%",
-                  background: barColor,
-                  opacity: 0.9,
-                }}
-              />
-            </div>
-
-            <div className="mt-1 text-[11px] flex justify-end" style={{ color: T.text3 }}>
-              {pct == null ? "—" : `${brNum(pct, 1)}%`}
-            </div>
-          </div>
-        </div>
-
-        <div className="shrink-0" style={{ color: T.text3 }}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   TABLE
-========================================================= */
-function GerencialTable({
+const GerencialTable = memo(function GerencialTable({
   rows,
   energyUnit,
 }: {
@@ -1315,21 +1410,20 @@ function GerencialTable({
   energyUnit: "kWh" | "MWh";
 }) {
   return (
-    <div className="border rounded-2xl overflow-hidden" style={{ borderColor: T.border }}>
+    <div className="border rounded-[20px] overflow-hidden" style={{ borderColor: T.border }}>
       <div className="overflow-auto max-h-[620px]">
         <table className="w-full min-w-[1480px] border-separate border-spacing-0">
           <thead className="sticky top-0 z-10">
             <tr>
               {[
                 "Período",
-                `Geração`,
-                // `Perdas AYA`,
-                // `Topo Pilha (${energyUnit})`,
+                `Geração (${energyUnit})`,
+                `Perdas AYA (${energyUnit})`,
                 `P90 (${energyUnit})`,
                 "Geração/P90",
-                `Estimado Tecsci`,
-                "Geração/Tecsci",
-                `Estimado AYA`,
+                `Estimado TecSci (${energyUnit})`,
+                "Geração/TecSci",
+                `Estimado AYA (${energyUnit})`,
                 "Geração/AYA",
                 "Irradiação",
                 "Irrad. Meta",
@@ -1342,10 +1436,13 @@ function GerencialTable({
                 "Disp./Meta",
               ].map((h, idx) => (
                 <th
-                  key={idx}
-                  className="px-3 py-3 text-left text-[11px] font-semibold border-b whitespace-nowrap"
+                  key={h}
+                  className={cx(
+                    "px-3 py-3 text-left text-[11px] font-semibold border-b whitespace-nowrap",
+                    idx === 0 ? "sticky left-0 z-20" : ""
+                  )}
                   style={{
-                    background: T.cardSoft,
+                    background: T.cardSoft2,
                     borderColor: T.border,
                     color: T.text2,
                   }}
@@ -1359,12 +1456,8 @@ function GerencialTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={19}
-                  className="px-4 py-10 text-center text-sm"
-                  style={{ color: T.text3 }}
-                >
-                  Sem dados para exibir.
+                <td colSpan={18} className="px-4 py-10 text-center text-sm" style={{ color: T.text3 }}>
+                  Sem dados para exibir no período selecionado.
                 </td>
               </tr>
             ) : (
@@ -1377,76 +1470,34 @@ function GerencialTable({
                 const disp = pctVs(r.disponibilidade, r.disponibilidadeMeta);
 
                 return (
-                  <tr
-                    key={`${r.periodo}-${i}`}
-                    className="hover:bg-[rgba(17,24,39,0.018)]"
-                  >
+                  <tr key={`${r.periodo}-${i}`}>
                     <td
-                      className="px-3 py-3 text-sm  border-b whitespace-nowrap"
-                      style={{ borderColor: T.border, color: T.text }}
+                      className="px-3 py-3 text-sm border-b sticky left-0"
+                      style={{
+                        borderColor: T.border,
+                        color: T.text,
+                        background: i % 2 === 0 ? "#FFFFFF" : "#FBFCFD",
+                      }}
                     >
                       {r.periodo}
                     </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.geracao, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.errTx }}>
-                      {brNum(r.perdasAya, 2)}
-                    </td>
-                    {/* <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap font-semibold" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.totalEmpilhado, 2)}
-                    </td> */}
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.p90, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={genP90} />
-                    </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.estimadoTec, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={genTec} />
-                    </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.estimadoAya, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={genAya} />
-                    </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.irradiacao, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brNum(r.irradiacaoMeta, 2)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={irr} />
-                    </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brPct(r.pr, 1)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brPct(r.prMeta, 1)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={pr} />
-                    </td>
-
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brPct(r.disponibilidade, 1)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b tabular-nums whitespace-nowrap" style={{ borderColor: T.border, color: T.text }}>
-                      {brPct(r.disponibilidadeMeta, 1)}
-                    </td>
-                    <td className="px-3 py-3 text-sm border-b whitespace-nowrap" style={{ borderColor: T.border }}>
-                      <StatusChip pct={disp} />
-                    </td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.geracao, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.errTx }}>{brNum(r.perdasAya, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.p90, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genP90} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoTec, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genTec} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoAya, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genAya} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacao, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacaoMeta, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={irr} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.pr, 1)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.prMeta, 1)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={pr} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.disponibilidade, 1)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.disponibilidadeMeta, 1)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={disp} /></td>
                   </tr>
                 );
               })
@@ -1456,47 +1507,53 @@ function GerencialTable({
       </div>
     </div>
   );
-}
+});
 
-/* =========================================================
-   MAIN
-========================================================= */
 export function TecsciPage() {
-  const isMobile = useIsMobile(640);
-
-  const [msg, setMsg] = useState<{ type: "ok" | "warn" | "err"; text: string } | null>(
-    null
-  );
-  const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [xlsxLoading, setXlsxLoading] = useState(false);
-  const [pngLoading, setPngLoading] = useState(false);
-
-  const abortRef = useRef<AbortController | null>(null);
-
-  const [stations, setStations] = useState<Station[]>([]);
-  const [stationsLoading, setStationsLoading] = useState(true);
-
-  const [psId, setPsId] = useState<number>(1);
-  const selectedStation = useMemo(
-    () => stations.find((s) => s.id === psId) || null,
-    [stations, psId]
+  const [tableQuery, setTableQuery] = useState("");
+  const [presentMode, setPresentMode] = useState(false);
+  const [stationCountdown, setStationCountdown] = useState(
+    PRESENTATION_STATION_SECONDS
   );
+  const [periodPreset, setPeriodPreset] = useState<Preset>("thisMonth");
+  const [group, setGroup] = useState<"auto" | "day" | "month" | "year">("auto");
+  const [energyUnit, setEnergyUnit] = useState<"kWh" | "MWh">("MWh");
+
+  const { stations, stationsLoading } = useStations();
+  const [psId, setPsId] = useState<number>(0);
+  const chartsFullscreen = useFullscreen<HTMLDivElement>();
+  const presentationActive = presentMode || chartsFullscreen.isFullscreen;
 
   const initialRange = useMemo(() => {
     const r = monthRangeISO(new Date());
     return { start: r.start, end: clampEndToToday(r.end) };
   }, []);
 
-  const [periodPreset, setPeriodPreset] = useState<Preset>("thisMonth");
   const [start, setStart] = useState(initialRange.start);
   const [end, setEnd] = useState(initialRange.end);
 
-  const [group, setGroup] = useState<"auto" | "day" | "month" | "year">("auto");
-  const [energyUnit, setEnergyUnit] = useState<"kWh" | "MWh">("MWh");
+  useEffect(() => {
+    if (!stations.length) return;
+    setPsId((curr) => (stations.some((s) => s.id === curr) ? curr : stations[0]?.id || 0));
+  }, [stations]);
 
-  const [data, setData] = useState<PerfApiResp | null>(null);
-  const [openCharts, setOpenCharts] = useState(true);
+  const { data, loading, msg, setMsg, reload, lastUpdatedAt } =
+    usePerformanceData({
+      psId,
+      start,
+      end,
+      group,
+      enabled: !!psId,
+    });
+
+  const selectedStation = useMemo(
+    () => stations.find((s) => s.id === psId) || null,
+    [stations, psId]
+  );
+
+  const deferredTableQuery = useDeferredValue(tableQuery);
 
   const svgEnergyRef = useRef<SVGSVGElement | null>(null);
   const svgIrrRef = useRef<SVGSVGElement | null>(null);
@@ -1504,19 +1561,58 @@ export function TecsciPage() {
   const svgPrRef = useRef<SVGSVGElement | null>(null);
   const svgAvailRef = useRef<SVGSVGElement | null>(null);
 
+  const nextStation = useCallback(() => {
+    if (!stations.length) return;
+
+    setPsId((curr) => {
+      const idx = stations.findIndex((s) => s.id === curr);
+      if (idx < 0) return stations[0]?.id || curr;
+      return stations[(idx + 1) % stations.length]?.id || curr;
+    });
+
+    setStationCountdown(PRESENTATION_STATION_SECONDS);
+  }, [stations]);
+
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch("/api/tecsci/stations", { cache: "no-store" });
-        const j = await r.json();
-        if (j?.ok) setStations(j.stations || []);
-      } catch { }
-      setStationsLoading(false);
-    })();
+    if (!presentationActive || stations.length <= 1) {
+      setStationCountdown(PRESENTATION_STATION_SECONDS);
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setStationCountdown((prev) => {
+        if (prev <= 1) {
+          setPsId((curr) => {
+            const idx = stations.findIndex((s) => s.id === curr);
+            if (idx < 0) return stations[0]?.id || curr;
+            return stations[(idx + 1) % stations.length]?.id || curr;
+          });
+          return PRESENTATION_STATION_SECONDS;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(id);
+  }, [presentationActive, stations]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setPresentMode(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
   }, []);
 
   const applyPreset = useCallback((p: Preset) => {
     const now = new Date();
+    setPeriodPreset(p);
+
     if (p === "custom") return;
 
     if (p === "thisMonth") {
@@ -1525,6 +1621,7 @@ export function TecsciPage() {
       setEnd(clampEndToToday(r.end));
       return;
     }
+
     if (p === "lastMonth") {
       const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const r = monthRangeISO(d);
@@ -1532,6 +1629,7 @@ export function TecsciPage() {
       setEnd(r.end);
       return;
     }
+
     if (p === "last7") {
       const e = new Date(now);
       const s = new Date(now);
@@ -1540,6 +1638,7 @@ export function TecsciPage() {
       setEnd(toISO(e));
       return;
     }
+
     if (p === "last30") {
       const e = new Date(now);
       const s = new Date(now);
@@ -1548,99 +1647,185 @@ export function TecsciPage() {
       setEnd(toISO(e));
       return;
     }
+
     if (p === "thisYear") {
       const r = yearRangeISO(now.getFullYear());
       setStart(r.start);
       setEnd(clampEndToToday(r.end));
       return;
     }
+
     if (p === "lastYear") {
       const r = yearRangeISO(now.getFullYear() - 1);
       setStart(r.start);
       setEnd(r.end);
-      return;
     }
   }, []);
 
-  const load = useCallback(async () => {
-    setMsg(null);
-
-    const today = todayISO();
-    const endClamped = end > today ? today : end;
-
-    if (!psId || !Number.isFinite(psId)) {
-      setMsg({ type: "err", text: "Selecione uma usina." });
-      return;
-    }
-
-    if (!isIsoDate(start) || !isIsoDate(endClamped)) {
-      setMsg({ type: "err", text: "Datas inválidas." });
-      return;
-    }
-
-    if (start > endClamped) {
-      setMsg({ type: "err", text: "Data inicial maior que a final." });
-      return;
-    }
-
-    abortRef.current?.abort();
-    const ctrl = new AbortController();
-    abortRef.current = ctrl;
-
-    setLoading(true);
+  const startPresentation = useCallback(async () => {
+    setPresentMode(true);
+    setStationCountdown(PRESENTATION_STATION_SECONDS);
 
     try {
-      const url = `/api/tecsci/performance?ps_id=${psId}&start_date=${start}&end_date=${endClamped}&group=${group}`;
-      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
-      const j: PerfApiResp = await r.json().catch(() => ({ ok: false } as any));
-
-      if (!r.ok || !j?.ok) {
-        setData(null);
-        setMsg({ type: "err", text: j?.error || "Erro ao carregar performance." });
-        return;
+      if (!chartsFullscreen.isFullscreen) {
+        await chartsFullscreen.toggle();
       }
-
-      setData(j);
-      setMsg({ type: "ok", text: "Atualizado ✅" });
-    } catch (e: any) {
-      if (e?.name === "AbortError") return;
-      setData(null);
-      setMsg({ type: "err", text: "Erro de conexão." });
-    } finally {
-      setLoading(false);
+    } catch {
+      setMsg({
+        type: "warn",
+        text: "Modo apresentação ativado. Caso a tela cheia não abra automaticamente, use o botão de tela cheia.",
+      });
     }
-  }, [psId, start, end, group]);
+  }, [chartsFullscreen, setMsg]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 450);
-    return () => clearTimeout(t);
-  }, [load]);
+  const stopPresentation = useCallback(async () => {
+    setPresentMode(false);
+    setStationCountdown(PRESENTATION_STATION_SECONDS);
+
+    try {
+      if (chartsFullscreen.isFullscreen) {
+        await chartsFullscreen.toggle();
+      }
+    } catch {}
+  }, [chartsFullscreen]);
 
   const perf = data?.performance || null;
 
+  const resolvedGroup = useMemo<"day" | "month" | "year" | "aggregate">(() => {
+    if (data?.group === "day" || data?.group === "month" || data?.group === "year") {
+      return data.group;
+    }
+
+    if (data?.series?.daily?.length) return "day";
+    if (data?.series?.monthly?.length) return "month";
+    if (data?.series?.yearly?.length) return "year";
+    return "aggregate";
+  }, [data]);
+
   const bucket = useMemo(() => {
     const s = data?.series;
-    if (!s || !data?.group) return [];
-    if (data.group === "day") return (s.daily || []).map((x) => ({ label: brDate(x.day), dto: x }));
-    if (data.group === "month") return (s.monthly || []).map((x) => ({ label: x.month, dto: x }));
-    if (data.group === "year") return (s.yearly || []).map((x) => ({ label: x.year, dto: x }));
-    return [];
-  }, [data]);
+
+    if (resolvedGroup === "day") {
+      return (s?.daily || []).map((x) => ({ label: brDate(x.day), dto: x }));
+    }
+
+    if (resolvedGroup === "month") {
+      return (s?.monthly || []).map((x) => ({ label: x.month, dto: x }));
+    }
+
+    if (resolvedGroup === "year") {
+      return (s?.yearly || []).map((x) => ({ label: x.year, dto: x }));
+    }
+
+    return perf ? [{ label: "Consolidado", dto: perf }] : [];
+  }, [data, resolvedGroup, perf]);
+
+  const kpi = useMemo(() => {
+    const genKwh = safeNum(perf?.generated_energy_kwh);
+    const expKwh = safeNum(perf?.expected_energy_kwh);
+    const p90Kwh = safeNum(perf?.projected_energy_kwh);
+    const poa = safeNum(perf?.poa_irradiation_kwh);
+    const poaMeta = safeNum(perf?.projected_irradiation_kwh);
+    const pr = safeNum(perf?.pr_percentage);
+    const prMeta = prMetaPct(safeNum(perf?.projected_pr));
+    const avail = safeNum(perf?.availability_percentage);
+    const availMeta = 97;
+    const dcKw = safeNum(perf?.dc_power_kw);
+    const estimatedAya = estimatedAyaKwh(poa, safeNum(perf?.projected_pr), dcKw);
+
+    return {
+      psLabel: selectedStation ? selectedStation.name : "—",
+      geracao: genKwh == null ? null : kwhToUnit(genKwh, energyUnit),
+      p90: p90Kwh == null ? null : kwhToUnit(p90Kwh, energyUnit),
+      expectedTec: expKwh == null ? null : kwhToUnit(expKwh, energyUnit),
+      estimatedAya:
+        estimatedAya == null ? null : kwhToUnit(estimatedAya, energyUnit),
+      poa,
+      poaMeta,
+      pr,
+      prMeta,
+      avail,
+      availMeta,
+    };
+  }, [perf, selectedStation, energyUnit]);
+
+  const p90Pct = pctVs(kpi.geracao, kpi.p90);
+  const tecPct = pctVs(kpi.geracao, kpi.expectedTec);
+  const ayaPct = pctVs(kpi.geracao, kpi.estimatedAya);
+  const prPct = pctVs(kpi.pr, kpi.prMeta);
+  const availPct = pctVs(kpi.avail, kpi.availMeta);
+
+  const heroMetrics = useMemo(() => {
+    const gapP90 =
+      kpi.geracao != null && kpi.p90 != null ? kpi.geracao - kpi.p90 : null;
+
+    const gapTec =
+      kpi.geracao != null && kpi.expectedTec != null
+        ? kpi.geracao - kpi.expectedTec
+        : null;
+
+    const lossAya =
+      kpi.estimatedAya != null && kpi.geracao != null
+        ? Math.max(0, kpi.estimatedAya - kpi.geracao)
+        : null;
+
+    return [
+      {
+        label: `Geração (${energyUnit})`,
+        value: kpi.geracao == null ? "—" : brNum(kpi.geracao, 2),
+        sub: `P90 ${brNum(kpi.p90, 2)} • TecSci ${brNum(kpi.expectedTec, 2)}`,
+        icon: <Zap className="w-5 h-5" />,
+        tone: statusTone(p90Pct),
+      },
+      {
+        label: "Atingimento P90",
+        value: p90Pct == null ? "—" : `${brNum(p90Pct, 1)}%`,
+        sub: `Gap ${brNum(gapP90, 2)} ${energyUnit}`,
+        icon: <TrendingUp className="w-5 h-5" />,
+        tone: statusTone(p90Pct),
+      },
+      {
+        label: "Atingimento TecSci",
+        value: tecPct == null ? "—" : `${brNum(tecPct, 1)}%`,
+        sub: `Gap ${brNum(gapTec, 2)} ${energyUnit}`,
+        icon: <Gauge className="w-5 h-5" />,
+        tone: statusTone(tecPct),
+      },
+      {
+        label: `Perda estimada (${energyUnit})`,
+        value: lossAya == null ? "—" : brNum(lossAya, 2),
+        sub: `Referência AYA ${brNum(kpi.estimatedAya, 2)}`,
+        icon: <Activity className="w-5 h-5" />,
+        tone: statusTone(ayaPct),
+      },
+      {
+        label: "PR / Meta",
+        value: prPct == null ? "—" : `${brNum(prPct, 1)}%`,
+        sub: `${brPct(kpi.pr, 1)} vs ${brPct(kpi.prMeta, 1)}`,
+        icon: <LineChart className="w-5 h-5" />,
+        tone: statusTone(prPct),
+      },
+      {
+        label: "Disponibilidade / Meta",
+        value: availPct == null ? "—" : `${brNum(availPct, 1)}%`,
+        sub: `${brPct(kpi.avail, 1)} vs ${brPct(kpi.availMeta, 1)}`,
+        icon: <ShieldCheck className="w-5 h-5" />,
+        tone: statusTone(availPct),
+      },
+    ];
+  }, [kpi, energyUnit, p90Pct, tecPct, ayaPct, prPct, availPct]);
 
   const seriesEnergy = useMemo(() => {
     return bucket.map((b) => {
       const genKwh = safeNum(b.dto.generated_energy_kwh);
       const expTecKwh = safeNum(b.dto.expected_energy_kwh);
-
-      // TROCAR AQUI se vier um campo real de P90 na API
       const p90Kwh = safeNum(b.dto.projected_energy_kwh);
-
       const poa = safeNum(b.dto.poa_irradiation_kwh);
       const projPr = safeNum(b.dto.projected_pr);
       const dcKw = safeNum(b.dto.dc_power_kw);
-
       const ayaKwh = estimatedAyaKwh(poa, projPr, dcKw);
-      const lossAyaKwh = ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
+      const lossAyaKwh =
+        ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
 
       return {
         periodo: b.label,
@@ -1682,71 +1867,27 @@ export function TecsciPage() {
     }));
   }, [bucket]);
 
-  const kpi = useMemo(() => {
-    const genKwh = safeNum(perf?.generated_energy_kwh);
-    const expKwh = safeNum(perf?.expected_energy_kwh);
-
-    // TROCAR AQUI se vier um campo real de P90 na API
-    const p90Kwh = safeNum(perf?.projected_energy_kwh);
-
-    const poa = safeNum(perf?.poa_irradiation_kwh);
-    const poaMeta = safeNum(perf?.projected_irradiation_kwh);
-
-    const pr = safeNum(perf?.pr_percentage);
-    const prMeta = prMetaPct(safeNum(perf?.projected_pr));
-
-    const avail = safeNum(perf?.availability_percentage);
-    const availMeta = 97;
-
-    const dcKw = safeNum(perf?.dc_power_kw);
-    const estimatedAya = estimatedAyaKwh(poa, safeNum(perf?.projected_pr), dcKw);
-
-    return {
-      psLabel: selectedStation ? `${selectedStation.name} (${selectedStation.code})` : "—",
-
-      geracao: genKwh == null ? null : kwhToUnit(genKwh, energyUnit),
-      p90: p90Kwh == null ? null : kwhToUnit(p90Kwh, energyUnit),
-      expectedTec: expKwh == null ? null : kwhToUnit(expKwh, energyUnit),
-      estimatedAya: estimatedAya == null ? null : kwhToUnit(estimatedAya, energyUnit),
-
-      poa,
-      poaMeta,
-      pr,
-      prMeta,
-      avail,
-      availMeta,
-    };
-  }, [perf, selectedStation, energyUnit]);
-
   const tableRows = useMemo<TableRow[]>(() => {
     return bucket.map((b) => {
       const genKwh = safeNum(b.dto.generated_energy_kwh);
       const expTecKwh = safeNum(b.dto.expected_energy_kwh);
-
-      // TROCAR AQUI se vier um campo real de P90 na API
       const p90Kwh = safeNum(b.dto.projected_energy_kwh);
-
       const poa = safeNum(b.dto.poa_irradiation_kwh);
       const poaMeta = safeNum(b.dto.projected_irradiation_kwh);
       const pr = safeNum(b.dto.pr_percentage);
       const prMeta = prMetaPct(safeNum(b.dto.projected_pr));
       const disp = safeNum(b.dto.availability_percentage);
       const dispMeta = 97;
-
       const projPr = safeNum(b.dto.projected_pr);
       const dcKw = safeNum(b.dto.dc_power_kw);
       const ayaKwh = estimatedAyaKwh(poa, projPr, dcKw);
-      const lossAyaKwh = ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
-
-      const geracao = genKwh == null ? null : kwhToUnit(genKwh, energyUnit);
-      const perdasAya = lossAyaKwh == null ? null : kwhToUnit(lossAyaKwh, energyUnit);
+      const lossAyaKwh =
+        ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
 
       return {
         periodo: b.label,
-        geracao,
-        perdasAya,
-        totalEmpilhado:
-          geracao != null && perdasAya != null ? geracao + perdasAya : geracao,
+        geracao: genKwh == null ? null : kwhToUnit(genKwh, energyUnit),
+        perdasAya: lossAyaKwh == null ? null : kwhToUnit(lossAyaKwh, energyUnit),
         p90: p90Kwh == null ? null : kwhToUnit(p90Kwh, energyUnit),
         estimadoTec: expTecKwh == null ? null : kwhToUnit(expTecKwh, energyUnit),
         estimadoAya: ayaKwh == null ? null : kwhToUnit(ayaKwh, energyUnit),
@@ -1760,45 +1901,116 @@ export function TecsciPage() {
     });
   }, [bucket, energyUnit]);
 
+  const filteredTableRows = useMemo(() => {
+    const q = deferredTableQuery.trim().toLowerCase();
+    if (!q) return tableRows;
+    return tableRows.filter((r) => r.periodo.toLowerCase().includes(q));
+  }, [tableRows, deferredTableQuery]);
+
   const chartEnergySeries: ChartSeries[] = useMemo(
     () => [
-      { key: "geracao", name: `Geração (${energyUnit})`, type: "bar", color: T.cGen },
-      { key: "perdasAya", name: `Perdas (${energyUnit})`, type: "bar", color: T.cLoss },
-      { key: "p90", name: `P90 (${energyUnit})`, type: "line", color: T.cP90, dashed: true },
-      { key: "estimadoAya", name: `Estimado AYA (${energyUnit})`, type: "line", color: T.cAya },
-      { key: "estimadoTec", name: `Estimado TecSci (${energyUnit})`, type: "line", color: T.cTec, dashed: true },
+      {
+        key: "geracao",
+        name: `Geração (${energyUnit})`,
+        type: "bar",
+        color: T.cGen,
+      },
+      {
+        key: "perdasAya",
+        name: `Perdas (${energyUnit})`,
+        type: "bar",
+        color: T.cLoss,
+      },
+      {
+        key: "p90",
+        name: `P90 (${energyUnit})`,
+        type: "line",
+        color: T.cP90,
+      },
+      {
+        key: "estimadoAya",
+        name: `Estimado AYA (${energyUnit})`,
+        type: "line",
+        color: T.cAya,
+        dashed: true,
+        showPoints: true,
+        pointRadius: 3.5,
+      },
+      {
+        key: "estimadoTec",
+        name: `Estimado TecSci (${energyUnit})`,
+        type: "line",
+        color: T.cTec,
+        dashed: true,
+        showPoints: true,
+        pointRadius: 3.5,
+      },
     ],
     [energyUnit]
   );
 
   const chartIrr1: ChartSeries[] = useMemo(
     () => [
-      { key: "poa", name: "Irradiação Real", type: "bar", color: T.cPoa },
-      { key: "meta", name: "Irradiação Meta", type: "line", color: T.cPoaMeta, dashed: true },
+      { key: "poa", name: "Irradiação real", type: "bar", color: T.cPoa },
+      {
+        key: "meta",
+        name: "Irradiação Meta",
+        type: "line",
+        color: T.cPoaMeta,
+        dashed: true,
+      },
     ],
     []
   );
 
   const chartIrr2: ChartSeries[] = useMemo(
     () => [
-      { key: "accPoa", name: "Irradiação Acumulada", type: "line", color: T.cPoa },
-      { key: "accMeta", name: "Irradiação Meta Acumulada", type: "line", color: T.cPoaMeta, dashed: true },
+      {
+        key: "accPoa",
+        name: "Irradiação acumulada",
+        type: "line",
+        color: T.cPoa,
+      },
+      {
+        key: "accMeta",
+        name: "Irradiação acumulada Meta",
+        type: "line",
+        color: T.cPoaMeta,
+        dashed: true,
+      },
     ],
     []
   );
 
   const chartPR: ChartSeries[] = useMemo(
     () => [
-      { key: "pr", name: "PR (%)", type: "bar", color: T.cPR },
-      { key: "meta", name: "Meta PR", type: "line", color: T.cTarget, dashed: true },
+      { key: "pr", name: "PR", type: "bar", color: T.cPR },
+      {
+        key: "meta",
+        name: "PR Meta",
+        type: "line",
+        color: T.cTarget,
+        dashed: true,
+      },
     ],
     []
   );
 
   const chartAvail: ChartSeries[] = useMemo(
     () => [
-      { key: "disponibilidade", name: "Disponibilidade (%)", type: "bar", color: T.cAvail },
-      { key: "meta", name: "Meta", type: "line", color: T.cTarget, dashed: true },
+      {
+        key: "disponibilidade",
+        name: "Disponibilidade",
+        type: "bar",
+        color: T.cAvail,
+      },
+      {
+        key: "meta",
+        name: "Disponibilidade Meta",
+        type: "line",
+        color: T.cTarget,
+        dashed: true,
+      },
     ],
     []
   );
@@ -1808,7 +2020,6 @@ export function TecsciPage() {
       periodo: r.periodo,
       geracao: r.geracao,
       perdas_aya: r.perdasAya,
-      topo_pilha: r.totalEmpilhado,
       p90: r.p90,
       perc_geracao_p90: pctVs(r.geracao, r.p90),
       estimado_tecsci: r.estimadoTec,
@@ -1823,41 +2034,53 @@ export function TecsciPage() {
       perc_pr_meta: pctVs(r.pr, r.prMeta),
       disponibilidade: r.disponibilidade,
       disponibilidade_meta: r.disponibilidadeMeta,
-      perc_disponibilidade_meta: pctVs(r.disponibilidade, r.disponibilidadeMeta),
+      perc_disponibilidade_meta: pctVs(
+        r.disponibilidade,
+        r.disponibilidadeMeta
+      ),
     }));
   }, [tableRows]);
 
-  const baseFileName = useMemo(() => {
-    return sanitizeFileName(
-      `Relatorio_${selectedStation?.name || "Usina"}_${start}_${end}`
-    );
-  }, [selectedStation, start, end]);
+  const pdfFileName = useMemo(
+    () =>
+      sanitizeFileName(
+        `Relatorio_Gerencial_${selectedStation?.name || "Usina"}_${start}_${clampEndToToday(end)}`
+      ),
+    [selectedStation, start, end]
+  );
 
-  const loadingInitial = loading && !data;
-  const isReloading = loading && !!data;
+  const excelFileName = useMemo(
+    () =>
+      sanitizeFileName(
+        `Tabela_Analitica_${selectedStation?.name || "Usina"}_${start}_${clampEndToToday(end)}`
+      ),
+    [selectedStation, start, end]
+  );
 
-  const captureVisibleCharts = useCallback(async () => {
-    const charts = [
-      { ref: svgEnergyRef, w: 1600, h: 680, title: "Energia" },
-      { ref: svgIrrRef, w: 1400, h: 560, title: "Irradiação" },
-      { ref: svgIrrAccRef, w: 1400, h: 560, title: "Irradiação Acumulada" },
-      { ref: svgPrRef, w: 1400, h: 520, title: "PR" },
-      { ref: svgAvailRef, w: 1400, h: 520, title: "Disponibilidade" },
+  const captureCharts = useCallback(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const items = [
+      { title: "Energia", ref: svgEnergyRef, w: 1600, h: 680 },
+      { title: "Irradiação", ref: svgIrrRef, w: 1400, h: 560 },
+      { title: "Irradiação acumulada", ref: svgIrrAccRef, w: 1400, h: 560 },
+      { title: "PR", ref: svgPrRef, w: 1400, h: 520 },
+      { title: "Disponibilidade", ref: svgAvailRef, w: 1400, h: 520 },
     ] as const;
 
     const out: Array<{ title: string; dataUrl: string; w: number; h: number }> = [];
 
-    for (const c of charts) {
-      if (!c.ref.current) continue;
-      const dataUrl = await svgElementToPng(c.ref.current, c.w, c.h);
-      out.push({ title: c.title, dataUrl, w: c.w, h: c.h });
+    for (const item of items) {
+      if (!item.ref.current) continue;
+      const dataUrl = await svgElementToPng(item.ref.current, item.w, item.h);
+      out.push({ title: item.title, dataUrl, w: item.w, h: item.h });
     }
 
     return out;
   }, []);
 
   const exportExcel = useCallback(async () => {
-    if (!data?.ok) {
+    if (!data?.ok || !tableRows.length) {
       setMsg({ type: "err", text: "Sem dados para exportar." });
       return;
     }
@@ -1869,288 +2092,115 @@ export function TecsciPage() {
       const wb = XLSX.utils.book_new();
 
       const resumoAOA: any[][] = [
-        ["Relatório — TecSci Performance"],
+        ["Tabela Analítica"],
         [],
         ["Usina", kpi.psLabel],
-        ["Período", `${start} → ${end}`],
-        ["Granularidade", data.group || group],
+        ["Período", `${start} → ${clampEndToToday(end)}`],
+        ["Granularidade", groupLabel(resolvedGroup)],
         ["Unidade de Energia", energyUnit],
-        [],
-        ["Comparativos", ""],
-        ["Geração", kpi.geracao],
-        ["P90", kpi.p90],
-        ["Estimado TecSci", kpi.expectedTec],
-        ["Estimado AYA", kpi.estimatedAya],
-        ["Irradiação", kpi.poa],
-        ["Meta Irradiação", kpi.poaMeta],
-        ["PR (%)", kpi.pr],
-        ["Meta PR (%)", kpi.prMeta],
-        ["Disponibilidade (%)", kpi.avail],
-        ["Meta Disponibilidade (%)", kpi.availMeta],
+        ["Última atualização", brDateTime(lastUpdatedAt)],
       ];
 
       const wsResumo = XLSX.utils.aoa_to_sheet(resumoAOA);
-      wsResumo["!cols"] = [{ wch: 28 }, { wch: 28 }];
+      wsResumo["!cols"] = [{ wch: 28 }, { wch: 34 }];
       XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
 
       const wsSerie = XLSX.utils.json_to_sheet(exportRows);
-      wsSerie["!cols"] = [
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 16 },
-        { wch: 18 },
-        { wch: 18 },
-        { wch: 16 },
-        { wch: 18 },
-        { wch: 12 },
-        { wch: 14 },
-        { wch: 16 },
-        { wch: 10 },
-        { wch: 12 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 16 },
-        { wch: 18 },
-      ];
       XLSX.utils.book_append_sheet(wb, wsSerie, "Tabela");
 
-      XLSX.writeFile(wb, `${baseFileName}.xlsx`, { compression: true });
-      setMsg({ type: "ok", text: "Excel gerado ✅" });
+      XLSX.writeFile(wb, `${excelFileName}.xlsx`, { compression: true });
+      setMsg({ type: "ok", text: "Excel gerado com sucesso." });
     } catch {
       setMsg({ type: "err", text: "Falha ao gerar Excel." });
     } finally {
       setXlsxLoading(false);
     }
-  }, [data, kpi, start, end, group, energyUnit, exportRows, baseFileName]);
-
-  const exportPng = useCallback(async () => {
-    if (!data?.ok) {
-      setMsg({ type: "err", text: "Sem dados para exportar." });
-      return;
-    }
-
-    if (!openCharts) setOpenCharts(true);
-
-    setPngLoading(true);
-
-    try {
-      await new Promise((r) => setTimeout(r, 320));
-      const images = await captureVisibleCharts();
-
-      if (!images.length) {
-        setMsg({ type: "err", text: "Gráficos não disponíveis para exportar PNG." });
-        return;
-      }
-
-      const canvas = document.createElement("canvas");
-      const width = 1600;
-      const padding = 40;
-      const headerH = 180;
-      const gap = 28;
-
-      const scaledHeights = images.map((img) =>
-        Math.round((width - padding * 2) * (img.h / img.w))
-      );
-
-      const totalH =
-        headerH +
-        scaledHeights.reduce((acc, h) => acc + h, 0) +
-        gap * (images.length - 1) +
-        padding * 2;
-
-      canvas.width = width;
-      canvas.height = totalH;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas não suportado");
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = T.text;
-      ctx.font = "700 34px Inter, Arial, sans-serif";
-      ctx.fillText("Relatório — TecSci Performance", padding, 54);
-
-      ctx.fillStyle = T.text2;
-      ctx.font = "500 20px Inter, Arial, sans-serif";
-      ctx.fillText(selectedStation?.name || "Usina", padding, 90);
-      ctx.fillText(`Período: ${brDate(start)} → ${brDate(end)}`, padding, 118);
-      ctx.fillText(`Granularidade: ${data.group || group}`, 980, 90);
-      ctx.fillText(`Energia: ${energyUnit}`, 980, 118);
-
-      let y = headerH;
-
-      for (let i = 0; i < images.length; i++) {
-        const img = new Image();
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error("Falha ao carregar imagem"));
-          img.src = images[i].dataUrl;
-        });
-
-        const drawW = width - padding * 2;
-        const drawH = scaledHeights[i];
-
-        ctx.fillStyle = "#F7F9FB";
-        ctx.fillRect(padding, y - 8, drawW, drawH + 16);
-
-        ctx.fillStyle = T.text;
-        ctx.font = "700 20px Inter, Arial, sans-serif";
-        ctx.fillText(images[i].title, padding + 16, y + 24);
-
-        ctx.drawImage(img, padding, y + 36, drawW, drawH - 36);
-        y += drawH + gap;
-      }
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/png", 1)
-      );
-      if (!blob) throw new Error("Falha ao gerar PNG");
-
-      downloadBlob(`${baseFileName}.png`, blob);
-      setMsg({ type: "ok", text: "PNG gerado ✅" });
-    } catch {
-      setMsg({ type: "err", text: "Falha ao gerar PNG." });
-    } finally {
-      setPngLoading(false);
-    }
-  }, [data, openCharts, captureVisibleCharts, baseFileName, selectedStation, start, end, group, energyUnit]);
+  }, [
+    data,
+    tableRows.length,
+    setMsg,
+    kpi,
+    start,
+    end,
+    resolvedGroup,
+    energyUnit,
+    lastUpdatedAt,
+    exportRows,
+    excelFileName,
+  ]);
 
   const exportPdf = useCallback(async () => {
-    if (!data?.ok) {
+    if (!data?.ok || !tableRows.length) {
       setMsg({ type: "err", text: "Sem dados para gerar PDF." });
       return;
     }
 
-    if (!openCharts) setOpenCharts(true);
     setPdfLoading(true);
 
     try {
-      await new Promise((r) => setTimeout(r, 320));
-
-      const energyEl = svgEnergyRef.current;
-      const irrEl = svgIrrRef.current;
-      const irrAccEl = svgIrrAccRef.current;
-      const prEl = svgPrRef.current;
-      const availEl = svgAvailRef.current;
-
-      if (!energyEl || !irrEl || !irrAccEl || !prEl || !availEl) {
-        setMsg({
-          type: "err",
-          text: "Gráficos não disponíveis. Mostre os gráficos e tente novamente.",
-        });
-        return;
-      }
+      const images = await captureCharts();
+      if (!images.length) throw new Error();
 
       const { jsPDF } = await import("jspdf");
-      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: "a4",
+      });
 
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
-      const margin = 36;
-      const chartW = pageW - margin * 2;
+      const margin = 34;
+      const usableW = pageW - margin * 2;
 
-      const title = "Relatório — TecSci Performance";
-      const infoText = `${kpi.psLabel} • Período: ${brDate(start)} → ${brDate(end)} • Granularidade: ${data.group || group}`;
+      const drawHeader = (title = "Relatório Gerencial") => {
+        doc.setFillColor(22, 101, 52);
+        doc.rect(0, 0, pageW, 64, "F");
 
-      const drawHeader = () => {
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.setTextColor(11, 18, 32);
-        doc.text(title, margin, margin + 10);
+        doc.setFontSize(20);
+        doc.setTextColor(255, 255, 255);
+        doc.text(title, margin, 40);
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
-        const lines = doc.splitTextToSize(infoText, pageW - margin * 2);
-        doc.text(lines, margin, margin + 28);
+        doc.text(
+          `Usina: ${selectedStation?.name || "-"}  •  Período: ${brDate(start)} - ${brDate(
+            clampEndToToday(end)
+          )}  •  Granularidade: ${groupLabel(resolvedGroup)}`,
+          margin,
+          84
+        );
 
-        const lineY = margin + 40 + (Array.isArray(lines) ? (lines.length - 1) * 10 : 0);
         doc.setDrawColor(229, 231, 235);
-        doc.line(margin, lineY, pageW - margin, lineY);
-
-        return lineY;
+        doc.line(margin, 94, pageW - margin, 94);
       };
 
-      const drawComparePdfCard = (
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        titleTxt: string,
-        aLabel: string,
-        aValue: string,
-        bLabel: string,
-        bValue: string,
-        pct: number | null,
-        delta: string
-      ) => {
-        doc.setFillColor(251, 252, 253);
-        doc.setDrawColor(229, 231, 235);
-        doc.roundedRect(x, y, w, h, 12, 12, "FD");
-
+      const drawSectionTitle = (text: string, y: number) => {
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
+        doc.setFontSize(13);
         doc.setTextColor(11, 18, 32);
-        doc.text(titleTxt, x + 12, y + 18);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(aLabel, x + 12, y + 36);
-        doc.text(bLabel, x + w / 2, y + 36);
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(11, 18, 32);
-        doc.text(aValue, x + 12, y + 56);
-        doc.text(bValue, x + w / 2, y + 56);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Δ ${delta}`, x + 12, y + 76);
-
-        doc.setDrawColor(229, 231, 235);
-        doc.setFillColor(240, 242, 245);
-        doc.roundedRect(x + 12, y + 86, w - 24, 8, 4, 4, "FD");
-
-        const widthPct = pct == null ? 0 : Math.max(0, Math.min(100, pct));
-        if (widthPct > 0) {
-          if (widthPct >= 100) doc.setFillColor(46, 123, 65);
-          else if (widthPct >= 95) doc.setFillColor(245, 158, 11);
-          else doc.setFillColor(239, 68, 68);
-
-          doc.roundedRect(x + 12, y + 86, ((w - 24) * widthPct) / 100, 8, 4, 4, "F");
-        }
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(pct == null ? "—" : `${brNum(pct, 1)}%`, x + w - 34, y + 104);
+        doc.text(text, margin, y);
       };
 
-      const drawMiniTable = (startY: number) => {
-        const headerY = startY;
-        const rowH = 18;
-
+      const drawMiniTable = (rows: TableRow[], yStart: number) => {
         const cols = [
-          { label: "Período", x: margin, w: 70, align: "left" as const },
-          { label: "Geração", x: margin + 75, w: 66, align: "right" as const },
-          { label: "P90", x: margin + 147, w: 66, align: "right" as const },
-          { label: "%", x: margin + 219, w: 42, align: "right" as const },
-          { label: "TecSci", x: margin + 267, w: 72, align: "right" as const },
-          { label: "%", x: margin + 345, w: 42, align: "right" as const },
-          { label: "AYA", x: margin + 393, w: 72, align: "right" as const },
-          { label: "%", x: margin + 471, w: 42, align: "right" as const },
+          { label: "Período", x: margin, w: 116, align: "left" as const },
+          { label: "Geração", x: margin + 122, w: 92, align: "right" as const },
+          { label: "% P90", x: margin + 220, w: 70, align: "right" as const },
+          { label: "% TecSci", x: margin + 296, w: 78, align: "right" as const },
+          { label: "% AYA", x: margin + 380, w: 72, align: "right" as const },
+          { label: "% PR", x: margin + 458, w: 62, align: "right" as const },
+          { label: "% Disp.", x: margin + 526, w: 70, align: "right" as const },
         ];
+
+        const headerY = yStart;
+        const rowH = 20;
 
         doc.setFillColor(247, 249, 251);
         doc.setDrawColor(229, 231, 235);
-        doc.rect(margin, headerY, pageW - margin * 2, rowH, "FD");
+        doc.rect(margin, headerY, usableW, rowH, "FD");
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8);
@@ -2160,48 +2210,48 @@ export function TecsciPage() {
           doc.text(
             c.label,
             c.align === "left" ? c.x + 4 : c.x + c.w - 4,
-            headerY + 12,
+            headerY + 13,
             { align: c.align === "left" ? "left" : "right" }
           );
         });
 
-        const maxRows = Math.min(16, tableRows.length);
         let y = headerY + rowH;
+        const maxRows = Math.min(14, rows.length);
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(11, 18, 32);
 
         for (let i = 0; i < maxRows; i++) {
-          const r = tableRows[i];
+          const r = rows[i];
+
           const genP90 = pctVs(r.geracao, r.p90);
           const genTec = pctVs(r.geracao, r.estimadoTec);
           const genAya = pctVs(r.geracao, r.estimadoAya);
-
-          if (y + rowH > pageH - 40) break;
+          const prPctRow = pctVs(r.pr, r.prMeta);
+          const dispPctRow = pctVs(r.disponibilidade, r.disponibilidadeMeta);
 
           if (i % 2 === 0) {
             doc.setFillColor(252, 253, 254);
-            doc.rect(margin, y, pageW - margin * 2, rowH, "F");
+            doc.rect(margin, y, usableW, rowH, "F");
           }
 
-          const vals = [
+          const values = [
             r.periodo,
             brNum(r.geracao, 2),
-            brNum(r.p90, 2),
             genP90 == null ? "—" : `${brNum(genP90, 1)}%`,
-            brNum(r.estimadoTec, 2),
             genTec == null ? "—" : `${brNum(genTec, 1)}%`,
-            brNum(r.estimadoAya, 2),
             genAya == null ? "—" : `${brNum(genAya, 1)}%`,
+            prPctRow == null ? "—" : `${brNum(prPctRow, 1)}%`,
+            dispPctRow == null ? "—" : `${brNum(dispPctRow, 1)}%`,
           ];
 
-          vals.forEach((v, idx) => {
+          values.forEach((v, idx) => {
             const c = cols[idx];
             doc.text(
               v,
               c.align === "left" ? c.x + 4 : c.x + c.w - 4,
-              y + 12,
+              y + 13,
               { align: c.align === "left" ? "left" : "right" }
             );
           });
@@ -2210,664 +2260,713 @@ export function TecsciPage() {
           doc.line(margin, y + rowH, pageW - margin, y + rowH);
           y += rowH;
         }
-
-        if (tableRows.length > 16) {
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(8);
-          doc.setTextColor(100, 116, 139);
-          doc.text(
-            `Tabela resumida: exibindo 16 de ${tableRows.length} linhas. O arquivo Excel contém a tabela completa.`,
-            margin,
-            y + 14
-          );
-        }
       };
 
-      const lineY = drawHeader();
+      drawHeader();
+      drawSectionTitle("Resumo executivo", 122);
+      drawMiniTable(tableRows, 140);
 
-      let y = lineY + 22;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(11, 18, 32);
-      doc.text("Resumo comparativo", margin, y);
-      y += 14;
+      images.forEach((img) => {
+        doc.addPage();
+        drawHeader(`Relatório Gerencial — ${img.title}`);
 
-      const cardGap = 14;
-      const cardW = (pageW - margin * 2 - cardGap) / 2;
-      const cardH = 112;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(11, 18, 32);
+        doc.text(img.title, margin, 122);
 
-      const compareData = [
-        {
-          title: `Geração x P90 (${energyUnit})`,
-          aLabel: "Geração",
-          aValue: kpi.geracao,
-          bLabel: "P90",
-          bValue: kpi.p90,
-          fmt: (n: number) => brNum(n, 2),
-        },
-        {
-          title: `Geração x Estimado TecSci (${energyUnit})`,
-          aLabel: "Geração",
-          aValue: kpi.geracao,
-          bLabel: "Estimado TecSci",
-          bValue: kpi.expectedTec,
-          fmt: (n: number) => brNum(n, 2),
-        },
-        {
-          title: `Geração x Estimado AYA (${energyUnit})`,
-          aLabel: "Geração",
-          aValue: kpi.geracao,
-          bLabel: "Estimado AYA",
-          bValue: kpi.estimatedAya,
-          fmt: (n: number) => brNum(n, 2),
-        },
-        {
-          title: "Irradiação x Meta",
-          aLabel: "Irradiação",
-          aValue: kpi.poa,
-          bLabel: "Meta",
-          bValue: kpi.poaMeta,
-          fmt: (n: number) => brNum(n, 2),
-        },
-        {
-          title: "PR x Meta PR",
-          aLabel: "PR",
-          aValue: kpi.pr,
-          bLabel: "Meta PR",
-          bValue: kpi.prMeta,
-          fmt: (n: number) => brPct(n, 1),
-        },
-        {
-          title: "Disponibilidade x Meta",
-          aLabel: "Disp.",
-          aValue: kpi.avail,
-          bLabel: "Meta",
-          bValue: kpi.availMeta,
-          fmt: (n: number) => brPct(n, 1),
-        },
-      ];
+        const drawW = usableW;
+        const drawH = drawW * (img.h / img.w);
+        const maxChartH = pageH - 156;
+        const finalH = Math.min(drawH, maxChartH);
 
-      compareData.forEach((c, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const x = margin + col * (cardW + cardGap);
-        const yy = y + row * (cardH + 12);
-
-        const pct = pctVs(c.aValue, c.bValue);
-        const delta =
-          c.aValue != null && c.bValue != null ? c.fmt(c.aValue - c.bValue) : "—";
-
-        drawComparePdfCard(
-          x,
-          yy,
-          cardW,
-          cardH,
-          c.title,
-          c.aLabel,
-          c.aValue == null ? "—" : c.fmt(c.aValue),
-          c.bLabel,
-          c.bValue == null ? "—" : c.fmt(c.bValue),
-          pct,
-          delta
-        );
+        doc.addImage(img.dataUrl, "PNG", margin, 138, drawW, finalH);
       });
 
-      doc.addPage();
-      const line2 = drawHeader();
-      y = line2 + 22;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(11, 18, 32);
-      doc.text("Tabela resumida", margin, y);
-      y += 14;
-      drawMiniTable(y);
-
-      doc.addPage();
-      drawHeader();
-      y = 92;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(11, 18, 32);
-      doc.text("Energia", margin, y);
-
-      {
-        const png = await svgElementToPng(energyEl, 1600, 680);
-        const imgH = (chartW * 680) / 1600;
-        doc.addImage(png, "PNG", margin, y + 10, chartW, imgH);
-      }
-
-      doc.addPage();
-      drawHeader();
-      y = 92;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(11, 18, 32);
-      doc.text("Irradiação", margin, y);
-
-      {
-        const png = await svgElementToPng(irrEl, 1400, 560);
-        const imgH = (chartW * 560) / 1400;
-        doc.addImage(png, "PNG", margin, y + 10, chartW, imgH);
-        y += imgH + 34;
-      }
-
-      doc.text("Irradiação acumulada", margin, y);
-
-      {
-        const png = await svgElementToPng(irrAccEl, 1400, 560);
-        const imgH = (chartW * 560) / 1400;
-        doc.addImage(png, "PNG", margin, y + 10, chartW, imgH);
-      }
-
-      doc.addPage();
-      drawHeader();
-      y = 92;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(11, 18, 32);
-      doc.text("PR", margin, y);
-
-      {
-        const png = await svgElementToPng(prEl, 1400, 520);
-        const imgH = (chartW * 520) / 1400;
-        doc.addImage(png, "PNG", margin, y + 10, chartW, imgH);
-        y += imgH + 34;
-      }
-
-      doc.text("Disponibilidade", margin, y);
-
-      {
-        const png = await svgElementToPng(availEl, 1400, 520);
-        const imgH = (chartW * 520) / 1400;
-        doc.addImage(png, "PNG", margin, y + 10, chartW, imgH);
-      }
-
-      doc.save(`${baseFileName}.pdf`);
-      setMsg({ type: "ok", text: "PDF gerado ✅" });
+      doc.save(`${pdfFileName}.pdf`);
+      setMsg({ type: "ok", text: "PDF gerado com sucesso." });
     } catch {
       setMsg({ type: "err", text: "Falha ao gerar PDF." });
     } finally {
       setPdfLoading(false);
     }
-  }, [data, openCharts, kpi, start, end, group, energyUnit, baseFileName, tableRows]);
+  }, [
+    data,
+    tableRows,
+    setMsg,
+    captureCharts,
+    pdfFileName,
+    selectedStation,
+    start,
+    end,
+    resolvedGroup,
+  ]);
 
-  const FiltersBody = (
-    <div className="p-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-20 gap-3 items-end">
-        <div className="xl:col-span-5 min-w-0">
-          <StationPicker
-            stations={stations}
-            valueId={psId}
-            onChangeId={setPsId}
-            disabled={stationsLoading}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <label className={UI.label} style={{ color: T.text2 }}>
-            Período
-          </label>
-          <select
-            className={UI.select}
-            style={{ borderColor: T.border }}
-            value={periodPreset}
-            onChange={(e) => {
-              const v = e.target.value as Preset;
-              setPeriodPreset(v);
-              applyPreset(v);
-            }}
-          >
-            <option value="thisMonth">Este mês</option>
-            <option value="lastMonth">Mês passado</option>
-            <option value="last7">Últimos 7 dias</option>
-            <option value="last30">Últimos 30 dias</option>
-            <option value="thisYear">Ano atual</option>
-            <option value="lastYear">Ano passado</option>
-            <option value="custom">Personalizado</option>
-          </select>
-        </div>
-
-        <div className="xl:col-span-3">
-          <label className={UI.label} style={{ color: T.text2 }}>
-            Início
-          </label>
-          <input
-            className={UI.input}
-            style={{ borderColor: T.border }}
-            type="date"
-            value={start}
-            max={todayISO()}
-            onChange={(e) => {
-              setStart(e.target.value);
-              setPeriodPreset("custom");
-            }}
-          />
-        </div>
-
-        <div className="xl:col-span-3">
-          <label className={UI.label} style={{ color: T.text2 }}>
-            Fim
-          </label>
-          <input
-            className={UI.input}
-            style={{ borderColor: T.border }}
-            type="date"
-            value={end}
-            max={todayISO()}
-            onChange={(e) => {
-              const v = e.target.value;
-              const t = todayISO();
-              setEnd(v > t ? t : v);
-              setPeriodPreset("custom");
-            }}
-          />
-        </div>
-
-        
-
-        <div className="xl:col-span-2">
-          <label className={UI.label} style={{ color: T.text2 }}>
-            Unidade de Energia
-          </label>
-          <div className="mt-1">
-            <Segmented
-              value={energyUnit}
-              onChange={(v) => setEnergyUnit(v as any)}
-              options={[
-                { value: "MWh", label: "MWh" },
-                { value: "kWh", label: "kWh" },
-              ]}
-            />
-          </div>
-        </div>
-        <div className="xl:col-span-3">
-          <label className={UI.label} style={{ color: T.text2 }}>
-            Granularidade
-          </label>
-          <div className="mt-1">
-            <Segmented
-              value={group}
-              onChange={(v) => setGroup(v as any)}
-              options={[
-                { value: "auto", label: "Auto" },
-                { value: "day", label: "Dia" },
-                { value: "month", label: "Mês" },
-                { value: "year", label: "Ano" },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const KpisBody = (
-    <div className="p-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3 items-stretch">
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title={`Geração x P90 (${energyUnit})`}
-            aLabel="Geração"
-            aValue={kpi.geracao}
-            bLabel="P90"
-            bValue={kpi.p90}
-            fmt={(n) => brNum(n, 2)}
-            icon={<Zap className="w-4 h-4" />}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title={`Geração x Estimado TecSci (${energyUnit})`}
-            aLabel="Geração"
-            aValue={kpi.geracao}
-            bLabel="Estimado TecSci"
-            bValue={kpi.expectedTec}
-            fmt={(n) => brNum(n, 2)}
-            icon={<Gauge className="w-4 h-4" />}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title={`Geração x Estimado AYA (${energyUnit})`}
-            aLabel="Geração"
-            aValue={kpi.geracao}
-            bLabel="Estimado AYA"
-            bValue={kpi.estimatedAya}
-            fmt={(n) => brNum(n, 2)}
-            icon={<Activity className="w-4 h-4" />}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title="Irradiação x Meta"
-            aLabel="Irradiação"
-            aValue={kpi.poa}
-            bLabel="Meta"
-            bValue={kpi.poaMeta}
-            fmt={(n) => brNum(n, 2)}
-            icon={<Activity className="w-4 h-4" />}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title="PR x Meta PR"
-            aLabel="PR"
-            aValue={kpi.pr}
-            bLabel="Meta PR"
-            bValue={kpi.prMeta}
-            fmt={(n) => brPct(n, 1)}
-            icon={<Activity className="w-4 h-4" />}
-          />
-        </div>
-
-        <div className="xl:col-span-4">
-          <CompareKpiCard
-            title="Disponibilidade x Meta"
-            aLabel="Disponibilidade"
-            aValue={kpi.avail}
-            bLabel="Meta"
-            bValue={kpi.availMeta}
-            fmt={(n) => brPct(n, 1)}
-            icon={<Activity className="w-4 h-4" />}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const TableBody = (
-    <div className="p-5">
-      <GerencialTable rows={tableRows} energyUnit={energyUnit} />
-    </div>
-  );
-
-  const ChartsBody = (
-    <div className="p-5 grid gap-4">
-      <div
-        className="border rounded-2xl p-4"
-        style={{ borderColor: T.border, background: T.cardSoft }}
-      >
-        <MiniChart
-          title="Performance energética"
-          // subtitle="Barras empilhadas: Geração + Perdas • Linhas: Estimado TecSci, Estimado AYA e P90"
-          data={seriesEnergy}
-          xKey="periodo"
-          series={chartEnergySeries}
-          height={380}
-          formatterLeft={(v) => brNum(v, 2)}
-          svgRef={svgEnergyRef}
-          xLabelCount={10}
-          stackBars
-        />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div
-          className="border rounded-2xl p-4"
-          style={{ borderColor: T.border, background: T.cardSoft }}
-        >
-          <MiniChart
-            title="Irradiação"
-            // subtitle="Irradiação x Meta"
-            data={seriesIrr}
-            xKey="periodo"
-            series={chartIrr1}
-            height={320}
-            formatterLeft={(v) => brNum(v, 2)}
-            svgRef={svgIrrRef}
-            xLabelCount={8}
-          />
-        </div>
-
-        <div
-          className="border rounded-2xl p-4"
-          style={{ borderColor: T.border, background: T.cardSoft }}
-        >
-          <MiniChart
-            title="Irradiação acumulada"
-            // subtitle="Acumulado de irradiação x acumulado da meta"
-            data={seriesIrr}
-            xKey="periodo"
-            series={chartIrr2}
-            height={320}
-            formatterLeft={(v) => brNum(v, 2)}
-            svgRef={svgIrrAccRef}
-            xLabelCount={8}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div
-          className="border rounded-2xl p-4"
-          style={{ borderColor: T.border, background: T.cardSoft }}
-        >
-          <MiniChart
-            title="PR"
-            // subtitle="PR x Meta PR"
-            data={seriesPR}
-            xKey="periodo"
-            series={chartPR}
-            height={300}
-            yDomain={[0, 100]}
-            formatterLeft={(v) => `${brNum(v, 0)}%`}
-            svgRef={svgPrRef}
-            xLabelCount={8}
-          />
-        </div>
-
-        <div
-          className="border rounded-2xl p-4"
-          style={{ borderColor: T.border, background: T.cardSoft }}
-        >
-          <MiniChart
-            title="Disponibilidade"
-            // subtitle="Disponibilidade x Meta"
-            data={seriesAvail}
-            xKey="periodo"
-            series={chartAvail}
-            height={300}
-            yDomain={[0, 100]}
-            formatterLeft={(v) => `${brNum(v, 0)}%`}
-            svgRef={svgAvailRef}
-            xLabelCount={8}
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const InitialLoadingBody = (
-    <div className="grid gap-4">
-      <div className={UI.section} style={{ borderColor: T.border, background: T.card }}>
-        <SectionHeader title="Filtros" hint="Carregando interface…" />
-        <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3">
-          <Skeleton className="xl:col-span-4 h-10" />
-          <Skeleton className="xl:col-span-2 h-10" />
-          <Skeleton className="xl:col-span-2 h-10" />
-          <Skeleton className="xl:col-span-2 h-10" />
-          <Skeleton className="xl:col-span-6 h-10" />
-          <Skeleton className="xl:col-span-6 h-10" />
-        </div>
-      </div>
-
-      <div className={UI.section} style={{ borderColor: T.border, background: T.card }}>
-        <SectionHeader title="KPIs" hint="Carregando indicadores…" />
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="xl:col-span-4 h-40" />
-          ))}
-        </div>
-      </div>
-
-      <div className={UI.section} style={{ borderColor: T.border, background: T.card }}>
-        <SectionHeader title="Tabela" hint="Carregando dados…" />
-        <div className="p-5">
-          <Skeleton className="h-[380px] w-full" />
-        </div>
-      </div>
-    </div>
-  );
+  const loadingInitial = loading && !data;
+  const isReloading = loading && !!data;
 
   return (
-    <section className={UI.page} style={{ background: T.bg, color: T.text }}>
+    <section
+      className={UI.page}
+      style={{
+        background: `radial-gradient(circle at top left, ${T.pageGlow} 0%, transparent 26%), linear-gradient(180deg, ${T.bg} 0%, ${T.bg2} 100%)`,
+        color: T.text,
+      }}
+    >
       <div className={UI.container}>
         <div
-          className={cx(UI.header, "p-4 sm:p-5")}
+          className={cx(UI.hero, "overflow-hidden")}
           style={{ borderColor: T.border, background: T.card }}
         >
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="min-w-0">
-              <div className={UI.headerTitle} style={{ color: T.text }}>
-                Painel de Performance 
+          <div
+            className="px-5 sm:px-6 py-5"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(22,101,52,0.05) 0%, rgba(22,101,52,0.00) 40%, rgba(15,23,42,0.03) 100%)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                    style={{ background: T.cardSoft2, color: T.accent }}
+                  >
+                    <Factory className="w-5 h-5" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className={UI.headerTitle} style={{ color: T.text }}>
+                      Painel Operacional de Performance
+                    </div>
+                    <div className="mt-1 text-sm font-semibold truncate" style={{ color: T.text2 }}>
+                      {selectedStation ? selectedStation.name : "Selecione a usina"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  <Pill tone="accent">
+                    <CalendarDays className="w-3.5 h-3.5 mr-1" />
+                    {rangeLabel(start, end)}
+                  </Pill>
+                  <Pill>
+                    <Database className="w-3.5 h-3.5 mr-1" />
+                    {groupLabel(resolvedGroup)}
+                  </Pill>
+                  <Pill tone="info">
+                    <BarChart3 className="w-3.5 h-3.5 mr-1" />
+                    Energia em {energyUnit}
+                  </Pill>
+                  <Pill>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                    {lastUpdatedAt ? brDateTime(lastUpdatedAt) : "Sem atualização"}
+                  </Pill>
+                </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <Pill tone="accent">
-                  {selectedStation
-                    ? selectedStation.name
-                    : stationsLoading
-                      ? "Carregando usinas…"
-                      : "Selecione a usina"}
-                </Pill>
-                <Pill>
-                  Período: {start && end ? `${brDate(start)} - ${brDate(end)}` : "—"}
-                </Pill>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Btn tone="secondary" onClick={reload} loading={loading} title="Atualizar dados">
+                  {!loading && <RefreshCw className="w-4 h-4" />}
+                  {!loading && "Atualizar"}
+                </Btn>
+
+                <Btn tone="secondary" onClick={startPresentation} title="Modo apresentação">
+                  <LayoutDashboard className="w-4 h-4" />
+                  Apresentar
+                </Btn>
+
+                <Btn
+                  tone="primary"
+                  onClick={exportPdf}
+                  loading={pdfLoading}
+                  disabled={!data?.ok || !tableRows.length}
+                  title="Gerar relatório em PDF"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Relatório Gerencial
+                </Btn>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Btn tone="secondary" onClick={load} loading={loading} title="Recarregar">
-                <RefreshCw className="w-4 h-4" />
-              </Btn>
-
-              <Btn tone="secondary" onClick={exportPng} loading={pngLoading} title="Gerar PNG">
-                <FileImage className="w-4 h-4" />
-                PNG
-              </Btn>
-
-              <Btn tone="secondary" onClick={exportPdf} loading={pdfLoading} title="Gerar PDF">
-                <FileDown className="w-4 h-4" />
-                PDF
-              </Btn>
-
-              <Btn tone="secondary" onClick={exportExcel} loading={xlsxLoading} title="Gerar Excel">
-                <FileSpreadsheet className="w-4 h-4" />
-                Excel
-              </Btn>
-
-              <Btn
-                tone="secondary"
-                onClick={() => setOpenCharts((p) => !p)}
-                title="Mostrar/ocultar gráficos"
-              >
-                {openCharts ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </Btn>
+            <div className="mt-5">
+              <OpsStrip
+                stationName={selectedStation?.name || "—"}
+                lastUpdatedAt={lastUpdatedAt}
+                generated={kpi.geracao}
+                energyUnit={energyUnit}
+                p90Pct={p90Pct}
+                prPct={prPct}
+                availPct={availPct}
+              />
             </div>
-          </div>
 
-          <div className="mt-3">
-            <MsgBox m={msg} />
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+              {heroMetrics.map((item) => (
+                <ExecutiveMetric key={item.label} {...item} />
+              ))}
+            </div>
           </div>
         </div>
 
+        {!presentationActive ? (
+          <div className="mt-4 max-w-[520px]">
+            <MsgBox m={msg} />
+          </div>
+        ) : null}
+
         {loadingInitial ? (
-          <div className="mt-4">{InitialLoadingBody}</div>
+          <div
+            className="mt-4 border rounded-[20px] bg-white p-12 text-center"
+            style={{ borderColor: T.border }}
+          >
+            <div className="inline-flex items-center gap-3 text-sm" style={{ color: T.text2 }}>
+              <span className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              Carregando dados do painel...
+            </div>
+          </div>
         ) : (
-          <div className="relative mt-4">
-            <div
-              style={{
-                filter: isReloading ? "blur(2px)" : "none",
-                opacity: isReloading ? 0.72 : 1,
-                pointerEvents: isReloading ? "none" : "auto",
-                transition: "all 180ms ease",
-              }}
-            >
+          <div className="relative mt-4 space-y-4">
+            {!presentationActive ? (
               <div
                 className={UI.section}
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="Filtros"
-                  hint="Seleção de usina, período, granularidade e unidade de energia"
+                  title="Filtros e configuração"
+                  hint="Selecione a usina, período, granularidade e unidade de energia"
                   right={
                     <Btn
                       tone="secondary"
                       onClick={() => {
                         setMsg(null);
-                        setPeriodPreset("thisMonth");
+                        setTableQuery("");
                         applyPreset("thisMonth");
                       }}
-                      className={cx(isMobile ? "h-9 px-3 text-xs" : "")}
-                      title="Limpar"
+                      title="Restaurar filtro padrão"
                     >
                       <Eraser className="w-4 h-4" />
+                      Limpar
                     </Btn>
                   }
                 />
-                {FiltersBody}
-              </div>
 
+                <div className="p-5 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+                    <div className="xl:col-span-2">
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Usina
+                      </label>
+                      <select
+                        className={UI.select}
+                        style={{ borderColor: T.border }}
+                        value={psId}
+                        onChange={(e) => setPsId(Number(e.target.value))}
+                        disabled={stationsLoading}
+                      >
+                        {stations.length === 0 ? (
+                          <option value="">Carregando...</option>
+                        ) : null}
+                        {stations.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Período
+                      </label>
+                      <select
+                        className={UI.select}
+                        style={{ borderColor: T.border }}
+                        value={periodPreset}
+                        onChange={(e) => applyPreset(e.target.value as Preset)}
+                      >
+                        <option value="thisMonth">Este mês</option>
+                        <option value="lastMonth">Mês passado</option>
+                        <option value="last7">Últimos 7 dias</option>
+                        <option value="last30">Últimos 30 dias</option>
+                        <option value="thisYear">Ano atual</option>
+                        <option value="lastYear">Ano passado</option>
+                        <option value="custom">Personalizado</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Início
+                      </label>
+                      <input
+                        className={UI.input}
+                        style={{ borderColor: T.border }}
+                        type="date"
+                        value={start}
+                        max={todayISO()}
+                        onChange={(e) => {
+                          setStart(e.target.value);
+                          setPeriodPreset("custom");
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Fim
+                      </label>
+                      <input
+                        className={UI.input}
+                        style={{ borderColor: T.border }}
+                        type="date"
+                        value={end}
+                        max={todayISO()}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const t = todayISO();
+                          setEnd(v > t ? t : v);
+                          setPeriodPreset("custom");
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Unidade
+                      </label>
+                      <Segmented
+                        value={energyUnit}
+                        onChange={(v) => setEnergyUnit(v as "kWh" | "MWh")}
+                        options={[
+                          { value: "MWh", label: "MWh" },
+                          { value: "kWh", label: "kWh" },
+                        ]}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={UI.label} style={{ color: T.text2 }}>
+                        Granularidade
+                      </label>
+                      <Segmented
+                        value={group}
+                        onChange={(v) => setGroup(v as "auto" | "day" | "month" | "year")}
+                        options={[
+                          { value: "auto", label: "Auto" },
+                          { value: "day", label: "Dia" },
+                          { value: "month", label: "Mês" },
+                          { value: "year", label: "Ano" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {!presentationActive ? (
               <div
-                className={cx(UI.section, "mt-4")}
+                className={UI.section}
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="KPIs"
-                  hint="Comparativos consolidados do período"
+                  title="Resumo executivo"
+                  hint="Comparativos consolidados do período e atingimento das metas"
+                  right={
+                    <Pill tone="accent">
+                      <ClipboardList className="w-3.5 h-3.5 mr-1" />
+                      Visão consolidada
+                    </Pill>
+                  }
                 />
-                {KpisBody}
+
+                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title={`Geração x P90 (${energyUnit})`}
+                      aLabel="Geração"
+                      aValue={kpi.geracao}
+                      bLabel="P90"
+                      bValue={kpi.p90}
+                      fmt={(n) => brNum(n, 2)}
+                      icon={<Zap className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title={`Geração x Estimado TecSci (${energyUnit})`}
+                      aLabel="Geração"
+                      aValue={kpi.geracao}
+                      bLabel="Estimado TecSci"
+                      bValue={kpi.expectedTec}
+                      fmt={(n) => brNum(n, 2)}
+                      icon={<Gauge className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title={`Geração x Estimado AYA (${energyUnit})`}
+                      aLabel="Geração"
+                      aValue={kpi.geracao}
+                      bLabel="Estimado AYA"
+                      bValue={kpi.estimatedAya}
+                      fmt={(n) => brNum(n, 2)}
+                      icon={<Activity className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title="Irradiação x Meta"
+                      aLabel="Irradiação"
+                      aValue={kpi.poa}
+                      bLabel="Meta"
+                      bValue={kpi.poaMeta}
+                      fmt={(n) => brNum(n, 2)}
+                      icon={<SunMedium className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title="PR x Meta PR"
+                      aLabel="PR"
+                      aValue={kpi.pr}
+                      bLabel="Meta PR"
+                      bValue={kpi.prMeta}
+                      fmt={(n) => brPct(n, 1)}
+                      icon={<LineChart className="w-4 h-4" />}
+                    />
+                  </div>
+
+                  <div className="xl:col-span-4">
+                    <CompareKpiCard
+                      title="Disponibilidade x Meta"
+                      aLabel="Disponibilidade"
+                      aValue={kpi.avail}
+                      bLabel="Meta"
+                      bValue={kpi.availMeta}
+                      fmt={(n) => brPct(n, 1)}
+                      icon={<ShieldCheck className="w-4 h-4" />}
+                    />
+                  </div>
+                </div>
               </div>
-              {openCharts ? (
+            ) : null}
+
+            <div
+              ref={chartsFullscreen.ref}
+              className={cx(
+                UI.section,
+                "relative",
+                chartsFullscreen.isFullscreen ? "rounded-none border-0 min-h-screen" : ""
+              )}
+              style={{
+                borderColor: T.border,
+                background: chartsFullscreen.isFullscreen ? T.bg : T.card,
+              }}
+            >
+              <SectionHeader
+                title={
+                  presentationActive
+                    ? `Modo apresentação — ${selectedStation?.name || "Usina"}`
+                    : `Resumo gráfico — ${selectedStation?.name || "Usina"}`
+                }
+                hint={
+                  presentationActive
+                    ? "Troca automática de usina a cada 20 segundos"
+                    : "Energia, irradiância, PR e disponibilidade operacional"
+                }
+                right={
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Pill>
+                      <CalendarDays className="w-3.5 h-3.5 mr-1" />
+                      {lastUpdatedAt ? brDateTime(lastUpdatedAt) : "Sem atualização"}
+                    </Pill>
+
+                    {presentationActive ? (
+                      <>
+                        <Pill tone="accent">Próxima usina em {stationCountdown}s</Pill>
+
+                        <Btn tone="secondary" onClick={nextStation} title="Próxima usina">
+                          Próxima
+                          <ChevronRight className="w-4 h-4" />
+                        </Btn>
+
+                        <Btn tone="secondary" onClick={stopPresentation} title="Sair da apresentação">
+                          <Minimize2 className="w-4 h-4" />
+                          Sair
+                        </Btn>
+                      </>
+                    ) : (
+                      <Btn tone="secondary" onClick={chartsFullscreen.toggle} title="Tela cheia">
+                        <Maximize2 className="w-4 h-4" />
+                        Tela cheia
+                      </Btn>
+                    )}
+                  </div>
+                }
+              />
+
+              {presentationActive ? (
                 <div
-                  className={cx(UI.section, "mt-4")}
-                  style={{ borderColor: T.border, background: T.card }}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-[-100000px] top-0 w-[1400px] opacity-0"
                 >
-                  <SectionHeader
-                    title="Gráficos"
-                    hint="Energia, irradiância, PR e disponibilidade"
-                    // right={
-                    //   <div className="flex items-center gap-2">
-                    //     <Pill>pontos: {bucket.length}</Pill>
-                    //     <Pill>{data?.group || group}</Pill>
-                    //   </div>
-                    // }
-                  />
-                  {ChartsBody}
+                  <div
+                    className="border rounded-[20px] p-4"
+                    style={{ borderColor: T.border, background: T.cardSoft }}
+                  >
+                    <MiniChart
+                      title="Irradiação"
+                      subtitle="Real versus meta"
+                      data={seriesIrr}
+                      xKey="periodo"
+                      series={chartIrr1}
+                      height={320}
+                      formatterLeft={(v) => brNum(v, 2)}
+                      svgRef={svgIrrRef}
+                      xLabelCount={8}
+                    />
+                  </div>
+
+                  <div
+                    className="mt-4 border rounded-[20px] p-4"
+                    style={{ borderColor: T.border, background: T.cardSoft }}
+                  >
+                    <MiniChart
+                      title="Disponibilidade"
+                      subtitle="Disponibilidade operacional versus meta"
+                      data={seriesAvail}
+                      xKey="periodo"
+                      series={chartAvail}
+                      height={300}
+                      yDomain={[0, 100]}
+                      formatterLeft={(v) => `${brNum(v, 0)}%`}
+                      svgRef={svgAvailRef}
+                      xLabelCount={8}
+                    />
+                  </div>
                 </div>
               ) : null}
+
               <div
-                className={cx(UI.section, "mt-4")}
+                className={cx(
+                  "p-5 grid gap-4",
+                  presentationActive ? "h-[calc(100vh-150px)] overflow-hidden" : ""
+                )}
+              >
+                {presentationActive ? (
+                  <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 h-full">
+                    <div
+                      className="xl:col-span-12 border rounded-[20px] p-4"
+                      style={{ borderColor: T.border, background: T.cardSoft2 }}
+                    >
+                      <MiniChart
+                        title="Performance energética"
+                        subtitle="Geração, perdas e referências do período"
+                        data={seriesEnergy}
+                        xKey="periodo"
+                        series={chartEnergySeries}
+                        height={360}
+                        formatterLeft={(v) => brNum(v, 2)}
+                        svgRef={svgEnergyRef}
+                        xLabelCount={14}
+                        stackBars
+                      />
+                    </div>
+
+                    <div
+                      className="xl:col-span-6 border rounded-[20px] p-4"
+                      style={{ borderColor: T.border, background: T.cardSoft2 }}
+                    >
+                      <MiniChart
+                        title="Irradiação acumulada"
+                        subtitle="Curva acumulada do período"
+                        data={seriesIrr}
+                        xKey="periodo"
+                        series={chartIrr2}
+                        height={250}
+                        formatterLeft={(v) => brNum(v, 2)}
+                        svgRef={svgIrrAccRef}
+                        xLabelCount={10}
+                      />
+                    </div>
+
+                    <div
+                      className="xl:col-span-6 border rounded-[20px] p-4"
+                      style={{ borderColor: T.border, background: T.cardSoft2 }}
+                    >
+                      <MiniChart
+                        title="Performance ratio versus meta"
+                        subtitle="PR real comparado com a meta"
+                        data={seriesPR}
+                        xKey="periodo"
+                        series={chartPR}
+                        height={250}
+                        yDomain={[0, 100]}
+                        formatterLeft={(v) => `${brNum(v, 0)}%`}
+                        svgRef={svgPrRef}
+                        xLabelCount={10}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div
+                      className="border rounded-[20px] p-4"
+                      style={{ borderColor: T.border, background: T.cardSoft2 }}
+                    >
+                      <MiniChart
+                        title="Performance energética"
+                        subtitle="Barras empilhadas de geração e perdas com linhas de referência"
+                        data={seriesEnergy}
+                        xKey="periodo"
+                        series={chartEnergySeries}
+                        height={390}
+                        formatterLeft={(v) => brNum(v, 2)}
+                        svgRef={svgEnergyRef}
+                        xLabelCount={10}
+                        stackBars
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div
+                        className="border rounded-[20px] p-4"
+                        style={{ borderColor: T.border, background: T.cardSoft2 }}
+                      >
+                        <MiniChart
+                          title="Irradiação"
+                          subtitle="Real versus meta"
+                          data={seriesIrr}
+                          xKey="periodo"
+                          series={chartIrr1}
+                          height={320}
+                          formatterLeft={(v) => brNum(v, 2)}
+                          svgRef={svgIrrRef}
+                          xLabelCount={8}
+                        />
+                      </div>
+
+                      <div
+                        className="border rounded-[20px] p-4"
+                        style={{ borderColor: T.border, background: T.cardSoft2 }}
+                      >
+                        <MiniChart
+                          title="Irradiação acumulada"
+                          subtitle="Curva acumulada"
+                          data={seriesIrr}
+                          xKey="periodo"
+                          series={chartIrr2}
+                          height={320}
+                          formatterLeft={(v) => brNum(v, 2)}
+                          svgRef={svgIrrAccRef}
+                          xLabelCount={8}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div
+                        className="border rounded-[20px] p-4"
+                        style={{ borderColor: T.border, background: T.cardSoft2 }}
+                      >
+                        <MiniChart
+                          title="PR"
+                          subtitle="Performance ratio versus meta"
+                          data={seriesPR}
+                          xKey="periodo"
+                          series={chartPR}
+                          height={300}
+                          yDomain={[0, 100]}
+                          formatterLeft={(v) => `${brNum(v, 0)}%`}
+                          svgRef={svgPrRef}
+                          xLabelCount={8}
+                        />
+                      </div>
+
+                      <div
+                        className="border rounded-[20px] p-4"
+                        style={{ borderColor: T.border, background: T.cardSoft2 }}
+                      >
+                        <MiniChart
+                          title="Disponibilidade"
+                          subtitle="Disponibilidade operacional versus meta"
+                          data={seriesAvail}
+                          xKey="periodo"
+                          series={chartAvail}
+                          height={300}
+                          yDomain={[0, 100]}
+                          formatterLeft={(v) => `${brNum(v, 0)}%`}
+                          svgRef={svgAvailRef}
+                          xLabelCount={8}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {!presentationActive ? (
+              <div
+                className={UI.section}
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="Tabela"
-                  hint="Comparativos detalhados por período"
-                // right={
-                //   <div className="flex items-center gap-2">
-                //     <Pill>{tableRows.length} linhas</Pill>
-                //     <Pill>{data?.group || group}</Pill>
-                //   </div>
-                // }
+                  title="Tabela analítica"
+                  hint="Comparativos detalhados por período para conferência e exportação"
+                  right={
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="relative w-full sm:w-[320px]">
+                        <input
+                          className={cx(UI.input, "pl-10")}
+                          style={{ borderColor: T.border }}
+                          placeholder="Buscar período…"
+                          value={tableQuery}
+                          onChange={(e) => setTableQuery(e.target.value)}
+                        />
+                        <Search
+                          className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2"
+                          style={{ color: T.text3 }}
+                        />
+                      </div>
+
+                      <Btn
+                        tone="secondary"
+                        onClick={exportExcel}
+                        loading={xlsxLoading}
+                        disabled={!data?.ok || !tableRows.length}
+                        title="Exportar tabela para Excel"
+                      >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        Excel
+                      </Btn>
+                    </div>
+                  }
                 />
-                {TableBody}
+
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Pill>{filteredTableRows.length} linhas</Pill>
+                    <Pill>{groupLabel(resolvedGroup)}</Pill>
+                    <Pill>Energia em {energyUnit}</Pill>
+                  </div>
+
+                  <GerencialTable rows={filteredTableRows} energyUnit={energyUnit} />
+                </div>
               </div>
-
-
-            </div>
+            ) : null}
 
             {isReloading ? (
               <div
                 className="absolute inset-0 z-20 flex items-start justify-center"
                 style={{
-                  background: "rgba(244,246,248,0.18)",
+                  background: "rgba(243,246,248,0.18)",
                   backdropFilter: "blur(2px)",
                   WebkitBackdropFilter: "blur(2px)",
                 }}
@@ -2894,7 +2993,30 @@ export function TecsciPage() {
           outline: none !important;
           box-shadow: 0 0 0 2px ${T.accentRing} !important;
         }
+
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: rgba(15, 23, 42, 0.16);
+          border-radius: 999px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        * {
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
       `}</style>
     </section>
   );
+}
+
+export default function Page() {
+  return <TecsciPage />;
 }
