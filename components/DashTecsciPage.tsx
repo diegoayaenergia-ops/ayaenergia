@@ -164,7 +164,7 @@ type ChartSeries = {
   pointRadius?: number;
 };
 
-type ChartPoint = Record<string, any>;
+type ChartPoint = Record<string, unknown>;
 
 type TableRow = {
   periodo: string;
@@ -257,7 +257,8 @@ function yearRangeISO(year: number) {
   return { start: `${year}-01-01`, end: `${year}-12-31` };
 }
 
-function safeNum(v: any): number | null {
+function safeNum(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
@@ -344,38 +345,40 @@ async function svgStringToPngDataUrl(
   const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
-  const img = new Image();
-  img.crossOrigin = "anonymous";
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
 
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = () => reject(new Error("Falha ao renderizar SVG"));
-    img.src = url;
-  });
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Falha ao renderizar SVG"));
+      img.src = url;
+    });
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas não suportado");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas não suportado");
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(img, 0, 0, width, height);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
 
-  URL.revokeObjectURL(url);
-  return canvas.toDataURL("image/png");
+    return canvas.toDataURL("image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
-
 async function svgElementToPng(
   el: SVGSVGElement,
   width?: number,
   height?: number
 ) {
   const vb = el.viewBox?.baseVal;
-  const w = width || vb?.width || el.clientWidth || 1400;
-  const h = height || vb?.height || el.clientHeight || 420;
+  const w = Math.max(1, Math.floor(width || vb?.width || el.clientWidth || 1400));
+  const h = Math.max(1, Math.floor(height || vb?.height || el.clientHeight || 420));
   const svg = svgToString(el, w, h);
   return svgStringToPngDataUrl(svg, w, h);
 }
@@ -393,10 +396,10 @@ function niceTicks(min: number, max: number, count = 5) {
     err >= 7.5
       ? 10 * pow
       : err >= 3.5
-      ? 5 * pow
-      : err >= 1.5
-      ? 2 * pow
-      : 1 * pow;
+        ? 5 * pow
+        : err >= 1.5
+          ? 2 * pow
+          : 1 * pow;
 
   const start = Math.floor(min / step) * step;
   const end = Math.ceil(max / step) * step;
@@ -436,21 +439,27 @@ function useElementSize<T extends HTMLElement>() {
   const [size, setSize] = useState({ w: 960, h: 300 });
 
   useEffect(() => {
-    if (!ref.current) return;
     const el = ref.current;
+    if (!el) return;
 
     const update = () => {
       const r = el.getBoundingClientRect();
       setSize({
-        w: Math.max(360, Math.floor(r.width)),
-        h: Math.max(220, Math.floor(r.height)),
+        w: Math.max(360, Math.floor(r.width || 960)),
+        h: Math.max(220, Math.floor(r.height || 300)),
       });
     };
 
     update();
 
-    const ro = new ResizeObserver(update);
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+
+    const ro = new ResizeObserver(() => update());
     ro.observe(el);
+
     return () => ro.disconnect();
   }, []);
 
@@ -586,13 +595,18 @@ function usePerformanceData({
     setLoading(true);
 
     try {
-      const url =
-        `/api/tecsci/performance?ps_id=${filters.psId}` +
-        `&start_date=${filters.start}` +
-        `&end_date=${filters.end}` +
-        `&group=${filters.group}`;
+      const params = new URLSearchParams({
+        ps_id: String(filters.psId),
+        start_date: filters.start,
+        end_date: filters.end,
+        group: filters.group,
+      });
 
-      const r = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+      const r = await fetch(`/api/tecsci/performance?${params.toString()}`, {
+        cache: "no-store",
+        signal: ctrl.signal,
+      });
+
       const j: PerfApiResp = await r.json().catch(
         () => ({ ok: false } as PerfApiResp)
       );
@@ -608,8 +622,9 @@ function usePerformanceData({
 
       setData(j);
       setLastUpdatedAt(new Date().toISOString());
-    } catch (e: any) {
-      if (e?.name === "AbortError") return;
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+
       setData(null);
       setMsg({
         type: "err",
@@ -618,7 +633,7 @@ function usePerformanceData({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [requestFilters]);
 
   const reload = useCallback(() => {
     if (!enabled) return;
@@ -650,13 +665,13 @@ const Btn = memo(function Btn({
   const style =
     tone === "primary"
       ? {
-          background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
-          borderColor: "rgba(22, 101, 52, 0.34)",
-          color: "#FFFFFF",
-        }
+        background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
+        borderColor: "rgba(22, 101, 52, 0.34)",
+        color: "#FFFFFF",
+      }
       : tone === "danger"
-      ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
-      : { background: T.card, borderColor: T.border, color: T.text };
+        ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
+        : { background: T.card, borderColor: T.border, color: T.text };
 
   return (
     <button
@@ -688,17 +703,17 @@ const Pill = memo(function Pill({
   const style =
     tone === "accent"
       ? {
-          borderColor: T.accentSoft2,
-          background: T.accentSoft,
-          color: T.accent,
-        }
+        borderColor: T.accentSoft2,
+        background: T.accentSoft,
+        color: T.accent,
+      }
       : tone === "info"
-      ? {
+        ? {
           borderColor: T.infoBd,
           background: T.infoBg,
           color: T.infoTx,
         }
-      : {
+        : {
           borderColor: T.border,
           background: T.cardSoft,
           color: T.text2,
@@ -721,8 +736,8 @@ const MsgBox = memo(function MsgBox({ m }: { m: MessageState }) {
     m.type === "ok"
       ? { background: T.okBg, borderColor: T.okBd, color: T.okTx }
       : m.type === "warn"
-      ? { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx }
-      : { background: T.errBg, borderColor: T.errBd, color: T.errTx };
+        ? { background: T.warnBg, borderColor: T.warnBd, color: T.warnTx }
+        : { background: T.errBg, borderColor: T.errBd, color: T.errTx };
 
   return (
     <div className="text-sm px-3 py-2.5 border rounded-2xl" style={s}>
@@ -827,10 +842,10 @@ const ExecutiveMetric = memo(function ExecutiveMetric({
     tone === "good"
       ? T.accent
       : tone === "warn"
-      ? "#D97706"
-      : tone === "bad"
-      ? "#DC2626"
-      : T.blue;
+        ? "#D97706"
+        : tone === "bad"
+          ? "#DC2626"
+          : T.blue;
 
   return (
     <div
@@ -921,7 +936,7 @@ const OpsStrip = memo(function OpsStrip({
               className="w-10 h-10 rounded-2xl flex items-center justify-center"
               style={{ background: T.cardSoft2, color: T.text2 }}
             >
-              <Monitor className="w-4.5 h-4.5" />
+              <Monitor className="w-[18px] h-[18px]" />
             </div>
           </div>
         </div>
@@ -981,10 +996,10 @@ const OpsStrip = memo(function OpsStrip({
               {tone === "good"
                 ? "Estável"
                 : tone === "warn"
-                ? "Atenção"
-                : tone === "bad"
-                ? "Crítico"
-                : "Neutro"}
+                  ? "Atenção"
+                  : tone === "bad"
+                    ? "Crítico"
+                    : "Neutro"}
             </span>
           </div>
         </div>
@@ -1318,7 +1333,7 @@ const MiniChart = memo(function MiniChart({
             const barW = Math.max(
               4,
               (groupW - barGap * Math.max(0, bars.length - 1)) /
-                Math.max(1, bars.length)
+              Math.max(1, bars.length)
             );
             const left =
               xCenter(i) -
@@ -1379,21 +1394,21 @@ const MiniChart = memo(function MiniChart({
           {lines.map((s) =>
             s.showPoints
               ? data.map((p, i) => {
-                  const v = safeNum(p[s.key]);
-                  if (v == null) return null;
+                const v = safeNum(p[s.key]);
+                if (v == null) return null;
 
-                  return (
-                    <circle
-                      key={`pt-${s.key}-${i}`}
-                      cx={xCenter(i)}
-                      cy={y(v)}
-                      r={s.pointRadius ?? 3}
-                      fill={T.card}
-                      stroke={s.color}
-                      strokeWidth={2}
-                    />
-                  );
-                })
+                return (
+                  <circle
+                    key={`pt-${s.key}-${i}`}
+                    cx={xCenter(i)}
+                    cy={y(v)}
+                    r={s.pointRadius ?? 3}
+                    fill={T.card}
+                    stroke={s.color}
+                    strokeWidth={2}
+                  />
+                );
+              })
               : null
           )}
         </svg>
@@ -1472,7 +1487,7 @@ const GerencialTable = memo(function GerencialTable({
                 return (
                   <tr key={`${r.periodo}-${i}`}>
                     <td
-                      className="px-3 py-3 text-sm border-b sticky left-0"
+                      className="px-3 py-3 text-sm border-b sticky left-0 z-[1]"
                       style={{
                         borderColor: T.border,
                         color: T.text,
@@ -1686,7 +1701,7 @@ export function TecsciPage() {
       if (chartsFullscreen.isFullscreen) {
         await chartsFullscreen.toggle();
       }
-    } catch {}
+    } catch { }
   }, [chartsFullscreen]);
 
   const perf = data?.performance || null;
@@ -1755,7 +1770,15 @@ export function TecsciPage() {
   const prPct = pctVs(kpi.pr, kpi.prMeta);
   const availPct = pctVs(kpi.avail, kpi.availMeta);
 
-  const heroMetrics = useMemo(() => {
+  const heroMetrics = useMemo<
+    Array<{
+      label: string;
+      value: string;
+      sub: string;
+      icon: ReactNode;
+      tone: "good" | "warn" | "bad" | "neutral";
+    }>
+  >(() => {
     const gapP90 =
       kpi.geracao != null && kpi.p90 != null ? kpi.geracao - kpi.p90 : null;
 
@@ -2058,7 +2081,11 @@ export function TecsciPage() {
   );
 
   const captureCharts = useCallback(async () => {
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => resolve())
+      )
+    );
 
     const items = [
       { title: "Energia", ref: svgEnergyRef, w: 1600, h: 680 },
@@ -2071,8 +2098,10 @@ export function TecsciPage() {
     const out: Array<{ title: string; dataUrl: string; w: number; h: number }> = [];
 
     for (const item of items) {
-      if (!item.ref.current) continue;
-      const dataUrl = await svgElementToPng(item.ref.current, item.w, item.h);
+      const el = item.ref.current;
+      if (!el) continue;
+
+      const dataUrl = await svgElementToPng(el, item.w, item.h);
       out.push({ title: item.title, dataUrl, w: item.w, h: item.h });
     }
 
@@ -2091,7 +2120,7 @@ export function TecsciPage() {
       const XLSX = await import("xlsx");
       const wb = XLSX.utils.book_new();
 
-      const resumoAOA: any[][] = [
+      const resumoAOA: (string | number)[][] = [
         ["Tabela Analítica"],
         [],
         ["Usina", kpi.psLabel],
@@ -2110,16 +2139,17 @@ export function TecsciPage() {
 
       XLSX.writeFile(wb, `${excelFileName}.xlsx`, { compression: true });
       setMsg({ type: "ok", text: "Excel gerado com sucesso." });
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMsg({ type: "err", text: "Falha ao gerar Excel." });
     } finally {
       setXlsxLoading(false);
     }
   }, [
     data,
-    tableRows.length,
+    tableRows,
     setMsg,
-    kpi,
+    kpi.psLabel,
     start,
     end,
     resolvedGroup,
@@ -2128,7 +2158,6 @@ export function TecsciPage() {
     exportRows,
     excelFileName,
   ]);
-
   const exportPdf = useCallback(async () => {
     if (!data?.ok || !tableRows.length) {
       setMsg({ type: "err", text: "Sem dados para gerar PDF." });
@@ -2139,7 +2168,9 @@ export function TecsciPage() {
 
     try {
       const images = await captureCharts();
-      if (!images.length) throw new Error();
+      if (!images.length) {
+        throw new Error("Nenhum gráfico disponível para exportação.");
+      }
 
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({
@@ -2266,7 +2297,7 @@ export function TecsciPage() {
       drawSectionTitle("Resumo executivo", 122);
       drawMiniTable(tableRows, 140);
 
-      images.forEach((img) => {
+      for (const img of images) {
         doc.addPage();
         drawHeader(`Relatório Gerencial — ${img.title}`);
 
@@ -2281,11 +2312,12 @@ export function TecsciPage() {
         const finalH = Math.min(drawH, maxChartH);
 
         doc.addImage(img.dataUrl, "PNG", margin, 138, drawW, finalH);
-      });
+      }
 
       doc.save(`${pdfFileName}.pdf`);
       setMsg({ type: "ok", text: "PDF gerado com sucesso." });
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMsg({ type: "err", text: "Falha ao gerar PDF." });
     } finally {
       setPdfLoading(false);
