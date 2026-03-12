@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, {
@@ -21,18 +22,14 @@ import {
   Activity,
   ChevronRight,
   TrendingUp,
-  CalendarDays,
   Maximize2,
   Minimize2,
   LayoutDashboard,
   SunMedium,
   ShieldCheck,
-  Database,
-  BarChart3,
   Factory,
   Monitor,
   LineChart,
-  ClipboardList,
 } from "lucide-react";
 
 const cx = (...p: Array<string | false | null | undefined>) =>
@@ -90,7 +87,7 @@ const T = {
   cLoss: "#DC2626",
   cP90: "#D97706",
   cTec: "#64748B",
-  cAya: "#0F172A",
+  cAya: "#909490",
   cPoa: "#D97706",
   cPoaMeta: "#DC2626",
   cPR: "#2563EB",
@@ -186,7 +183,27 @@ type MessageState = {
   text: string;
 } | null;
 
+type MultiStationProgress = {
+  done: number;
+  total: number;
+  current: string;
+};
+
+type MultiStationFetchResult =
+  | {
+      ok: true;
+      station: Station;
+      daily: PerfApiResp;
+      monthly: PerfApiResp;
+    }
+  | {
+      ok: false;
+      station: Station;
+      error: string;
+    };
+
 const PRESENTATION_STATION_SECONDS = 20;
+const MULTI_REPORT_REQUEST_INTERVAL_MS = 2200;
 
 function isIsoDate(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
@@ -302,8 +319,8 @@ function pctVs(a: number | null, b: number | null) {
 
 function statusTone(pct: number | null) {
   if (pct == null) return "neutral";
-  if (pct >= 100) return "good";
-  if (pct >= 95) return "warn";
+  if (pct >= 98) return "good";
+  if (pct >= 80) return "warn";
   return "bad";
 }
 
@@ -371,6 +388,7 @@ async function svgStringToPngDataUrl(
     URL.revokeObjectURL(url);
   }
 }
+
 async function svgElementToPng(
   el: SVGSVGElement,
   width?: number,
@@ -421,6 +439,22 @@ function groupLabel(
   if (group === "year") return "Anual";
   if (group === "aggregate") return "Consolidada";
   return "Automática";
+}
+
+function brMonthLabel(value?: string | null) {
+  if (!value) return "—";
+
+  const ym = String(value).match(/^(\d{4})-(\d{2})$/);
+  if (ym) return `${ym[2]}/${ym[1]}`;
+
+  const ymd = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymd) return `${ymd[2]}/${ymd[1]}`;
+
+  return String(value);
+}
+
+function wait(ms = 100) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 function useDebouncedValue<T>(value: T, delay = 350) {
@@ -533,6 +567,80 @@ function useStations() {
   return { stations, stationsLoading };
 }
 
+async function fetchPerformanceByGroup({
+  psId,
+  start,
+  end,
+  group,
+  signal,
+}: {
+  psId: number;
+  start: string;
+  end: string;
+  group: "day" | "month";
+  signal?: AbortSignal;
+}) {
+  const params = new URLSearchParams({
+    ps_id: String(psId),
+    start_date: start,
+    end_date: clampEndToToday(end),
+    group,
+  });
+
+  const r = await fetch(`/api/tecsci/performance?${params.toString()}`, {
+    cache: "no-store",
+    signal,
+  });
+
+  const j: PerfApiResp = await r.json().catch(
+    () => ({ ok: false } as PerfApiResp)
+  );
+
+  if (!r.ok || !j?.ok) {
+    throw new Error(
+      j?.error || `Falha ao carregar dados ${group === "day" ? "diários" : "mensais"}`
+    );
+  }
+
+  return j;
+}
+
+function buildTableRowFromDto(
+  periodo: string,
+  dto: PerformanceDTO,
+  energyUnit: "kWh" | "MWh"
+): TableRow {
+  const genKwh = safeNum(dto.generated_energy_kwh);
+  const expTecKwh = safeNum(dto.expected_energy_kwh);
+  const p90Kwh = safeNum(dto.projected_energy_kwh);
+  const poa = safeNum(dto.poa_irradiation_kwh);
+  const poaMeta = safeNum(dto.projected_irradiation_kwh);
+  const pr = safeNum(dto.pr_percentage);
+  const prMeta = prMetaPct(safeNum(dto.projected_pr));
+  const disp = safeNum(dto.availability_percentage);
+  const dispMeta = 97;
+  const projPr = safeNum(dto.projected_pr);
+  const dcKw = safeNum(dto.dc_power_kw);
+  const ayaKwh = estimatedAyaKwh(poa, projPr, dcKw);
+  const lossAyaKwh =
+    ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
+
+  return {
+    periodo,
+    geracao: genKwh == null ? null : kwhToUnit(genKwh, energyUnit),
+    perdasAya: lossAyaKwh == null ? null : kwhToUnit(lossAyaKwh, energyUnit),
+    p90: p90Kwh == null ? null : kwhToUnit(p90Kwh, energyUnit),
+    estimadoTec: expTecKwh == null ? null : kwhToUnit(expTecKwh, energyUnit),
+    estimadoAya: ayaKwh == null ? null : kwhToUnit(ayaKwh, energyUnit),
+    irradiacao: poa,
+    irradiacaoMeta: poaMeta,
+    pr,
+    prMeta,
+    disponibilidade: disp,
+    disponibilidadeMeta: dispMeta,
+  };
+}
+
 function usePerformanceData({
   psId,
   start,
@@ -633,7 +741,7 @@ function usePerformanceData({
     } finally {
       setLoading(false);
     }
-  }, [requestFilters]);
+  }, []);
 
   const reload = useCallback(() => {
     if (!enabled) return;
@@ -665,10 +773,10 @@ const Btn = memo(function Btn({
   const style =
     tone === "primary"
       ? {
-        background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
-        borderColor: "rgba(22, 101, 52, 0.34)",
-        color: "#FFFFFF",
-      }
+          background: `linear-gradient(135deg, ${T.accent} 0%, ${T.accent2} 100%)`,
+          borderColor: "rgba(22, 101, 52, 0.34)",
+          color: "#FFFFFF",
+        }
       : tone === "danger"
         ? { background: T.errBg, borderColor: T.errBd, color: T.errTx }
         : { background: T.card, borderColor: T.border, color: T.text };
@@ -690,42 +798,6 @@ const Btn = memo(function Btn({
         children
       )}
     </button>
-  );
-});
-
-const Pill = memo(function Pill({
-  children,
-  tone = "soft",
-}: {
-  children: ReactNode;
-  tone?: "soft" | "accent" | "info";
-}) {
-  const style =
-    tone === "accent"
-      ? {
-        borderColor: T.accentSoft2,
-        background: T.accentSoft,
-        color: T.accent,
-      }
-      : tone === "info"
-        ? {
-          borderColor: T.infoBd,
-          background: T.infoBg,
-          color: T.infoTx,
-        }
-        : {
-          borderColor: T.border,
-          background: T.cardSoft,
-          color: T.text2,
-        };
-
-  return (
-    <span
-      className="inline-flex items-center h-8 px-3 text-[11px] font-semibold border rounded-2xl"
-      style={style}
-    >
-      {children}
-    </span>
   );
 });
 
@@ -872,232 +944,6 @@ const ExecutiveMetric = memo(function ExecutiveMetric({
               {sub}
             </div>
           ) : null}
-        </div>
-
-        <div
-          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-2xl"
-          style={{ background: T.cardSoft2, color: T.text2 }}
-        >
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const OpsStrip = memo(function OpsStrip({
-  stationName,
-  lastUpdatedAt,
-  generated,
-  energyUnit,
-  p90Pct,
-  prPct,
-  availPct,
-}: {
-  stationName: string;
-  lastUpdatedAt: string | null;
-  generated: number | null;
-  energyUnit: "kWh" | "MWh";
-  p90Pct: number | null;
-  prPct: number | null;
-  availPct: number | null;
-}) {
-  const status =
-    p90Pct != null && prPct != null && availPct != null
-      ? (p90Pct + prPct + availPct) / 3
-      : null;
-
-  const tone = statusTone(status);
-  const style = toneStyles(tone);
-
-  return (
-    <div
-      className="border rounded-[18px] px-4 py-4"
-      style={{ borderColor: T.border, background: T.cardSoft3 }}
-    >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
-        <div
-          className="lg:col-span-4 border rounded-[16px] p-4"
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className={UI.label} style={{ color: T.text3 }}>
-                Contexto operacional
-              </div>
-              <div className="mt-1 text-base font-semibold truncate" style={{ color: T.text }}>
-                {stationName}
-              </div>
-              <div className="mt-1 text-xs" style={{ color: T.text3 }}>
-                Última atualização: {brDateTime(lastUpdatedAt)}
-              </div>
-            </div>
-            <div
-              className="w-10 h-10 rounded-2xl flex items-center justify-center"
-              style={{ background: T.cardSoft2, color: T.text2 }}
-            >
-              <Monitor className="w-[18px] h-[18px]" />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="lg:col-span-2 border rounded-[16px] p-4"
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div className={UI.label} style={{ color: T.text3 }}>
-            Geração
-          </div>
-          <div className="mt-1 text-[22px] font-bold" style={{ color: T.text }}>
-            {generated == null ? "—" : brNum(generated, 2)}
-          </div>
-          <div className="text-xs" style={{ color: T.text3 }}>
-            {energyUnit}
-          </div>
-        </div>
-
-        <div
-          className="lg:col-span-2 border rounded-[16px] p-4"
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div className={UI.label} style={{ color: T.text3 }}>
-            Atingimento P90
-          </div>
-          <div className="mt-2">
-            <StatusChip pct={p90Pct} />
-          </div>
-        </div>
-
-        <div
-          className="lg:col-span-2 border rounded-[16px] p-4"
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div className={UI.label} style={{ color: T.text3 }}>
-            PR / Meta
-          </div>
-          <div className="mt-2">
-            <StatusChip pct={prPct} />
-          </div>
-        </div>
-
-        <div
-          className="lg:col-span-2 border rounded-[16px] p-4"
-          style={{ borderColor: T.border, background: T.card }}
-        >
-          <div className={UI.label} style={{ color: T.text3 }}>
-            Disponibilidade
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <StatusChip pct={availPct} />
-            <span
-              className="inline-flex items-center h-8 px-3 rounded-2xl border text-[11px] font-semibold"
-              style={style}
-            >
-              {tone === "good"
-                ? "Estável"
-                : tone === "warn"
-                  ? "Atenção"
-                  : tone === "bad"
-                    ? "Crítico"
-                    : "Neutro"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-const CompareKpiCard = memo(function CompareKpiCard({
-  title,
-  aLabel,
-  aValue,
-  bLabel,
-  bValue,
-  fmt,
-  icon,
-}: {
-  title: string;
-  aLabel: string;
-  aValue: number | null;
-  bLabel: string;
-  bValue: number | null;
-  fmt: (n: number) => string;
-  icon: ReactNode;
-}) {
-  const pct = pctVs(aValue, bValue);
-  const dlt = aValue != null && bValue != null ? aValue - bValue : null;
-  const tone = statusTone(pct);
-  const style = toneStyles(tone);
-  const good = pct != null ? pct >= 100 : null;
-  const barColor = good == null ? T.borderStrong : good ? T.accent2 : T.errBd;
-
-  return (
-    <div
-      className="border rounded-[20px] p-4 min-w-0 h-full"
-      style={{
-        borderColor: T.border,
-        background: "linear-gradient(180deg, #FFFFFF 0%, #FBFCFD 100%)",
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 w-full">
-          <div className={UI.label} style={{ color: T.text2 }}>
-            {title}
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-[11px]" style={{ color: T.text3 }}>
-                {aLabel}
-              </div>
-              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
-                {aValue == null ? "—" : fmt(aValue)}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[11px]" style={{ color: T.text3 }}>
-                {bLabel}
-              </div>
-              <div className="text-xl font-extrabold truncate" style={{ color: T.text }}>
-                {bValue == null ? "—" : fmt(bValue)}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
-            <span
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-2xl border text-[11px] font-semibold"
-              style={style}
-            >
-              <TrendingUp className="w-3.5 h-3.5" />
-              {pct == null ? "Sem referência" : `${brNum(pct, 1)}% da meta`}
-            </span>
-
-            <div
-              className="text-[11px] font-semibold"
-              style={{
-                color: good == null ? T.text3 : good ? T.accent : T.errTx,
-              }}
-            >
-              Δ {dlt == null ? "—" : fmt(dlt)}
-            </div>
-          </div>
-
-          <div
-            className="mt-3 border rounded-2xl overflow-hidden"
-            style={{ borderColor: T.border, background: T.mutedBg, height: 10 }}
-          >
-            <div
-              style={{
-                width: `${pct == null ? 0 : Math.max(0, Math.min(100, pct))}%`,
-                height: "100%",
-                background: barColor,
-                opacity: 0.95,
-              }}
-            />
-          </div>
         </div>
 
         <div
@@ -1333,7 +1179,7 @@ const MiniChart = memo(function MiniChart({
             const barW = Math.max(
               4,
               (groupW - barGap * Math.max(0, bars.length - 1)) /
-              Math.max(1, bars.length)
+                Math.max(1, bars.length)
             );
             const left =
               xCenter(i) -
@@ -1394,21 +1240,21 @@ const MiniChart = memo(function MiniChart({
           {lines.map((s) =>
             s.showPoints
               ? data.map((p, i) => {
-                const v = safeNum(p[s.key]);
-                if (v == null) return null;
+                  const v = safeNum(p[s.key]);
+                  if (v == null) return null;
 
-                return (
-                  <circle
-                    key={`pt-${s.key}-${i}`}
-                    cx={xCenter(i)}
-                    cy={y(v)}
-                    r={s.pointRadius ?? 3}
-                    fill={T.card}
-                    stroke={s.color}
-                    strokeWidth={2}
-                  />
-                );
-              })
+                  return (
+                    <circle
+                      key={`pt-${s.key}-${i}`}
+                      cx={xCenter(i)}
+                      cy={y(v)}
+                      r={s.pointRadius ?? 3}
+                      fill={T.card}
+                      stroke={s.color}
+                      strokeWidth={2}
+                    />
+                  );
+                })
               : null
           )}
         </svg>
@@ -1432,23 +1278,21 @@ const GerencialTable = memo(function GerencialTable({
             <tr>
               {[
                 "Período",
-                `Geração (${energyUnit})`,
-                `Perdas AYA (${energyUnit})`,
-                `P90 (${energyUnit})`,
-                "Geração/P90",
-                `Estimado TecSci (${energyUnit})`,
-                "Geração/TecSci",
-                `Estimado AYA (${energyUnit})`,
-                "Geração/AYA",
+                `Geração`,
+                // `P90`,
+                "% P90",
+                `Estimado AYA`,
+                "% Aya",
+                `Estimado Tecsci`,
+                "% Tecsci",
                 "Irradiação",
-                "Irrad. Meta",
-                "Irrad./Meta",
+                // "Irrad. Meta",
+                "% Irradiação",
                 "PR",
-                "PR Meta",
-                "PR/Meta",
-                "Disp.",
-                "Disp. Meta",
-                "Disp./Meta",
+                // "PR Meta",
+                "% PR",
+                "Disponibilidade",
+                
               ].map((h, idx) => (
                 <th
                   key={h}
@@ -1497,22 +1341,21 @@ const GerencialTable = memo(function GerencialTable({
                       {r.periodo}
                     </td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.geracao, 2)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.errTx }}>{brNum(r.perdasAya, 2)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.p90, 2)}</td>
+                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.errTx }}>{brNum(r.perdasAya, 2)}</td> */}
+                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.p90, 2)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genP90} /></td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoTec, 2)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genTec} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoAya, 2)}</td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genAya} /></td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoTec, 2)}</td>
+                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genTec} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacao, 2)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacaoMeta, 2)}</td>
+                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacaoMeta, 2)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={irr} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.pr, 1)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.prMeta, 1)}</td>
+                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.prMeta, 1)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={pr} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.disponibilidade, 1)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.disponibilidadeMeta, 1)}</td>
-                    <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={disp} /></td>
+                    
                   </tr>
                 );
               })
@@ -1525,8 +1368,14 @@ const GerencialTable = memo(function GerencialTable({
 });
 
 export function TecsciPage() {
-  const [pdfLoading, setPdfLoading] = useState(false);
   const [xlsxLoading, setXlsxLoading] = useState(false);
+  const [multiReportLoading, setMultiReportLoading] = useState(false);
+  const [multiReportProgress, setMultiReportProgress] = useState<MultiStationProgress>({
+    done: 0,
+    total: 0,
+    current: "",
+  });
+
   const [tableQuery, setTableQuery] = useState("");
   const [presentMode, setPresentMode] = useState(false);
   const [stationCountdown, setStationCountdown] = useState(
@@ -1701,7 +1550,7 @@ export function TecsciPage() {
       if (chartsFullscreen.isFullscreen) {
         await chartsFullscreen.toggle();
       }
-    } catch { }
+    } catch {}
   }, [chartsFullscreen]);
 
   const perf = data?.performance || null;
@@ -1891,37 +1740,7 @@ export function TecsciPage() {
   }, [bucket]);
 
   const tableRows = useMemo<TableRow[]>(() => {
-    return bucket.map((b) => {
-      const genKwh = safeNum(b.dto.generated_energy_kwh);
-      const expTecKwh = safeNum(b.dto.expected_energy_kwh);
-      const p90Kwh = safeNum(b.dto.projected_energy_kwh);
-      const poa = safeNum(b.dto.poa_irradiation_kwh);
-      const poaMeta = safeNum(b.dto.projected_irradiation_kwh);
-      const pr = safeNum(b.dto.pr_percentage);
-      const prMeta = prMetaPct(safeNum(b.dto.projected_pr));
-      const disp = safeNum(b.dto.availability_percentage);
-      const dispMeta = 97;
-      const projPr = safeNum(b.dto.projected_pr);
-      const dcKw = safeNum(b.dto.dc_power_kw);
-      const ayaKwh = estimatedAyaKwh(poa, projPr, dcKw);
-      const lossAyaKwh =
-        ayaKwh != null && genKwh != null ? clamp0(ayaKwh - genKwh) : null;
-
-      return {
-        periodo: b.label,
-        geracao: genKwh == null ? null : kwhToUnit(genKwh, energyUnit),
-        perdasAya: lossAyaKwh == null ? null : kwhToUnit(lossAyaKwh, energyUnit),
-        p90: p90Kwh == null ? null : kwhToUnit(p90Kwh, energyUnit),
-        estimadoTec: expTecKwh == null ? null : kwhToUnit(expTecKwh, energyUnit),
-        estimadoAya: ayaKwh == null ? null : kwhToUnit(ayaKwh, energyUnit),
-        irradiacao: poa,
-        irradiacaoMeta: poaMeta,
-        pr,
-        prMeta,
-        disponibilidade: disp,
-        disponibilidadeMeta: dispMeta,
-      };
-    });
+    return bucket.map((b) => buildTableRowFromDto(b.label, b.dto, energyUnit));
   }, [bucket, energyUnit]);
 
   const filteredTableRows = useMemo(() => {
@@ -1949,25 +1768,26 @@ export function TecsciPage() {
         name: `P90 (${energyUnit})`,
         type: "line",
         color: T.cP90,
+        dashed: true,
       },
       {
         key: "estimadoAya",
         name: `Estimado AYA (${energyUnit})`,
         type: "line",
         color: T.cAya,
-        dashed: true,
+        // dashed: true,
         showPoints: true,
         pointRadius: 3.5,
       },
-      {
-        key: "estimadoTec",
-        name: `Estimado TecSci (${energyUnit})`,
-        type: "line",
-        color: T.cTec,
-        dashed: true,
-        showPoints: true,
-        pointRadius: 3.5,
-      },
+      // {
+      //   key: "estimadoTec",
+      //   name: `Estimado TecSci (${energyUnit})`,
+      //   type: "line",
+      //   color: T.cTec,
+      //   dashed: true,
+      //   showPoints: true,
+      //   pointRadius: 3.5,
+      // },
     ],
     [energyUnit]
   );
@@ -2080,6 +1900,14 @@ export function TecsciPage() {
     [selectedStation, start, end]
   );
 
+  const multiReportFileName = useMemo(
+    () =>
+      sanitizeFileName(
+        `Relatorio_Gerencial_Multiusinas_AYA_Ineer_${start}_${clampEndToToday(end)}`
+      ),
+    [start, end]
+  );
+
   const captureCharts = useCallback(async () => {
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() =>
@@ -2158,181 +1986,460 @@ export function TecsciPage() {
     exportRows,
     excelFileName,
   ]);
-  const exportPdf = useCallback(async () => {
-    if (!data?.ok || !tableRows.length) {
-      setMsg({ type: "err", text: "Sem dados para gerar PDF." });
+
+  const exportMultiStationManagerialReport = useCallback(async () => {
+    const endSafe = clampEndToToday(end);
+
+    if (!stations.length) {
+      setMsg({ type: "err", text: "Nenhuma usina disponível para exportação." });
       return;
     }
 
-    setPdfLoading(true);
+    if (!isIsoDate(start) || !isIsoDate(endSafe) || start > endSafe) {
+      setMsg({ type: "err", text: "Período inválido para gerar o relatório." });
+      return;
+    }
+
+    setMultiReportLoading(true);
+    setMultiReportProgress({
+      done: 0,
+      total: stations.length,
+      current: "",
+    });
 
     try {
-      const images = await captureCharts();
-      if (!images.length) {
-        throw new Error("Nenhum gráfico disponível para exportação.");
+      const { jsPDF } = await import("jspdf");
+      const results: MultiStationFetchResult[] = [];
+
+      for (let index = 0; index < stations.length; index++) {
+        const station = stations[index];
+
+        setMultiReportProgress({
+          done: index,
+          total: stations.length,
+          current: station.name,
+        });
+
+        try {
+          const daily = await fetchPerformanceByGroup({
+            psId: station.id,
+            start,
+            end: endSafe,
+            group: "day",
+          });
+
+          await wait(MULTI_REPORT_REQUEST_INTERVAL_MS);
+
+          const monthly = await fetchPerformanceByGroup({
+            psId: station.id,
+            start,
+            end: endSafe,
+            group: "month",
+          });
+
+          results.push({
+            ok: true,
+            station,
+            daily,
+            monthly,
+          });
+        } catch (error) {
+          results.push({
+            ok: false,
+            station,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Falha ao carregar usina",
+          });
+        }
+
+        setMultiReportProgress({
+          done: index + 1,
+          total: stations.length,
+          current: station.name,
+        });
+
+        if (index < stations.length - 1) {
+          await wait(MULTI_REPORT_REQUEST_INTERVAL_MS);
+        }
       }
 
-      const { jsPDF } = await import("jspdf");
+      const success = results.filter(
+        (item): item is Extract<MultiStationFetchResult, { ok: true }> => item.ok
+      );
+
+      const failures = results.filter(
+        (item): item is Extract<MultiStationFetchResult, { ok: false }> => !item.ok
+      );
+
+      if (!success.length) {
+        throw new Error("Nenhuma usina retornou dados válidos para o período.");
+      }
+
+      const multiReportEnergyUnit: "MWh" = "MWh";
+
+      const buildManagerialRow = (station: Station, row: TableRow) => ({
+        usina: station.name,
+        periodo: row.periodo,
+        geracao: row.geracao,
+        p90Pct: pctVs(row.geracao, row.p90),
+        estimadoTec: row.estimadoTec,
+        tecPct: pctVs(row.geracao, row.estimadoTec),
+        estimadoAya: row.estimadoAya,
+        ayaPct: pctVs(row.geracao, row.estimadoAya),
+        irrPct: pctVs(row.irradiacao, row.irradiacaoMeta),
+        prPct: pctVs(row.pr, row.prMeta),
+        dispReal: row.disponibilidade,
+      });
+
+      const summaryRows = success
+        .filter((item) => item.daily.performance)
+        .map((item) => {
+          const row = buildTableRowFromDto(
+            `${brDate(start)} - ${brDate(endSafe)}`,
+            item.daily.performance as PerformanceDTO,
+            multiReportEnergyUnit
+          );
+          return buildManagerialRow(item.station, row);
+        })
+        .sort((a, b) => a.usina.localeCompare(b.usina, "pt-BR"));
+
+      const dailyRows = success
+        .flatMap((item) =>
+          (item.daily.series?.daily || []).map((dto) =>
+            buildManagerialRow(
+              item.station,
+              buildTableRowFromDto(brDate(dto.day), dto, multiReportEnergyUnit)
+            )
+          )
+        )
+        .sort((a, b) => {
+          const byStation = a.usina.localeCompare(b.usina, "pt-BR");
+          return byStation !== 0 ? byStation : a.periodo.localeCompare(b.periodo, "pt-BR");
+        });
+
+      const monthlyRows = success
+        .flatMap((item) =>
+          (item.monthly.series?.monthly || []).map((dto) =>
+            buildManagerialRow(
+              item.station,
+              buildTableRowFromDto(brMonthLabel(dto.month), dto, multiReportEnergyUnit)
+            )
+          )
+        )
+        .sort((a, b) => {
+          const byStation = a.usina.localeCompare(b.usina, "pt-BR");
+          return byStation !== 0 ? byStation : a.periodo.localeCompare(b.periodo, "pt-BR");
+        });
+
       const doc = new jsPDF({
         orientation: "landscape",
         unit: "pt",
         format: "a4",
+        compress: true,
       });
 
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
-      const margin = 34;
+      const margin = 26;
       const usableW = pageW - margin * 2;
+      const footerY = pageH - 26;
+      let pageNo = 1;
+      let usedInitialPage = false;
 
-      const drawHeader = (title = "Relatório Gerencial") => {
-        doc.setFillColor(22, 101, 52);
-        doc.rect(0, 0, pageW, 64, "F");
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(20);
-        doc.setTextColor(255, 255, 255);
-        doc.text(title, margin, 40);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(
-          `Usina: ${selectedStation?.name || "-"}  •  Período: ${brDate(start)} - ${brDate(
-            clampEndToToday(end)
-          )}  •  Granularidade: ${groupLabel(resolvedGroup)}`,
-          margin,
-          84
-        );
-
-        doc.setDrawColor(229, 231, 235);
-        doc.line(margin, 94, pageW - margin, 94);
-      };
-
-      const drawSectionTitle = (text: string, y: number) => {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(11, 18, 32);
-        doc.text(text, margin, y);
-      };
-
-      const drawMiniTable = (rows: TableRow[], yStart: number) => {
-        const cols = [
-          { label: "Período", x: margin, w: 116, align: "left" as const },
-          { label: "Geração", x: margin + 122, w: 92, align: "right" as const },
-          { label: "% P90", x: margin + 220, w: 70, align: "right" as const },
-          { label: "% TecSci", x: margin + 296, w: 78, align: "right" as const },
-          { label: "% AYA", x: margin + 380, w: 72, align: "right" as const },
-          { label: "% PR", x: margin + 458, w: 62, align: "right" as const },
-          { label: "% Disp.", x: margin + 526, w: 70, align: "right" as const },
-        ];
-
-        const headerY = yStart;
-        const rowH = 20;
-
-        doc.setFillColor(247, 249, 251);
-        doc.setDrawColor(229, 231, 235);
-        doc.rect(margin, headerY, usableW, rowH, "FD");
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139);
-
-        cols.forEach((c) => {
-          doc.text(
-            c.label,
-            c.align === "left" ? c.x + 4 : c.x + c.w - 4,
-            headerY + 13,
-            { align: c.align === "left" ? "left" : "right" }
-          );
-        });
-
-        let y = headerY + rowH;
-        const maxRows = Math.min(14, rows.length);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8);
-        doc.setTextColor(11, 18, 32);
-
-        for (let i = 0; i < maxRows; i++) {
-          const r = rows[i];
-
-          const genP90 = pctVs(r.geracao, r.p90);
-          const genTec = pctVs(r.geracao, r.estimadoTec);
-          const genAya = pctVs(r.geracao, r.estimadoAya);
-          const prPctRow = pctVs(r.pr, r.prMeta);
-          const dispPctRow = pctVs(r.disponibilidade, r.disponibilidadeMeta);
-
-          if (i % 2 === 0) {
-            doc.setFillColor(252, 253, 254);
-            doc.rect(margin, y, usableW, rowH, "F");
-          }
-
-          const values = [
-            r.periodo,
-            brNum(r.geracao, 2),
-            genP90 == null ? "—" : `${brNum(genP90, 1)}%`,
-            genTec == null ? "—" : `${brNum(genTec, 1)}%`,
-            genAya == null ? "—" : `${brNum(genAya, 1)}%`,
-            prPctRow == null ? "—" : `${brNum(prPctRow, 1)}%`,
-            dispPctRow == null ? "—" : `${brNum(dispPctRow, 1)}%`,
-          ];
-
-          values.forEach((v, idx) => {
-            const c = cols[idx];
-            doc.text(
-              v,
-              c.align === "left" ? c.x + 4 : c.x + c.w - 4,
-              y + 13,
-              { align: c.align === "left" ? "left" : "right" }
-            );
-          });
-
-          doc.setDrawColor(235, 237, 240);
-          doc.line(margin, y + rowH, pageW - margin, y + rowH);
-          y += rowH;
+      const fitText = (value: string, width: number) => {
+        const textValue = String(value || "");
+        if (doc.getTextWidth(textValue) <= width) return textValue;
+        let out = textValue;
+        while (out.length > 0 && doc.getTextWidth(`${out}…`) > width) {
+          out = out.slice(0, -1);
         }
+        return out ? `${out}…` : "";
       };
 
-      drawHeader();
-      drawSectionTitle("Resumo executivo", 122);
-      drawMiniTable(tableRows, 140);
-
-      for (const img of images) {
-        doc.addPage();
-        drawHeader(`Relatório Gerencial — ${img.title}`);
+      const drawAyaLogo = (x: number, y: number) => {
+        doc.setFillColor(22, 101, 52);
+        doc.roundedRect(x, y, 42, 42, 10, 10, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(17);
+        doc.setTextColor(255, 255, 255);
+        doc.text("AYA", x + 21, y + 27, { align: "center" });
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
         doc.setTextColor(11, 18, 32);
-        doc.text(img.title, margin, 122);
+        doc.text("AYA Energia", x + 54, y + 17);
 
-        const drawW = usableW;
-        const drawH = drawW * (img.h / img.w);
-        const maxChartH = pageH - 156;
-        const finalH = Math.min(drawH, maxChartH);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Relatórios gerenciais de performance", x + 54, y + 32);
+      };
 
-        doc.addImage(img.dataUrl, "PNG", margin, 138, drawW, finalH);
+      const drawFooter = () => {
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, footerY - 12, pageW - margin, footerY - 12);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text("AYA Energia • Cliente: Ineer Energia", margin, footerY);
+        doc.text(`Página ${pageNo}`, pageW - margin, footerY, { align: "right" });
+      };
+
+      const drawHeader = (sectionTitle: string, sectionHint?: string) => {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(0, 0, pageW, 72, "F");
+        drawAyaLogo(margin, 14);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(11, 18, 32);
+        doc.text(sectionTitle, pageW - margin, 28, { align: "right" });
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Cliente: Ineer Energia • Período: ${brDate(start)} - ${brDate(endSafe)}`, pageW - margin, 44, {
+          align: "right",
+        });
+
+        if (sectionHint) {
+          doc.text(sectionHint, pageW - margin, 58, { align: "right" });
+        }
+
+        doc.setFillColor(22, 101, 52);
+        doc.rect(0, 72, pageW, 4, "F");
+        drawFooter();
+      };
+
+      const addNewPage = (sectionTitle: string, sectionHint?: string, continued = false) => {
+        if (!usedInitialPage) {
+          usedInitialPage = true;
+          drawHeader(sectionTitle, continued ? `${sectionHint || ""} • Continuação`.trim() : sectionHint);
+          return;
+        }
+
+        doc.addPage();
+        pageNo += 1;
+        drawHeader(sectionTitle, continued ? `${sectionHint || ""} • Continuação`.trim() : sectionHint);
+      };
+
+
+
+      const drawTableSection = ({
+        sectionTitle,
+        sectionHint,
+        rows,
+      }: {
+        sectionTitle: string;
+        sectionHint: string;
+        rows: Array<{
+          usina: string;
+          periodo: string;
+          geracao: number | null;
+          p90Pct: number | null;
+          estimadoTec: number | null;
+          tecPct: number | null;
+          estimadoAya: number | null;
+          ayaPct: number | null;
+          irrPct: number | null;
+          prPct: number | null;
+          dispReal: number | null;
+        }>;
+      }) => {
+        addNewPage(sectionTitle, sectionHint);
+
+        const cols = [
+          { key: "usina", label: "Usina", width: 160, align: "left" as const },
+          { key: "periodo", label: "Período", width: 72, align: "left" as const },
+          { key: "geracao", label: "Geração (MWh)", width: 76, align: "right" as const },
+          { key: "p90Pct", label: "% P90", width: 50, align: "right" as const },
+          { key: "estimadoTec", label: "Estimado Tecsci", width: 82, align: "right" as const },
+          { key: "tecPct", label: "% TecSci", width: 54, align: "right" as const },
+          { key: "estimadoAya", label: "Estimado AYA", width: 76, align: "right" as const },
+          { key: "ayaPct", label: "% AYA", width: 50, align: "right" as const },
+          { key: "irrPct", label: "% Irrad", width: 50, align: "right" as const },
+          { key: "prPct", label: "% PR", width: 44, align: "right" as const },
+          { key: "dispReal", label: "Disp real", width: 56, align: "right" as const },
+        ];
+
+        const rowH = 22;
+        let y = 98;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(11, 18, 32);
+        doc.text(sectionTitle, margin, y);
+        y += 14;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(sectionHint, margin, y);
+        y += 16;
+
+        const drawTableHeader = () => {
+          doc.setFillColor(241, 245, 249);
+          doc.setDrawColor(226, 232, 240);
+          doc.rect(margin, y, usableW, rowH, "FD");
+
+          let x = margin;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8.5);
+          doc.setTextColor(71, 85, 105);
+
+          cols.forEach((col) => {
+            const tx = col.align === "left" ? x + 6 : x + col.width - 6;
+            doc.text(col.label, tx, y + 14, { align: col.align === "left" ? "left" : "right" });
+            x += col.width;
+          });
+
+          y += rowH;
+        };
+
+        drawTableHeader();
+
+        if (!rows.length) {
+          doc.setDrawColor(226, 232, 240);
+          doc.rect(margin, y, usableW, 48);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.setTextColor(100, 116, 139);
+          doc.text("Sem dados disponíveis para esta visão no período selecionado.", margin + 10, y + 28);
+          return;
+        }
+
+        rows.forEach((row, index) => {
+          if (y + rowH > pageH - 42) {
+            addNewPage(sectionTitle, sectionHint, true);
+            y = 98;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(13);
+            doc.setTextColor(11, 18, 32);
+            doc.text(sectionTitle, margin, y);
+            y += 14;
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`${sectionHint} • Continuação`, margin, y);
+            y += 16;
+            drawTableHeader();
+          }
+
+          if (index % 2 === 0) {
+            doc.setFillColor(252, 253, 254);
+            doc.rect(margin, y, usableW, rowH, "F");
+          }
+
+          doc.setDrawColor(241, 245, 249);
+          doc.line(margin, y + rowH, pageW - margin, y + rowH);
+
+          const values = {
+            usina: fitText(row.usina, 156),
+            periodo: row.periodo,
+            geracao: row.geracao == null ? "—" : brNum(row.geracao, 2),
+            p90Pct: row.p90Pct == null ? "—" : `${brNum(row.p90Pct, 1)}%`,
+            estimadoTec: row.estimadoTec == null ? "—" : brNum(row.estimadoTec, 2),
+            tecPct: row.tecPct == null ? "—" : `${brNum(row.tecPct, 1)}%`,
+            estimadoAya: row.estimadoAya == null ? "—" : brNum(row.estimadoAya, 2),
+            ayaPct: row.ayaPct == null ? "—" : `${brNum(row.ayaPct, 1)}%`,
+            irrPct: row.irrPct == null ? "—" : `${brNum(row.irrPct, 1)}%`,
+            prPct: row.prPct == null ? "—" : `${brNum(row.prPct, 1)}%`,
+            dispReal: row.dispReal == null ? "—" : `${brNum(row.dispReal, 1)}%`,
+          } as const;
+
+          let x = margin;
+          cols.forEach((col) => {
+            const rawValue = values[col.key as keyof typeof values];
+            const tx = col.align === "left" ? x + 6 : x + col.width - 6;
+
+            doc.setFont("helvetica", col.key === "usina" ? "bold" : "normal");
+            doc.setFontSize(8.8);
+            doc.setTextColor(15, 23, 42);
+            doc.text(String(rawValue), tx, y + 14, {
+              align: col.align === "left" ? "left" : "right",
+            });
+            x += col.width;
+          });
+
+          y += rowH;
+        });
+      };
+
+      drawTableSection({
+        sectionTitle: "Visão Mensal Consolidada",
+        sectionHint: "Tabela gerencial mensal de todas as usinas",
+        rows: monthlyRows,
+      });
+
+      drawTableSection({
+        sectionTitle: "Visão Diária Consolidada",
+        sectionHint: "Tabela gerencial diária de todas as usinas",
+        rows: dailyRows,
+      });
+
+      if (failures.length) {
+        addNewPage("Falhas de Coleta", "Usinas com erro durante a geração do relatório");
+        let y = 98;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(11, 18, 32);
+        doc.text("Falhas de Coleta", margin, y);
+        y += 16;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Estas usinas não retornaram dados válidos para uma ou ambas as visões no período.", margin, y);
+        y += 18;
+
+        failures.forEach((item, index) => {
+          if (y + 46 > pageH - 42) {
+            addNewPage("Falhas de Coleta", "Continuação", true);
+            y = 98;
+          }
+
+          doc.setFillColor(index % 2 === 0 ? 252 : 255, 253, 254);
+          doc.setDrawColor(226, 232, 240);
+          doc.roundedRect(margin, y, usableW, 38, 10, 10, "FD");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(11, 18, 32);
+          doc.text(item.station.name, margin + 12, y + 15);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text(fitText(item.error, usableW - 24), margin + 12, y + 28);
+          y += 46;
+        });
       }
 
-      doc.save(`${pdfFileName}.pdf`);
-      setMsg({ type: "ok", text: "PDF gerado com sucesso." });
+      doc.save(`${multiReportFileName}.pdf`);
+
+      setMsg({
+        type: "ok",
+        text: `PDF multiusinas gerado com sucesso. Usinas válidas: ${success.length}${
+          failures.length ? ` • Falhas: ${failures.length}` : ""
+        }.`,
+      });
     } catch (error) {
       console.error(error);
-      setMsg({ type: "err", text: "Falha ao gerar PDF." });
+      setMsg({
+        type: "err",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Falha ao gerar relatório consolidado multiusinas.",
+      });
     } finally {
-      setPdfLoading(false);
+      setMultiReportLoading(false);
+      setMultiReportProgress({
+        done: 0,
+        total: 0,
+        current: "",
+      });
     }
-  }, [
-    data,
-    tableRows,
-    setMsg,
-    captureCharts,
-    pdfFileName,
-    selectedStation,
-    start,
-    end,
-    resolvedGroup,
-  ]);
+  }, [stations, start, end, energyUnit, multiReportFileName, setMsg]);
 
   const loadingInitial = loading && !data;
   const isReloading = loading && !!data;
@@ -2360,40 +2467,16 @@ export function TecsciPage() {
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                    style={{ background: T.cardSoft2, color: T.accent }}
-                  >
-                    <Factory className="w-5 h-5" />
-                  </div>
+                  
 
                   <div className="min-w-0">
                     <div className={UI.headerTitle} style={{ color: T.text }}>
-                      Painel Operacional de Performance
+                      Painel Ineer Energia
                     </div>
                     <div className="mt-1 text-sm font-semibold truncate" style={{ color: T.text2 }}>
                       {selectedStation ? selectedStation.name : "Selecione a usina"}
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-4 flex items-center gap-2 flex-wrap">
-                  <Pill tone="accent">
-                    <CalendarDays className="w-3.5 h-3.5 mr-1" />
-                    {rangeLabel(start, end)}
-                  </Pill>
-                  <Pill>
-                    <Database className="w-3.5 h-3.5 mr-1" />
-                    {groupLabel(resolvedGroup)}
-                  </Pill>
-                  <Pill tone="info">
-                    <BarChart3 className="w-3.5 h-3.5 mr-1" />
-                    Energia em {energyUnit}
-                  </Pill>
-                  <Pill>
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                    {lastUpdatedAt ? brDateTime(lastUpdatedAt) : "Sem atualização"}
-                  </Pill>
                 </div>
               </div>
 
@@ -2403,37 +2486,33 @@ export function TecsciPage() {
                   {!loading && "Atualizar"}
                 </Btn>
 
+                <Btn
+                  tone="primary"
+                  onClick={exportMultiStationManagerialReport}
+                  disabled={multiReportLoading || !stations.length}
+                  title="Gerar relatório gerencial multiusinas em PDF"
+                >
+                  {multiReportLoading ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      {`Gerando ${multiReportProgress.done}/${multiReportProgress.total}`}
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-4 h-4" />
+                      Relatório Gerencial
+                    </>
+                  )}
+                </Btn>
+
                 <Btn tone="secondary" onClick={startPresentation} title="Modo apresentação">
                   <LayoutDashboard className="w-4 h-4" />
                   Apresentar
                 </Btn>
-
-                <Btn
-                  tone="primary"
-                  onClick={exportPdf}
-                  loading={pdfLoading}
-                  disabled={!data?.ok || !tableRows.length}
-                  title="Gerar relatório em PDF"
-                >
-                  <FileDown className="w-4 h-4" />
-                  Relatório Gerencial
-                </Btn>
               </div>
             </div>
 
-            <div className="mt-5">
-              <OpsStrip
-                stationName={selectedStation?.name || "—"}
-                lastUpdatedAt={lastUpdatedAt}
-                generated={kpi.geracao}
-                energyUnit={energyUnit}
-                p90Pct={p90Pct}
-                prPct={prPct}
-                availPct={availPct}
-              />
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
               {heroMetrics.map((item) => (
                 <ExecutiveMetric key={item.label} {...item} />
               ))}
@@ -2465,8 +2544,8 @@ export function TecsciPage() {
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="Filtros e configuração"
-                  hint="Selecione a usina, período, granularidade e unidade de energia"
+                  title="Filtros"
+                  hint="Defina os parâmetros para visualização dos dados"
                   right={
                     <Btn
                       tone="secondary"
@@ -2597,98 +2676,6 @@ export function TecsciPage() {
               </div>
             ) : null}
 
-            {!presentationActive ? (
-              <div
-                className={UI.section}
-                style={{ borderColor: T.border, background: T.card }}
-              >
-                <SectionHeader
-                  title="Resumo executivo"
-                  hint="Comparativos consolidados do período e atingimento das metas"
-                  right={
-                    <Pill tone="accent">
-                      <ClipboardList className="w-3.5 h-3.5 mr-1" />
-                      Visão consolidada
-                    </Pill>
-                  }
-                />
-
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3">
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title={`Geração x P90 (${energyUnit})`}
-                      aLabel="Geração"
-                      aValue={kpi.geracao}
-                      bLabel="P90"
-                      bValue={kpi.p90}
-                      fmt={(n) => brNum(n, 2)}
-                      icon={<Zap className="w-4 h-4" />}
-                    />
-                  </div>
-
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title={`Geração x Estimado TecSci (${energyUnit})`}
-                      aLabel="Geração"
-                      aValue={kpi.geracao}
-                      bLabel="Estimado TecSci"
-                      bValue={kpi.expectedTec}
-                      fmt={(n) => brNum(n, 2)}
-                      icon={<Gauge className="w-4 h-4" />}
-                    />
-                  </div>
-
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title={`Geração x Estimado AYA (${energyUnit})`}
-                      aLabel="Geração"
-                      aValue={kpi.geracao}
-                      bLabel="Estimado AYA"
-                      bValue={kpi.estimatedAya}
-                      fmt={(n) => brNum(n, 2)}
-                      icon={<Activity className="w-4 h-4" />}
-                    />
-                  </div>
-
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title="Irradiação x Meta"
-                      aLabel="Irradiação"
-                      aValue={kpi.poa}
-                      bLabel="Meta"
-                      bValue={kpi.poaMeta}
-                      fmt={(n) => brNum(n, 2)}
-                      icon={<SunMedium className="w-4 h-4" />}
-                    />
-                  </div>
-
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title="PR x Meta PR"
-                      aLabel="PR"
-                      aValue={kpi.pr}
-                      bLabel="Meta PR"
-                      bValue={kpi.prMeta}
-                      fmt={(n) => brPct(n, 1)}
-                      icon={<LineChart className="w-4 h-4" />}
-                    />
-                  </div>
-
-                  <div className="xl:col-span-4">
-                    <CompareKpiCard
-                      title="Disponibilidade x Meta"
-                      aLabel="Disponibilidade"
-                      aValue={kpi.avail}
-                      bLabel="Meta"
-                      bValue={kpi.availMeta}
-                      fmt={(n) => brPct(n, 1)}
-                      icon={<ShieldCheck className="w-4 h-4" />}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
             <div
               ref={chartsFullscreen.ref}
               className={cx(
@@ -2705,24 +2692,23 @@ export function TecsciPage() {
                 title={
                   presentationActive
                     ? `Modo apresentação — ${selectedStation?.name || "Usina"}`
-                    : `Resumo gráfico — ${selectedStation?.name || "Usina"}`
+                    : `Painel de performance — ${selectedStation?.name || "Usina"}`
                 }
                 hint={
                   presentationActive
                     ? "Troca automática de usina a cada 20 segundos"
-                    : "Energia, irradiância, PR e disponibilidade operacional"
+                    : "Visualizações de performance energética, irradiação, PR e disponibilidade"
                 }
                 right={
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Pill>
-                      <CalendarDays className="w-3.5 h-3.5 mr-1" />
-                      {lastUpdatedAt ? brDateTime(lastUpdatedAt) : "Sem atualização"}
-                    </Pill>
+                    <div className="rounded-2xl border px-3 py-2 text-[11px] font-semibold" style={{ borderColor: T.border, background: T.cardSoft2, color: T.text2 }}>
+                      {presentationActive
+                        ? `Próxima usina em ${stationCountdown}s`
+                        : `Atualizado em ${lastUpdatedAt ? brDateTime(lastUpdatedAt) : "—"}`}
+                    </div>
 
                     {presentationActive ? (
                       <>
-                        <Pill tone="accent">Próxima usina em {stationCountdown}s</Pill>
-
                         <Btn tone="secondary" onClick={nextStation} title="Próxima usina">
                           Próxima
                           <ChevronRight className="w-4 h-4" />
@@ -2854,7 +2840,7 @@ export function TecsciPage() {
                     >
                       <MiniChart
                         title="Performance energética"
-                        subtitle="Barras empilhadas de geração e perdas com linhas de referência"
+                        subtitle="Geração real, perdas estimadas e curvas de referência do período"
                         data={seriesEnergy}
                         xKey="periodo"
                         series={chartEnergySeries}
@@ -2872,8 +2858,8 @@ export function TecsciPage() {
                         style={{ borderColor: T.border, background: T.cardSoft2 }}
                       >
                         <MiniChart
-                          title="Irradiação"
-                          subtitle="Real versus meta"
+                          title="Irradiação POA"
+                          subtitle="Irradiação solar projetada nos módulos solares"
                           data={seriesIrr}
                           xKey="periodo"
                           series={chartIrr1}
@@ -2890,7 +2876,7 @@ export function TecsciPage() {
                       >
                         <MiniChart
                           title="Irradiação acumulada"
-                          subtitle="Curva acumulada"
+                          subtitle="Ritmo acumulado real versus referência"
                           data={seriesIrr}
                           xKey="periodo"
                           series={chartIrr2}
@@ -2908,8 +2894,8 @@ export function TecsciPage() {
                         style={{ borderColor: T.border, background: T.cardSoft2 }}
                       >
                         <MiniChart
-                          title="PR"
-                          subtitle="Performance ratio versus meta"
+                          title="Performance Ratio"
+                          subtitle="Eficiência operacional comparada à meta"
                           data={seriesPR}
                           xKey="periodo"
                           series={chartPR}
@@ -2926,8 +2912,8 @@ export function TecsciPage() {
                         style={{ borderColor: T.border, background: T.cardSoft2 }}
                       >
                         <MiniChart
-                          title="Disponibilidade"
-                          subtitle="Disponibilidade operacional versus meta"
+                          title="Disponibilidade operacional"
+                          subtitle="Disponibilidade real da usina frente à meta"
                           data={seriesAvail}
                           xKey="periodo"
                           series={chartAvail}
@@ -2950,24 +2936,10 @@ export function TecsciPage() {
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="Tabela analítica"
-                  hint="Comparativos detalhados por período para conferência e exportação"
+                  title="Historico de performance"
+                  hint="Exporte os dados de geração, irradiação, PR e disponibilidade para o período selecionado"
                   right={
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="relative w-full sm:w-[320px]">
-                        <input
-                          className={cx(UI.input, "pl-10")}
-                          style={{ borderColor: T.border }}
-                          placeholder="Buscar período…"
-                          value={tableQuery}
-                          onChange={(e) => setTableQuery(e.target.value)}
-                        />
-                        <Search
-                          className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2"
-                          style={{ color: T.text3 }}
-                        />
-                      </div>
-
                       <Btn
                         tone="secondary"
                         onClick={exportExcel}
@@ -2976,19 +2948,12 @@ export function TecsciPage() {
                         title="Exportar tabela para Excel"
                       >
                         <FileSpreadsheet className="w-4 h-4" />
-                        Excel
                       </Btn>
                     </div>
                   }
                 />
 
                 <div className="p-5 space-y-4">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Pill>{filteredTableRows.length} linhas</Pill>
-                    <Pill>{groupLabel(resolvedGroup)}</Pill>
-                    <Pill>Energia em {energyUnit}</Pill>
-                  </div>
-
                   <GerencialTable rows={filteredTableRows} energyUnit={energyUnit} />
                 </div>
               </div>

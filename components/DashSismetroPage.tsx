@@ -1,4 +1,3 @@
-// app/sismetro/visualizacao/page.tsx
 "use client";
 
 import React, {
@@ -118,17 +117,17 @@ function Btn({
   const style =
     tone === "primary"
       ? {
-        background: T.accent,
-        borderColor: "rgba(17, 89, 35, 0.45)",
-        color: "#fff",
-      }
+          background: T.accent,
+          borderColor: "rgba(17, 89, 35, 0.45)",
+          color: "#fff",
+        }
       : tone === "danger"
-        ? {
+      ? {
           background: "rgba(239, 68, 68, 0.10)",
           borderColor: "rgba(239, 68, 68, 0.35)",
           color: T.errTx,
         }
-        : {
+      : {
           background: T.card,
           borderColor: T.border,
           color: T.text,
@@ -291,7 +290,6 @@ function FullscreenShell({
         color: T.text,
       }}
     >
-      {/* TOPBAR */}
       <div
         className="shrink-0 px-4 sm:px-6 py-3 border-b flex items-start sm:items-center justify-between gap-3 flex-wrap"
         style={{ borderColor: T.border, background: T.card }}
@@ -338,7 +336,6 @@ function FullscreenShell({
         </div>
       </div>
 
-      {/* FILTROS */}
       {filtersOpen && (
         <div
           className="shrink-0 border-b"
@@ -348,7 +345,6 @@ function FullscreenShell({
         </div>
       )}
 
-      {/* CONTEÚDO */}
       <div className="flex-1 min-h-0 overflow-auto px-4 sm:px-6 py-4">
         {children}
       </div>
@@ -467,7 +463,6 @@ type SsItem = {
   tipoSs?: string | null;
   dataAbertura?: string | null;
 
-  // ✅ possíveis campos de finalização (depende do seu endpoint)
   dataFechamento?: string | null;
   dataFinalizacao?: string | null;
   dataConclusao?: string | null;
@@ -492,6 +487,7 @@ type ApiResp = {
   count?: number;
   items?: SsItem[];
   error?: string;
+  cached?: boolean;
 };
 
 type Row = {
@@ -500,7 +496,6 @@ type Row = {
   data: string;
   dataHora?: string | null;
 
-  // ✅ finalização
   dataFechamento?: string | null;
 
   cliente: string | null;
@@ -604,11 +599,9 @@ function avgCloseMs(rows: Row[]) {
 }
 
 function isConcluidoRow(r: { evolucao?: string | null; status?: string | null }) {
-  // prioridade: evolução do kanban
   const evo = normalizeKanban(r.evolucao);
   if (evo === "CONCLUÍDO") return true;
 
-  // fallback: status textual
   const st = clampUpper(String(r.status || ""));
   return st.includes("CONCLU");
 }
@@ -619,7 +612,6 @@ function rowTiming(r: Row, nowMs: number) {
 
   const isConcluido = isConcluidoRow(r);
 
-  // tempo só “fecha” se tiver close; se não tiver, só faz sentido para abertas
   const tempoMs = open
     ? (close ? close.getTime() : nowMs) - open.getTime()
     : NaN;
@@ -1078,6 +1070,7 @@ export function SismetroDashPage() {
 
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const allRowsRef = useRef<Row[]>([]);
+  const didInitialLoadRef = useRef(false);
 
   const DEFAULT_CLIENTE = "INEER ENERGIA";
 
@@ -1112,6 +1105,7 @@ export function SismetroDashPage() {
 
   const [loading, setLoading] = useState(false);
   const [allRows, setAllRows] = useState<Row[]>([]);
+  const [pagesLoaded, setPagesLoaded] = useState<number | null>(null);
 
   const limit = isMobile ? 8 : 14;
   const [page, setPage] = useState(1);
@@ -1135,7 +1129,6 @@ export function SismetroDashPage() {
     return () => window.clearTimeout(t);
   }, []);
 
-  // ✅ relógio (para “Aberta há: …” atualizar)
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
     const t = window.setInterval(() => setNowMs(Date.now()), 60_000);
@@ -1294,6 +1287,7 @@ export function SismetroDashPage() {
     setMsg(null);
     setLoading(true);
     setLoadingOptions(true);
+    setPagesLoaded(null);
 
     try {
       const res = await fetch("/api/sismetro/ss", {
@@ -1308,9 +1302,12 @@ export function SismetroDashPage() {
         setUsinasList([]);
         setEvolucoesList([]);
         setTecnicosList([]);
+        setPagesLoaded(null);
         setMsg({ type: "err", text: data?.error || "Erro ao carregar SS." });
         return;
       }
+
+      setPagesLoaded(Number(data?.totalPages ?? 1));
 
       const items = Array.isArray(data?.items) ? data.items : [];
 
@@ -1327,7 +1324,7 @@ export function SismetroDashPage() {
             data: iso || "",
             dataHora: it.dataAbertura || null,
 
-            dataFechamento: fechamento, // ✅
+            dataFechamento: fechamento,
 
             cliente: it.solicitante ?? null,
             usina: it.localizacao ?? null,
@@ -1384,6 +1381,7 @@ export function SismetroDashPage() {
       setTecnicosList(techs);
     } catch {
       setAllRows([]);
+      setPagesLoaded(null);
       setMsg({ type: "err", text: "Erro de conexão." });
     } finally {
       setLoading(false);
@@ -1392,6 +1390,8 @@ export function SismetroDashPage() {
   }, [DEFAULT_CLIENTE]);
 
   useEffect(() => {
+    if (didInitialLoadRef.current) return;
+    didInitialLoadRef.current = true;
     load();
   }, [load]);
 
@@ -1436,7 +1436,6 @@ export function SismetroDashPage() {
   const offset = (pageSafe - 1) * limit;
   const tableRows = useMemo(() => filteredRows.slice(offset, offset + limit), [filteredRows, offset, limit]);
 
-  // ✅ KPI médio até conclusão (somente SS com abertura + finalização)
   const avg = useMemo(() => {
     const r = avgCloseMs(filteredRows);
     return { n: r.n, label: r.ms != null ? formatDurationPt(r.ms) : "—" };
@@ -1558,18 +1557,18 @@ export function SismetroDashPage() {
       const ws = XLSX.utils.json_to_sheet(data);
 
       ws["!cols"] = [
-        { wch: 8 },  // SS
-        { wch: 18 }, // Abertura
-        { wch: 18 }, // Finalização
-        { wch: 10 }, // Tempo
-        { wch: 22 }, // Cliente
-        { wch: 28 }, // Usina
-        { wch: 14 }, // Tipo
-        { wch: 14 }, // Status
-        { wch: 18 }, // Evolução
-        { wch: 22 }, // Técnico
-        { wch: 46 }, // Descrição
-        { wch: 46 }, // Conclusão
+        { wch: 8 },
+        { wch: 18 },
+        { wch: 18 },
+        { wch: 10 },
+        { wch: 22 },
+        { wch: 28 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 22 },
+        { wch: 46 },
+        { wch: 46 },
       ];
 
       const wb = XLSX.utils.book_new();
@@ -1614,15 +1613,12 @@ export function SismetroDashPage() {
 
       const HEADER_H = 64;
       const MARGIN_X = 30;
-
-      // ✅ meta logo abaixo do header
       const TOP_MARGIN_TABLE = HEADER_H + 34;
       const FIRST_PAGE_START_Y = TOP_MARGIN_TABLE;
 
       const issuedAt = brDateTimeNow();
       const base = exportFileBaseName({ cliente, start, end, usina, tipo, tecnico });
 
-      // ✅ média do próprio relatório
       const avgReport = avgCloseMs(filteredRows);
       const avgLabel = avgReport.ms != null ? formatDurationPt(avgReport.ms) : "—";
 
@@ -1784,19 +1780,18 @@ export function SismetroDashPage() {
 
         alternateRowStyles: { fillColor: PDF_BRAND.lightGray },
 
-        // ✅ soma = 782 (A4 landscape com margem 30/30)
         columnStyles: {
-          0: { cellWidth: 40 }, // SS
-          1: { cellWidth: 72 }, // Abertura
-          2: { cellWidth: 72 }, // Finalização
-          3: { cellWidth: 48 }, // Tempo
-          4: { cellWidth: 66 }, // Cliente
-          5: { cellWidth: 96 }, // Usina
-          6: { cellWidth: 52 }, // Tipo
-          7: { cellWidth: 76 }, // Evolução
-          8: { cellWidth: 76 }, // Técnico
-          9: { cellWidth: 92 }, // Descrição
-          10: { cellWidth: 92 }, // Conclusão
+          0: { cellWidth: 40 },
+          1: { cellWidth: 72 },
+          2: { cellWidth: 72 },
+          3: { cellWidth: 48 },
+          4: { cellWidth: 66 },
+          5: { cellWidth: 96 },
+          6: { cellWidth: 52 },
+          7: { cellWidth: 76 },
+          8: { cellWidth: 76 },
+          9: { cellWidth: 92 },
+          10: { cellWidth: 92 },
         },
 
         didDrawPage: () => {
@@ -1819,7 +1814,6 @@ export function SismetroDashPage() {
     }
   }, [filteredRows, cliente, start, end, usina, tipo, tecnico]);
 
-  // bloco de filtros (reuso normal + fullscreen)
   const FiltersBody = (
     <div className="p-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
@@ -1964,7 +1958,6 @@ export function SismetroDashPage() {
 
   return (
     <section className={UI.page} style={{ background: T.bg, color: T.text }}>
-      {/* BOOT OVERLAY */}
       {bootOverlay && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center" aria-busy="true" aria-live="polite">
           <div
@@ -1998,7 +1991,6 @@ export function SismetroDashPage() {
       )}
 
       <div className={UI.container}>
-        {/* HEADER */}
         <div className={cx(UI.header, "p-4 sm:p-5 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="min-w-0">
@@ -2010,6 +2002,7 @@ export function SismetroDashPage() {
                 <Pill>Período: {start && end ? `${brDate(start)} → ${brDate(end)}` : "—"}</Pill>
                 <Pill>Cliente: {cliente || "Todos"}</Pill>
                 <Pill>Usina: {usina ? clampUpper(usina) : "Todas"}</Pill>
+                <Pill>Páginas carregadas: {pagesLoaded != null ? pagesLoaded : "—"}</Pill>
                 <Pill tone="accent">
                   Tempo médio até conclusão: {avg.label}{avg.n ? ` ` : ""}
                 </Pill>
@@ -2030,7 +2023,6 @@ export function SismetroDashPage() {
           </div>
         </div>
 
-        {/* FILTROS */}
         <div className={cx(UI.section, "mt-4 rounded-lg")} style={{ borderColor: T.border, background: T.card }}>
           <SectionHeader
             title="Filtros"
@@ -2073,9 +2065,7 @@ export function SismetroDashPage() {
           {filtersOpen && FiltersBody}
         </div>
 
-        {/* MAIN */}
         <main className="mt-4 grid gap-4">
-          {/* KANBAN */}
           {(() => {
             const isFull = full === "kanban";
             const kanbanH = 420;
@@ -2364,7 +2354,6 @@ export function SismetroDashPage() {
             );
           })()}
 
-          {/* GRÁFICOS */}
           {(() => {
             const isFull = full === "charts";
 
@@ -2498,7 +2487,6 @@ export function SismetroDashPage() {
             );
           })()}
 
-          {/* TABELA */}
           {(() => {
             const isFull = full === "table";
 
@@ -2569,10 +2557,10 @@ export function SismetroDashPage() {
                         key={r.id}
                         r={r}
                         nowMs={nowMs}
-                        onFilterUsina={() => applyUsinaFromChart(safeUpper(r.usina))}
+                        onFilterUsina={() => applyUsinaFromChart(safeUpper(r.usina, ""))}
                         onFilterTecnico={() =>
                           setTecnico((p) =>
-                            clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")
+                            clampUpper(p) === safeUpper(r.tecnico, "") ? "" : safeUpper(r.tecnico, "")
                           )
                         }
                       />
@@ -2606,8 +2594,8 @@ export function SismetroDashPage() {
                         </div>
 
                         {tableRows.map((r) => {
-                          const tecnicoActive = tecnico && clampUpper(tecnico) === safeUpper(r.tecnico);
-                          const usinaActive = usina && clampUpper(usina) === safeUpper(r.usina);
+                          const tecnicoActive = tecnico && clampUpper(tecnico) === safeUpper(r.tecnico, "");
+                          const usinaActive = usina && clampUpper(usina) === safeUpper(r.usina, "");
                           const t = rowTiming(r, nowMs);
 
                           return (
@@ -2628,7 +2616,7 @@ export function SismetroDashPage() {
                                   href={ssLink(r.idSs)}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className={cx("font-semiabold", UI.mono)}
+                                  className={cx("font-semibold", UI.mono)}
                                   style={{ color: T.accent }}
                                   title="Abrir SS no Sismetro"
                                 >
@@ -2668,7 +2656,7 @@ export function SismetroDashPage() {
                                   type="button"
                                   className="truncate text-left font-semibold max-w-full"
                                   style={{ color: usinaActive ? T.accent : T.text }}
-                                  onClick={() => applyUsinaFromChart(safeUpper(r.usina))}
+                                  onClick={() => applyUsinaFromChart(safeUpper(r.usina, ""))}
                                   title="Clique para filtrar por esta usina"
                                 >
                                   {safeUpper(r.usina)}
@@ -2692,7 +2680,7 @@ export function SismetroDashPage() {
                                   style={{ color: tecnicoActive ? T.accent : T.text }}
                                   onClick={() =>
                                     setTecnico((p) =>
-                                      clampUpper(p) === safeUpper(r.tecnico) ? "" : safeUpper(r.tecnico, "")
+                                      clampUpper(p) === safeUpper(r.tecnico, "") ? "" : safeUpper(r.tecnico, "")
                                     )
                                   }
                                   title="Clique para filtrar por este técnico"
@@ -2822,7 +2810,6 @@ export function SismetroDashPage() {
         </main>
       </div>
 
-      {/* focus ring + scrollbar + iOS date picker */}
       <style jsx global>{`
         input:focus,
         textarea:focus,

@@ -1,43 +1,32 @@
 import { NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 const BASE_URL = "https://get.api.sismetro.com/";
-const UNIT = process.env.SISMETRO_UNIT ?? "";
-const KEY = process.env.SISMETRO_KEY ?? "";
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const MIN_INTERVAL_MS = 6500; // ~9 req/min, abaixo do limite 10/min
+const UNIT = process.env.SISMETRO_UNIT ?? "484";
+const KEY = process.env.SISMETRO_KEY ?? "SEU_TOKEN_AQUI";
 
-type SismetroListResponse = {
-  totalPages?: number | string;
-  resultList?: any[];
-  [key: string]: any;
-};
+// 27 requisições/minuto aprox. -> fica abaixo do limite de 30/min
+const DELAY_BETWEEN_REQUESTS_MS = 2200;
+const MAX_RETRIES = 4;
+const REQUEST_TIMEOUT_MS = 20_000;
+const CACHE_TTL_MS = 60_000;
 
-type SsPayload = {
+type Payload = {
   ok: boolean;
   totalPages: number;
-  loadedPages: number[];
-  failedPages: number[];
   count: number;
   items: any[];
   cached?: boolean;
-  stale?: boolean;
-  partial?: boolean;
-  warning?: string;
 };
 
 let cache:
   | {
-      expiresAt: number;
-      payload: SsPayload;
+      ts: number;
+      payload: Payload;
     }
   | null = null;
 
-let inFlight: Promise<NextResponse> | null = null;
-let lastRequestAt = 0;
+let inFlight: Promise<Payload> | null = null;
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -47,150 +36,126 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function ensureConfig() {
-  if (!UNIT || !KEY || KEY === "SEU_TOKEN_AQUI") {
-    throw new Error(
-      "Configuração inválida do Sismetro. Verifique SISMETRO_UNIT e SISMETRO_KEY."
-    );
-  }
-}
+async function fetchJson(url: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-async function waitForRateLimit() {
-  const now = Date.now();
-  const diff = now - lastRequestAt;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        unit: UNIT,
+        key: KEY,
+        "Cache-Control": "no-cache",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
 
-  if (diff < MIN_INTERVAL_MS) {
-    await sleep(MIN_INTERVAL_MS - diff);
-  }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      const err: any = new Error(`Sismetro HTTP ${res.status}: ${text.slice(0, 300)}`);
+      err.status = res.status;
 
-  lastRequestAt = Date.now();
-}
+      const retryAfter = Number(res.headers.get("retry-after") || 0);
+      err.retryAfterMs =
+        Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 0;
 
-async function fetchJson(url: string, attempt = 0): Promise<SismetroListResponse> {
-  await waitForRateLimit();
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      unit: UNIT,
-      key: KEY,
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-    },
-    cache: "no-store",
-  });
-
-  if (res.status === 429) {
-    const retryAfter = Number(res.headers.get("retry-after") || 0);
-    const waitMs =
-      retryAfter > 0 ? retryAfter * 1000 : 10000 + attempt * 5000;
-
-    if (attempt < 3) {
-      await sleep(waitMs);
-      return fetchJson(url, attempt + 1);
+      throw err;
     }
 
-    const text = await res.text().catch(() => "");
-    throw new Error(`Sismetro HTTP 429: ${text.slice(0, 300)}`);
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Sismetro HTTP ${res.status}: ${text.slice(0, 300)}`);
-  }
-
-  return (await res.json()) as SismetroListResponse;
 }
 
-async function loadAllSs(): Promise<SsPayload> {
-  ensureConfig();
+async function fetchPageWithRetry(page: number, attempt = 1): Promise<any> {
+  try {
+    return await fetchJson(`${BASE_URL}SS/listAll?page=${pad2(page)}`);
+  } catch (err: any) {
+    const status = Number(err?.status ?? 0);
+    const canRetry =
+      err?.name === "AbortError" || status === 429 || status >= 500;
 
-  const first = await fetchJson(`${BASE_URL}SS/listAll?page=01`);
-  const totalPages = Math.max(1, Number(first?.totalPages ?? 1));
+    if (!canRetry || attempt >= MAX_RETRIES) {
+      throw err;
+    }
+
+    const retryAfterMs = Number(err?.retryAfterMs ?? 0);
+    const waitMs =
+      retryAfterMs > 0
+        ? retryAfterMs
+        : DELAY_BETWEEN_REQUESTS_MS * (attempt + 1) * 2;
+
+    await sleep(waitMs);
+    return fetchPageWithRetry(page, attempt + 1);
+  }
+}
+
+async function loadAllPages(): Promise<Payload> {
+  const first = await fetchPageWithRetry(1);
+
+  const totalPages = Number(first?.totalPages ?? 1);
   const firstList = Array.isArray(first?.resultList) ? first.resultList : [];
 
-  const loadedPages: number[] = [1];
-  const failedPages: number[] = [];
   const all: any[] = [...firstList];
 
   for (let p = 2; p <= totalPages; p++) {
-    try {
-      const pageData = await fetchJson(`${BASE_URL}SS/listAll?page=${pad2(p)}`);
-      const list = Array.isArray(pageData?.resultList) ? pageData.resultList : [];
-      all.push(...list);
-      loadedPages.push(p);
-    } catch {
-      failedPages.push(p);
+    await sleep(DELAY_BETWEEN_REQUESTS_MS);
 
-      // se começou a falhar, devolve o que já conseguiu em vez de zerar tudo
-      break;
-    }
+    const pageData = await fetchPageWithRetry(p);
+    const list = Array.isArray(pageData?.resultList) ? pageData.resultList : [];
+    all.push(...list);
   }
-
-  const partial = failedPages.length > 0 || loadedPages.length < totalPages;
 
   return {
     ok: true,
     totalPages,
-    loadedPages,
-    failedPages,
     count: all.length,
     items: all,
-    partial,
-    warning: partial
-      ? `Dados parciais carregados. Páginas carregadas: ${loadedPages.length}/${totalPages}.`
-      : undefined,
   };
 }
 
 export async function GET() {
-  const now = Date.now();
-
-  if (cache && cache.expiresAt > now) {
-    return NextResponse.json({
-      ...cache.payload,
-      cached: true,
-    });
-  }
-
-  if (inFlight) {
-    return inFlight;
-  }
-
-  inFlight = (async () => {
-    try {
-      const payload = await loadAllSs();
-
-      cache = {
-        expiresAt: Date.now() + CACHE_TTL_MS,
-        payload,
-      };
-
-      return NextResponse.json(payload);
-    } catch (err: any) {
-      const message = err?.message ?? "Erro desconhecido";
-
-      if (cache?.payload) {
-        return NextResponse.json({
-          ...cache.payload,
-          cached: true,
-          stale: true,
-          warning:
-            "Falha temporária ao consultar o Sismetro. Retornando último cache disponível.",
-        });
-      }
-
+  try {
+    if (!KEY || KEY === "SEU_TOKEN_AQUI") {
       return NextResponse.json(
-        {
-          ok: false,
-          error: message,
-        },
+        { ok: false, error: "Configure SISMETRO_KEY no .env.local" },
         { status: 500 }
       );
-    } finally {
-      inFlight = null;
     }
-  })();
 
-  return inFlight;
+    const now = Date.now();
+
+    // cache curto para evitar repaginar a API toda hora
+    if (cache && now - cache.ts < CACHE_TTL_MS) {
+      return NextResponse.json({
+        ...cache.payload,
+        cached: true,
+      });
+    }
+
+    // deduplicação: se já existe uma carga em andamento, reaproveita
+    if (!inFlight) {
+      inFlight = loadAllPages()
+        .then((payload) => {
+          cache = {
+            ts: Date.now(),
+            payload,
+          };
+          return payload;
+        })
+        .finally(() => {
+          inFlight = null;
+        });
+    }
+
+    const payload = await inFlight;
+    return NextResponse.json(payload);
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err?.message ?? "Erro desconhecido" },
+      { status: 500 }
+    );
+  }
 }
