@@ -4,7 +4,6 @@
 import React, {
   memo,
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -12,7 +11,6 @@ import React, {
   type ReactNode,
 } from "react";
 import {
-  Search,
   RefreshCw,
   Eraser,
   FileDown,
@@ -25,12 +23,21 @@ import {
   Maximize2,
   Minimize2,
   LayoutDashboard,
-  SunMedium,
   ShieldCheck,
-  Factory,
-  Monitor,
   LineChart,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  Bar,
+  Line,
+  Brush,
+} from "recharts";
 
 const cx = (...p: Array<string | false | null | undefined>) =>
   p.filter(Boolean).join(" ");
@@ -38,7 +45,7 @@ const cx = (...p: Array<string | false | null | undefined>) =>
 const T = {
   bg: "#F3F6F8",
   bg2: "#EEF2F6",
-  pageGlow: "rgba(22, 101, 52, 0.04)",
+  pageGlow: "rgba(22, 101, 52, 0.05)",
 
   card: "#FFFFFF",
   cardSoft: "#FAFBFC",
@@ -52,18 +59,12 @@ const T = {
   text: "#0F172A",
   text2: "rgba(15, 23, 42, 0.74)",
   text3: "rgba(15, 23, 42, 0.56)",
-  text4: "rgba(15, 23, 42, 0.38)",
-  mutedBg: "rgba(15, 23, 42, 0.035)",
 
   accent: "#166534",
   accent2: "#14532D",
-  accent3: "#1F7A44",
-  accentSoft: "rgba(22, 101, 52, 0.08)",
-  accentSoft2: "rgba(22, 101, 52, 0.14)",
   accentRing: "rgba(22, 101, 52, 0.18)",
 
   blue: "#1D4ED8",
-  blueSoft: "rgba(29, 78, 216, 0.08)",
 
   okBg: "rgba(16, 185, 129, 0.10)",
   okBd: "rgba(16, 185, 129, 0.26)",
@@ -77,17 +78,13 @@ const T = {
   errBd: "rgba(239, 68, 68, 0.24)",
   errTx: "#991B1B",
 
-  infoBg: "rgba(37, 99, 235, 0.08)",
-  infoBd: "rgba(37, 99, 235, 0.18)",
-  infoTx: "#1D4ED8",
-
   grid: "rgba(15, 23, 42, 0.08)",
 
   cGen: "#166534",
   cLoss: "#DC2626",
   cP90: "#D97706",
   cTec: "#64748B",
-  cAya: "#909490",
+  cAya: "#0F172A",
   cPoa: "#D97706",
   cPoaMeta: "#DC2626",
   cPR: "#2563EB",
@@ -99,9 +96,9 @@ const UI = {
   page: "w-full min-w-0",
   container: "mx-auto w-full max-w-[1560px] px-4 sm:px-6 py-6",
   hero:
-    "border bg-white min-w-0 rounded-[22px] shadow-[0_2px_12px_rgba(15,23,42,0.04),0_18px_44px_rgba(15,23,42,0.06)]",
+    "border bg-white min-w-0 rounded-[24px] shadow-[0_2px_12px_rgba(15,23,42,0.04),0_18px_44px_rgba(15,23,42,0.06)]",
   section:
-    "border bg-white min-w-0 rounded-[20px] shadow-[0_1px_3px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.05)]",
+    "border bg-white min-w-0 rounded-[22px] shadow-[0_1px_3px_rgba(15,23,42,0.04),0_10px_28px_rgba(15,23,42,0.05)]",
   sectionTitle: "text-[13px] font-semibold tracking-[0.01em]",
   sectionHint: "text-xs",
   headerTitle: "text-[24px] sm:text-[30px] font-semibold tracking-tight",
@@ -201,6 +198,21 @@ type MultiStationFetchResult =
       station: Station;
       error: string;
     };
+
+type MonthlyReportRow = {
+  usina: string;
+  periodo: string;
+  sortKey: string;
+  geracao: number | null;
+  p90Pct: number | null;
+  estimadoTec: number | null;
+  tecPct: number | null;
+  estimadoAya: number | null;
+  ayaPct: number | null;
+  irrPct: number | null;
+  prPct: number | null;
+  dispReal: number | null;
+};
 
 const PRESENTATION_STATION_SECONDS = 20;
 const MULTI_REPORT_REQUEST_INTERVAL_MS = 2200;
@@ -345,62 +357,6 @@ function sanitizeFileName(name: string) {
     .replace(/_+/g, "_");
 }
 
-function svgToString(el: SVGSVGElement, width: number, height: number) {
-  const clone = el.cloneNode(true) as SVGSVGElement;
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(width));
-  clone.setAttribute("height", String(height));
-  clone.querySelectorAll("foreignObject").forEach((n) => n.remove());
-  return new XMLSerializer().serializeToString(clone);
-}
-
-async function svgStringToPngDataUrl(
-  svg: string,
-  width: number,
-  height: number
-) {
-  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Falha ao renderizar SVG"));
-      img.src = url;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Canvas não suportado");
-
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
-
-    return canvas.toDataURL("image/png");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-async function svgElementToPng(
-  el: SVGSVGElement,
-  width?: number,
-  height?: number
-) {
-  const vb = el.viewBox?.baseVal;
-  const w = Math.max(1, Math.floor(width || vb?.width || el.clientWidth || 1400));
-  const h = Math.max(1, Math.floor(height || vb?.height || el.clientHeight || 420));
-  const svg = svgToString(el, w, h);
-  return svgStringToPngDataUrl(svg, w, h);
-}
-
 function niceTicks(min: number, max: number, count = 5) {
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
     return [min, max];
@@ -427,10 +383,6 @@ function niceTicks(min: number, max: number, count = 5) {
   return ticks;
 }
 
-function rangeLabel(start: string, end: string) {
-  return `${brDate(start)} — ${brDate(clampEndToToday(end))}`;
-}
-
 function groupLabel(
   group: "auto" | "day" | "month" | "year" | "aggregate" | undefined
 ) {
@@ -455,6 +407,24 @@ function brMonthLabel(value?: string | null) {
 
 function wait(ms = 100) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function averageNullable(values: Array<number | null>) {
+  const valid = values.filter((v): v is number => v != null && Number.isFinite(v));
+  if (!valid.length) return null;
+  return valid.reduce((acc, v) => acc + v, 0) / valid.length;
+}
+
+function getSheetCols(rows: Array<Record<string, unknown>>) {
+  if (!rows.length) return [{ wch: 24 }];
+
+  const keys = Object.keys(rows[0]);
+  return keys.map((key) => {
+    const maxLen = rows.slice(0, 500).reduce((acc, row) => {
+      return Math.max(acc, String(row[key] ?? "").length);
+    }, key.length);
+    return { wch: Math.min(32, Math.max(12, maxLen + 2)) };
+  });
 }
 
 function useDebouncedValue<T>(value: T, delay = 350) {
@@ -639,6 +609,54 @@ function buildTableRowFromDto(
     disponibilidade: disp,
     disponibilidadeMeta: dispMeta,
   };
+}
+
+function buildConsolidatedReportRow(
+  station: Station,
+  periodo: string,
+  sortKey: string,
+  dto: PerformanceDTO
+): MonthlyReportRow {
+  const row = buildTableRowFromDto(periodo, dto, "MWh");
+
+  return {
+    usina: station.name,
+    periodo: row.periodo,
+    sortKey,
+    geracao: row.geracao,
+    p90Pct: pctVs(row.geracao, row.p90),
+    estimadoTec: row.estimadoTec,
+    tecPct: pctVs(row.geracao, row.estimadoTec),
+    estimadoAya: row.estimadoAya,
+    ayaPct: pctVs(row.geracao, row.estimadoAya),
+    irrPct: pctVs(row.irradiacao, row.irradiacaoMeta),
+    prPct: pctVs(row.pr, row.prMeta),
+    dispReal: row.disponibilidade,
+  };
+}
+
+function buildMonthlyReportRow(
+  station: Station,
+  dto: { month: string } & PerformanceDTO
+): MonthlyReportRow {
+  return buildConsolidatedReportRow(
+    station,
+    brMonthLabel(dto.month),
+    String(dto.month || ""),
+    dto
+  );
+}
+
+function buildDailyReportRow(
+  station: Station,
+  dto: { day: string } & PerformanceDTO
+): MonthlyReportRow {
+  return buildConsolidatedReportRow(
+    station,
+    brDate(dto.day),
+    String(dto.day || ""),
+    dto
+  );
 }
 
 function usePerformanceData({
@@ -921,7 +939,7 @@ const ExecutiveMetric = memo(function ExecutiveMetric({
 
   return (
     <div
-      className="rounded-[18px] border px-4 py-4 min-w-0 h-full"
+      className="rounded-[20px] border px-4 py-4 min-w-0 h-full"
       style={{
         borderColor: T.border,
         background: "linear-gradient(180deg, #FFFFFF 0%, #FBFCFD 100%)",
@@ -936,7 +954,7 @@ const ExecutiveMetric = memo(function ExecutiveMetric({
           >
             {label}
           </div>
-          <div className="mt-1 text-[23px] font-bold truncate" style={{ color: T.text }}>
+          <div className="mt-1 text-[24px] font-bold truncate" style={{ color: T.text }}>
             {value}
           </div>
           {sub ? (
@@ -947,11 +965,33 @@ const ExecutiveMetric = memo(function ExecutiveMetric({
         </div>
 
         <div
-          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-2xl"
+          className="shrink-0 flex items-center justify-center w-11 h-11 rounded-2xl"
           style={{ background: T.cardSoft2, color: T.text2 }}
         >
           {icon}
         </div>
+      </div>
+    </div>
+  );
+});
+
+const ContextMetric = memo(function ContextMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="rounded-[18px] border px-4 py-3"
+      style={{ borderColor: T.border, background: T.cardSoft3 }}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: T.text3 }}>
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold truncate" style={{ color: T.text }}>
+        {value}
       </div>
     </div>
   );
@@ -966,7 +1006,6 @@ const MiniChart = memo(function MiniChart({
   height = 340,
   yDomain,
   formatterLeft,
-  svgRef,
   xLabelCount = 10,
   stackBars = false,
 }: {
@@ -978,21 +1017,13 @@ const MiniChart = memo(function MiniChart({
   height?: number;
   yDomain?: [number, number] | null;
   formatterLeft?: (v: number) => string;
-  svgRef?: React.RefObject<SVGSVGElement | null>;
   xLabelCount?: number;
   stackBars?: boolean;
 }) {
   const { ref, size } = useElementSize<HTMLDivElement>();
-  const W = size.w;
-  const H = height;
-
-  const n = Math.max(1, data.length);
-  const M = { l: 60, r: 16, t: 14, b: 44 };
-  const plotW = Math.max(10, W - M.l - M.r);
-  const plotH = Math.max(10, H - M.t - M.b);
-
   const bars = series.filter((s) => s.type === "bar");
   const lines = series.filter((s) => s.type === "line");
+  const fmt = formatterLeft || ((v: number) => brNum(v, 0));
 
   const dom = useMemo(() => {
     let min = Number.POSITIVE_INFINITY;
@@ -1029,26 +1060,20 @@ const MiniChart = memo(function MiniChart({
     return yDomain ? yDomain : ([Math.min(0, min), max * 1.08] as [number, number]);
   }, [data, series, bars, lines, yDomain, stackBars]);
 
-  const ticks = useMemo(() => niceTicks(dom[0], dom[1], 5), [dom]);
-  const fmt = formatterLeft || ((v: number) => brNum(v, 0));
+  const interval = useMemo(() => {
+    const width = Math.max(size.w, 360);
+    const maxLabelsByWidth = Math.max(2, Math.floor(width / 92));
+    const target = Math.max(2, Math.min(xLabelCount, maxLabelsByWidth, data.length || 2));
+    return Math.max(0, Math.ceil((data.length || 1) / target) - 1);
+  }, [size.w, xLabelCount, data.length]);
 
-  const y = (v: number) => {
-    const [mn, mx] = dom;
-    const t = (v - mn) / (mx - mn);
-    return M.t + plotH * (1 - t);
-  };
-
-  const xBand = plotW / n;
-  const xCenter = (i: number) => M.l + i * xBand + xBand / 2;
-
-  const every = useMemo(() => {
-    const maxLabelsByWidth = Math.max(2, Math.floor(plotW / 84));
-    const target = Math.max(
-      2,
-      Math.min(xLabelCount, maxLabelsByWidth, data.length || 2)
-    );
-    return Math.max(1, Math.ceil((data.length || 1) / target));
-  }, [plotW, xLabelCount, data.length]);
+  const tooltipFormatter = useCallback(
+    (value: unknown, name: string) => {
+      const num = safeNum(value);
+      return [num == null ? "—" : fmt(num), name];
+    },
+    [fmt]
+  );
 
   if (!data.length) {
     return (
@@ -1073,191 +1098,104 @@ const MiniChart = memo(function MiniChart({
 
   return (
     <div ref={ref} className="min-w-0">
-      <div className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: T.text }}>
-        {title}
-      </div>
-      {subtitle ? (
-        <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
-          {subtitle}
-        </div>
-      ) : null}
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {series.map((s) => (
-          <div
-            key={s.key}
-            className="inline-flex items-center gap-2 h-8 px-3 text-[11px] font-semibold border rounded-2xl"
-            style={{
-              borderColor: T.border,
-              background: T.cardSoft,
-              color: T.text2,
-            }}
-          >
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
-            <span>{s.name}</span>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: T.text }}>
+            {title}
           </div>
-        ))}
+          {subtitle ? (
+            <div className="mt-1 text-[11px]" style={{ color: T.text3 }}>
+              {subtitle}
+            </div>
+          ) : null}
+        </div>
+        <div className="text-[10px] font-semibold" style={{ color: T.text3 }}>
+          Passe o mouse para detalhes • arraste o zoom quando disponível
+        </div>
       </div>
 
       <div
         className="mt-3 border rounded-2xl overflow-hidden"
         style={{ borderColor: T.border, background: T.card }}
       >
-        <svg
-          ref={svgRef}
-          width={W}
-          height={H}
-          viewBox={`0 0 ${W} ${H}`}
-          style={{ display: "block", width: "100%", height: `${H}px` }}
-        >
-          <rect x={0} y={0} width={W} height={H} fill={T.card} />
-
-          {ticks.map((v, idx) => {
-            const yy = y(v);
-            return (
-              <g key={idx}>
-                <line x1={M.l} y1={yy} x2={M.l + plotW} y2={yy} stroke={T.grid} />
-                <text x={M.l - 8} y={yy + 4} fontSize={10} textAnchor="end" fill={T.text3}>
-                  {fmt(v)}
-                </text>
-              </g>
-            );
-          })}
-
-          {data.map((p, i) => {
-            if (i % every !== 0 && i !== data.length - 1) return null;
-            return (
-              <text
-                key={i}
-                x={xCenter(i)}
-                y={M.t + plotH + 24}
-                fontSize={10}
-                textAnchor="middle"
-                fill={T.text3}
-              >
-                {String(p[xKey])}
-              </text>
-            );
-          })}
-
-          {data.map((p, i) => {
-            if (stackBars) {
-              const barWidth = Math.max(10, Math.min(36, xBand * 0.52));
-              const x = xCenter(i) - barWidth / 2;
-              let acc = 0;
-
-              return (
-                <g key={`stack-${i}`}>
-                  {bars.map((s, j) => {
-                    const v = safeNum(p[s.key]);
-                    if (v == null || v <= 0) return null;
-                    const yTop = y(acc + v);
-                    const yBottom = y(acc);
-                    const h = Math.max(0, yBottom - yTop);
-                    acc += v;
-
-                    return (
-                      <rect
-                        key={`${s.key}-${i}`}
-                        x={x}
-                        y={yTop}
-                        width={barWidth}
-                        height={h}
-                        fill={s.color}
-                        opacity={0.92}
-                        rx={j === bars.length - 1 ? 4 : 0}
-                        ry={j === bars.length - 1 ? 4 : 0}
-                      />
-                    );
-                  })}
-                </g>
-              );
-            }
-
-            const groupW = Math.min(xBand * 0.72, 56);
-            const barGap = 4;
-            const barW = Math.max(
-              4,
-              (groupW - barGap * Math.max(0, bars.length - 1)) /
-                Math.max(1, bars.length)
-            );
-            const left =
-              xCenter(i) -
-              (barW * bars.length + barGap * (bars.length - 1)) / 2;
-
-            return (
-              <g key={`bars-${i}`}>
-                {bars.map((s, j) => {
-                  const v = safeNum(p[s.key]);
-                  if (v == null) return null;
-                  const y0 = y(0);
-                  const yv = y(v);
-
-                  return (
-                    <rect
-                      key={`${s.key}-${i}`}
-                      x={left + j * (barW + barGap)}
-                      y={yv}
-                      width={barW}
-                      height={Math.max(0, y0 - yv)}
-                      fill={s.color}
-                      opacity={0.92}
-                      rx={4}
-                      ry={4}
-                    />
-                  );
-                })}
-              </g>
-            );
-          })}
-
-          {lines.map((s) => {
-            let d = "";
-
-            data.forEach((p, i) => {
-              const v = safeNum(p[s.key]);
-              if (v == null) return;
-              const xx = xCenter(i);
-              const yy = y(v);
-              d += d ? ` L ${xx} ${yy}` : `M ${xx} ${yy}`;
-            });
-
-            return (
-              <path
-                key={s.key}
-                d={d || "M 0 0"}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={2.6}
-                strokeDasharray={s.dashed ? "6 6" : undefined}
-                opacity={0.96}
-                strokeLinecap="round"
-                strokeLinejoin="round"
+        <div style={{ width: "100%", height }}>
+          <ResponsiveContainer>
+            <ComposedChart
+              data={data}
+              margin={{ top: 18, right: 18, left: 8, bottom: data.length > 12 ? 42 : 18 }}
+            >
+              <CartesianGrid stroke={T.grid} strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey={xKey}
+                tick={{ fill: T.text3, fontSize: 11 }}
+                axisLine={{ stroke: T.border }}
+                tickLine={{ stroke: T.border }}
+                interval={interval}
+                minTickGap={18}
               />
-            );
-          })}
-
-          {lines.map((s) =>
-            s.showPoints
-              ? data.map((p, i) => {
-                  const v = safeNum(p[s.key]);
-                  if (v == null) return null;
-
-                  return (
-                    <circle
-                      key={`pt-${s.key}-${i}`}
-                      cx={xCenter(i)}
-                      cy={y(v)}
-                      r={s.pointRadius ?? 3}
-                      fill={T.card}
-                      stroke={s.color}
-                      strokeWidth={2}
-                    />
-                  );
-                })
-              : null
-          )}
-        </svg>
+              <YAxis
+                tick={{ fill: T.text3, fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                domain={dom as [number, number]}
+                tickFormatter={(v) => fmt(Number(v))}
+                width={72}
+              />
+              <Tooltip
+                cursor={{ fill: "rgba(15, 23, 42, 0.04)" }}
+                contentStyle={{
+                  borderRadius: 16,
+                  border: `1px solid ${T.border}`,
+                  boxShadow: "0 18px 44px rgba(15,23,42,0.12)",
+                  background: "#FFFFFF",
+                }}
+                labelStyle={{ color: T.text, fontWeight: 700, marginBottom: 8 }}
+                itemStyle={{ color: T.text2 }}
+                formatter={tooltipFormatter}
+              />
+              <Legend
+                verticalAlign="top"
+                align="right"
+                wrapperStyle={{ fontSize: 11, color: T.text2, paddingBottom: 10 }}
+              />
+              {bars.map((s) => (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.name}
+                  fill={s.color}
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={34}
+                  stackId={stackBars ? "stack" : undefined}
+                  fillOpacity={0.92}
+                />
+              ))}
+              {lines.map((s) => (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.name}
+                  stroke={s.color}
+                  strokeWidth={2.5}
+                  strokeDasharray={s.dashed ? "6 6" : undefined}
+                  dot={s.showPoints ? { r: s.pointRadius ?? 3, strokeWidth: 2, fill: "#FFFFFF" } : false}
+                  activeDot={{ r: (s.pointRadius ?? 3) + 2 }}
+                  connectNulls
+                />
+              ))}
+              {data.length > 12 ? (
+                <Brush
+                  dataKey={xKey}
+                  height={24}
+                  stroke={T.accent}
+                  travellerWidth={10}
+                  fill="rgba(22, 101, 52, 0.08)"
+                />
+              ) : null}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
@@ -1265,34 +1203,28 @@ const MiniChart = memo(function MiniChart({
 
 const GerencialTable = memo(function GerencialTable({
   rows,
-  energyUnit,
 }: {
   rows: TableRow[];
-  energyUnit: "kWh" | "MWh";
 }) {
   return (
     <div className="border rounded-[20px] overflow-hidden" style={{ borderColor: T.border }}>
       <div className="overflow-auto max-h-[620px]">
-        <table className="w-full min-w-[1480px] border-separate border-spacing-0">
+        <table className="w-full min-w-[1280px] border-separate border-spacing-0">
           <thead className="sticky top-0 z-10">
             <tr>
               {[
                 "Período",
-                `Geração`,
-                // `P90`,
+                "Geração",
                 "% P90",
-                `Estimado AYA`,
-                "% Aya",
-                `Estimado Tecsci`,
+                "Estimado AYA",
+                "% AYA",
+                "Estimado Tecsci",
                 "% Tecsci",
                 "Irradiação",
-                // "Irrad. Meta",
                 "% Irradiação",
                 "PR",
-                // "PR Meta",
                 "% PR",
-                "Disponibilidade",
-                
+                "Disp. real",
               ].map((h, idx) => (
                 <th
                   key={h}
@@ -1315,7 +1247,7 @@ const GerencialTable = memo(function GerencialTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={18} className="px-4 py-10 text-center text-sm" style={{ color: T.text3 }}>
+                <td colSpan={12} className="px-4 py-10 text-center text-sm" style={{ color: T.text3 }}>
                   Sem dados para exibir no período selecionado.
                 </td>
               </tr>
@@ -1326,7 +1258,6 @@ const GerencialTable = memo(function GerencialTable({
                 const genAya = pctVs(r.geracao, r.estimadoAya);
                 const irr = pctVs(r.irradiacao, r.irradiacaoMeta);
                 const pr = pctVs(r.pr, r.prMeta);
-                const disp = pctVs(r.disponibilidade, r.disponibilidadeMeta);
 
                 return (
                   <tr key={`${r.periodo}-${i}`}>
@@ -1341,21 +1272,16 @@ const GerencialTable = memo(function GerencialTable({
                       {r.periodo}
                     </td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.geracao, 2)}</td>
-                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.errTx }}>{brNum(r.perdasAya, 2)}</td> */}
-                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.p90, 2)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genP90} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoAya, 2)}</td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genAya} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.estimadoTec, 2)}</td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={genTec} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacao, 2)}</td>
-                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brNum(r.irradiacaoMeta, 2)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={irr} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.pr, 1)}</td>
-                    {/* <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.prMeta, 1)}</td> */}
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border }}><StatusChip pct={pr} /></td>
                     <td className="px-3 py-3 text-sm border-b" style={{ borderColor: T.border, color: T.text }}>{brPct(r.disponibilidade, 1)}</td>
-                    
                   </tr>
                 );
               })
@@ -1369,14 +1295,13 @@ const GerencialTable = memo(function GerencialTable({
 
 export function TecsciPage() {
   const [xlsxLoading, setXlsxLoading] = useState(false);
-  const [multiReportLoading, setMultiReportLoading] = useState(false);
-  const [multiReportProgress, setMultiReportProgress] = useState<MultiStationProgress>({
+  const [reportBundleLoading, setReportBundleLoading] = useState(false);
+  const [reportBundleProgress, setReportBundleProgress] = useState<MultiStationProgress>({
     done: 0,
     total: 0,
     current: "",
   });
 
-  const [tableQuery, setTableQuery] = useState("");
   const [presentMode, setPresentMode] = useState(false);
   const [stationCountdown, setStationCountdown] = useState(
     PRESENTATION_STATION_SECONDS
@@ -1416,14 +1341,6 @@ export function TecsciPage() {
     () => stations.find((s) => s.id === psId) || null,
     [stations, psId]
   );
-
-  const deferredTableQuery = useDeferredValue(tableQuery);
-
-  const svgEnergyRef = useRef<SVGSVGElement | null>(null);
-  const svgIrrRef = useRef<SVGSVGElement | null>(null);
-  const svgIrrAccRef = useRef<SVGSVGElement | null>(null);
-  const svgPrRef = useRef<SVGSVGElement | null>(null);
-  const svgAvailRef = useRef<SVGSVGElement | null>(null);
 
   const nextStation = useCallback(() => {
     if (!stations.length) return;
@@ -1574,7 +1491,7 @@ export function TecsciPage() {
     }
 
     if (resolvedGroup === "month") {
-      return (s?.monthly || []).map((x) => ({ label: x.month, dto: x }));
+      return (s?.monthly || []).map((x) => ({ label: brMonthLabel(x.month), dto: x }));
     }
 
     if (resolvedGroup === "year") {
@@ -1645,7 +1562,7 @@ export function TecsciPage() {
       {
         label: `Geração (${energyUnit})`,
         value: kpi.geracao == null ? "—" : brNum(kpi.geracao, 2),
-        sub: `P90 ${brNum(kpi.p90, 2)} • TecSci ${brNum(kpi.expectedTec, 2)}`,
+        sub: `P90 ${brNum(kpi.p90, 2)} • Tecsci ${brNum(kpi.expectedTec, 2)}`,
         icon: <Zap className="w-5 h-5" />,
         tone: statusTone(p90Pct),
       },
@@ -1657,7 +1574,7 @@ export function TecsciPage() {
         tone: statusTone(p90Pct),
       },
       {
-        label: "Atingimento TecSci",
+        label: "Atingimento Tecsci",
         value: tecPct == null ? "—" : `${brNum(tecPct, 1)}%`,
         sub: `Gap ${brNum(gapTec, 2)} ${energyUnit}`,
         icon: <Gauge className="w-5 h-5" />,
@@ -1666,21 +1583,21 @@ export function TecsciPage() {
       {
         label: `Perda estimada (${energyUnit})`,
         value: lossAya == null ? "—" : brNum(lossAya, 2),
-        sub: `Referência AYA ${brNum(kpi.estimatedAya, 2)}`,
+        sub: `AYA ${brNum(kpi.estimatedAya, 2)} ${energyUnit}`,
         icon: <Activity className="w-5 h-5" />,
         tone: statusTone(ayaPct),
       },
       {
-        label: "PR / Meta",
+        label: "PR",
         value: prPct == null ? "—" : `${brNum(prPct, 1)}%`,
-        sub: `${brPct(kpi.pr, 1)} vs ${brPct(kpi.prMeta, 1)}`,
+        sub: `${brPct(kpi.pr, 1)} vs meta ${brPct(kpi.prMeta, 1)}`,
         icon: <LineChart className="w-5 h-5" />,
         tone: statusTone(prPct),
       },
       {
-        label: "Disponibilidade / Meta",
+        label: "Disponibilidade",
         value: availPct == null ? "—" : `${brNum(availPct, 1)}%`,
-        sub: `${brPct(kpi.avail, 1)} vs ${brPct(kpi.availMeta, 1)}`,
+        sub: `${brPct(kpi.avail, 1)} vs meta ${brPct(kpi.availMeta, 1)}`,
         icon: <ShieldCheck className="w-5 h-5" />,
         tone: statusTone(availPct),
       },
@@ -1743,12 +1660,6 @@ export function TecsciPage() {
     return bucket.map((b) => buildTableRowFromDto(b.label, b.dto, energyUnit));
   }, [bucket, energyUnit]);
 
-  const filteredTableRows = useMemo(() => {
-    const q = deferredTableQuery.trim().toLowerCase();
-    if (!q) return tableRows;
-    return tableRows.filter((r) => r.periodo.toLowerCase().includes(q));
-  }, [tableRows, deferredTableQuery]);
-
   const chartEnergySeries: ChartSeries[] = useMemo(
     () => [
       {
@@ -1772,21 +1683,17 @@ export function TecsciPage() {
       },
       {
         key: "estimadoAya",
-        name: `Estimado AYA (${energyUnit})`,
+        name: `Estimado (${energyUnit})`,
         type: "line",
-        color: T.cAya,
-        // dashed: true,
-        showPoints: true,
-        pointRadius: 3.5,
+        color: T.cTec,
+        dashed: true,
       },
       // {
       //   key: "estimadoTec",
-      //   name: `Estimado TecSci (${energyUnit})`,
+      //   name: `Estimado Tecsci (${energyUnit})`,
       //   type: "line",
       //   color: T.cTec,
       //   dashed: true,
-      //   showPoints: true,
-      //   pointRadius: 3.5,
       // },
     ],
     [energyUnit]
@@ -1797,7 +1704,7 @@ export function TecsciPage() {
       { key: "poa", name: "Irradiação real", type: "bar", color: T.cPoa },
       {
         key: "meta",
-        name: "Irradiação Meta",
+        name: "Irradiação meta",
         type: "line",
         color: T.cPoaMeta,
         dashed: true,
@@ -1810,13 +1717,13 @@ export function TecsciPage() {
     () => [
       {
         key: "accPoa",
-        name: "Irradiação acumulada",
+        name: "Acumulada real",
         type: "line",
         color: T.cPoa,
       },
       {
         key: "accMeta",
-        name: "Irradiação acumulada Meta",
+        name: "Acumulada meta",
         type: "line",
         color: T.cPoaMeta,
         dashed: true,
@@ -1830,7 +1737,7 @@ export function TecsciPage() {
       { key: "pr", name: "PR", type: "bar", color: T.cPR },
       {
         key: "meta",
-        name: "PR Meta",
+        name: "Meta PR",
         type: "line",
         color: T.cTarget,
         dashed: true,
@@ -1849,7 +1756,7 @@ export function TecsciPage() {
       },
       {
         key: "meta",
-        name: "Disponibilidade Meta",
+        name: "Meta",
         type: "line",
         color: T.cTarget,
         dashed: true,
@@ -1862,79 +1769,34 @@ export function TecsciPage() {
     return tableRows.map((r) => ({
       periodo: r.periodo,
       geracao: r.geracao,
-      perdas_aya: r.perdasAya,
-      p90: r.p90,
-      perc_geracao_p90: pctVs(r.geracao, r.p90),
-      estimado_tecsci: r.estimadoTec,
-      perc_geracao_tecsci: pctVs(r.geracao, r.estimadoTec),
       estimado_aya: r.estimadoAya,
       perc_geracao_aya: pctVs(r.geracao, r.estimadoAya),
+      estimado_tecsci: r.estimadoTec,
+      perc_geracao_tecsci: pctVs(r.geracao, r.estimadoTec),
+      perc_geracao_p90: pctVs(r.geracao, r.p90),
       irradiacao: r.irradiacao,
-      irradiacao_meta: r.irradiacaoMeta,
       perc_irradiacao_meta: pctVs(r.irradiacao, r.irradiacaoMeta),
       pr: r.pr,
-      pr_meta: r.prMeta,
       perc_pr_meta: pctVs(r.pr, r.prMeta),
       disponibilidade: r.disponibilidade,
-      disponibilidade_meta: r.disponibilidadeMeta,
-      perc_disponibilidade_meta: pctVs(
-        r.disponibilidade,
-        r.disponibilidadeMeta
-      ),
     }));
   }, [tableRows]);
-
-  const pdfFileName = useMemo(
-    () =>
-      sanitizeFileName(
-        `Relatorio_Gerencial_${selectedStation?.name || "Usina"}_${start}_${clampEndToToday(end)}`
-      ),
-    [selectedStation, start, end]
-  );
 
   const excelFileName = useMemo(
     () =>
       sanitizeFileName(
-        `Tabela_Analitica_${selectedStation?.name || "Usina"}_${start}_${clampEndToToday(end)}`
+        `Historico_Performance_${selectedStation?.name || "Usina"}_${start}_${clampEndToToday(end)}`
       ),
     [selectedStation, start, end]
   );
 
-  const multiReportFileName = useMemo(
+  const monthlyReportBaseName = useMemo(
     () =>
       sanitizeFileName(
-        `Relatorio_Gerencial_Multiusinas_AYA_Ineer_${start}_${clampEndToToday(end)}`
+        `Relatorio_Mensal_Multiusinas_AYA_Ineer_${start}_${clampEndToToday(end)}`
       ),
     [start, end]
   );
-
-  const captureCharts = useCallback(async () => {
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => resolve())
-      )
-    );
-
-    const items = [
-      { title: "Energia", ref: svgEnergyRef, w: 1600, h: 680 },
-      { title: "Irradiação", ref: svgIrrRef, w: 1400, h: 560 },
-      { title: "Irradiação acumulada", ref: svgIrrAccRef, w: 1400, h: 560 },
-      { title: "PR", ref: svgPrRef, w: 1400, h: 520 },
-      { title: "Disponibilidade", ref: svgAvailRef, w: 1400, h: 520 },
-    ] as const;
-
-    const out: Array<{ title: string; dataUrl: string; w: number; h: number }> = [];
-
-    for (const item of items) {
-      const el = item.ref.current;
-      if (!el) continue;
-
-      const dataUrl = await svgElementToPng(el, item.w, item.h);
-      out.push({ title: item.title, dataUrl, w: item.w, h: item.h });
-    }
-
-    return out;
-  }, []);
 
   const exportExcel = useCallback(async () => {
     if (!data?.ok || !tableRows.length) {
@@ -1949,7 +1811,7 @@ export function TecsciPage() {
       const wb = XLSX.utils.book_new();
 
       const resumoAOA: (string | number)[][] = [
-        ["Tabela Analítica"],
+        ["Histórico analítico de performance"],
         [],
         ["Usina", kpi.psLabel],
         ["Período", `${start} → ${clampEndToToday(end)}`],
@@ -1963,10 +1825,12 @@ export function TecsciPage() {
       XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
 
       const wsSerie = XLSX.utils.json_to_sheet(exportRows);
-      XLSX.utils.book_append_sheet(wb, wsSerie, "Tabela");
+      wsSerie["!cols"] = getSheetCols(exportRows);
+      if (wsSerie["!ref"]) wsSerie["!autofilter"] = { ref: wsSerie["!ref"] };
+      XLSX.utils.book_append_sheet(wb, wsSerie, "Historico");
 
       XLSX.writeFile(wb, `${excelFileName}.xlsx`, { compression: true });
-      setMsg({ type: "ok", text: "Excel gerado com sucesso." });
+      setMsg({ type: "ok", text: "Excel analítico gerado com sucesso." });
     } catch (error) {
       console.error(error);
       setMsg({ type: "err", text: "Falha ao gerar Excel." });
@@ -1987,7 +1851,7 @@ export function TecsciPage() {
     excelFileName,
   ]);
 
-  const exportMultiStationManagerialReport = useCallback(async () => {
+  const exportMonthlyBundle = useCallback(async () => {
     const endSafe = clampEndToToday(end);
 
     if (!stations.length) {
@@ -2000,41 +1864,45 @@ export function TecsciPage() {
       return;
     }
 
-    setMultiReportLoading(true);
-    setMultiReportProgress({
+    setReportBundleLoading(true);
+    setReportBundleProgress({
       done: 0,
       total: stations.length,
       current: "",
     });
 
     try {
-      const { jsPDF } = await import("jspdf");
+      const [{ jsPDF }, XLSX] = await Promise.all([
+        import("jspdf"),
+        import("xlsx"),
+      ]);
+
       const results: MultiStationFetchResult[] = [];
 
       for (let index = 0; index < stations.length; index++) {
         const station = stations[index];
 
-        setMultiReportProgress({
+        setReportBundleProgress({
           done: index,
           total: stations.length,
           current: station.name,
         });
 
         try {
-          const daily = await fetchPerformanceByGroup({
-            psId: station.id,
-            start,
-            end: endSafe,
-            group: "day",
-          });
-
-          await wait(MULTI_REPORT_REQUEST_INTERVAL_MS);
-
           const monthly = await fetchPerformanceByGroup({
             psId: station.id,
             start,
             end: endSafe,
             group: "month",
+          });
+
+          await wait(MULTI_REPORT_REQUEST_INTERVAL_MS);
+
+          const daily = await fetchPerformanceByGroup({
+            psId: station.id,
+            start,
+            end: endSafe,
+            group: "day",
           });
 
           results.push({
@@ -2054,7 +1922,7 @@ export function TecsciPage() {
           });
         }
 
-        setMultiReportProgress({
+        setReportBundleProgress({
           done: index + 1,
           total: stations.length,
           current: station.name,
@@ -2068,7 +1936,6 @@ export function TecsciPage() {
       const success = results.filter(
         (item): item is Extract<MultiStationFetchResult, { ok: true }> => item.ok
       );
-
       const failures = results.filter(
         (item): item is Extract<MultiStationFetchResult, { ok: false }> => !item.ok
       );
@@ -2077,61 +1944,101 @@ export function TecsciPage() {
         throw new Error("Nenhuma usina retornou dados válidos para o período.");
       }
 
-      const multiReportEnergyUnit: "MWh" = "MWh";
-
-      const buildManagerialRow = (station: Station, row: TableRow) => ({
-        usina: station.name,
-        periodo: row.periodo,
-        geracao: row.geracao,
-        p90Pct: pctVs(row.geracao, row.p90),
-        estimadoTec: row.estimadoTec,
-        tecPct: pctVs(row.geracao, row.estimadoTec),
-        estimadoAya: row.estimadoAya,
-        ayaPct: pctVs(row.geracao, row.estimadoAya),
-        irrPct: pctVs(row.irradiacao, row.irradiacaoMeta),
-        prPct: pctVs(row.pr, row.prMeta),
-        dispReal: row.disponibilidade,
-      });
-
-      const summaryRows = success
-        .filter((item) => item.daily.performance)
-        .map((item) => {
-          const row = buildTableRowFromDto(
-            `${brDate(start)} - ${brDate(endSafe)}`,
-            item.daily.performance as PerformanceDTO,
-            multiReportEnergyUnit
-          );
-          return buildManagerialRow(item.station, row);
-        })
-        .sort((a, b) => a.usina.localeCompare(b.usina, "pt-BR"));
+      const monthlyRows = success
+        .flatMap((item) =>
+          (item.monthly.series?.monthly || []).map((dto) =>
+            buildMonthlyReportRow(item.station, dto)
+          )
+        )
+        .sort((a, b) => {
+          const byStation = a.usina.localeCompare(b.usina, "pt-BR");
+          if (byStation !== 0) return byStation;
+          return a.sortKey.localeCompare(b.sortKey, "pt-BR");
+        });
 
       const dailyRows = success
         .flatMap((item) =>
           (item.daily.series?.daily || []).map((dto) =>
-            buildManagerialRow(
-              item.station,
-              buildTableRowFromDto(brDate(dto.day), dto, multiReportEnergyUnit)
-            )
+            buildDailyReportRow(item.station, dto)
           )
         )
         .sort((a, b) => {
           const byStation = a.usina.localeCompare(b.usina, "pt-BR");
-          return byStation !== 0 ? byStation : a.periodo.localeCompare(b.periodo, "pt-BR");
+          if (byStation !== 0) return byStation;
+          return a.sortKey.localeCompare(b.sortKey, "pt-BR");
         });
 
-      const monthlyRows = success
-        .flatMap((item) =>
-          (item.monthly.series?.monthly || []).map((dto) =>
-            buildManagerialRow(
-              item.station,
-              buildTableRowFromDto(brMonthLabel(dto.month), dto, multiReportEnergyUnit)
-            )
-          )
-        )
-        .sort((a, b) => {
-          const byStation = a.usina.localeCompare(b.usina, "pt-BR");
-          return byStation !== 0 ? byStation : a.periodo.localeCompare(b.periodo, "pt-BR");
-        });
+      const mapExcelRow = ({ sortKey: _sortKey, ...row }: MonthlyReportRow) => ({
+        Usina: row.usina,
+        Período: row.periodo,
+        "Geração (MWh)": row.geracao,
+        "% P90": row.p90Pct,
+        "Estimado Tecsci": row.estimadoTec,
+        "% Tecsci": row.tecPct,
+        "Estimado AYA": row.estimadoAya,
+        "% AYA": row.ayaPct,
+        "% Irrad": row.irrPct,
+        "% PR": row.prPct,
+        "Disp real": row.dispReal,
+      });
+
+      const monthlyExcelRows = monthlyRows.map(mapExcelRow);
+      const dailyExcelRows = dailyRows.map(mapExcelRow);
+
+      const totalGeneration = monthlyRows.reduce(
+        (acc, row) => acc + (row.geracao ?? 0),
+        0
+      );
+      const avgP90 = averageNullable(monthlyRows.map((row) => row.p90Pct));
+      const avgPr = averageNullable(monthlyRows.map((row) => row.prPct));
+      const avgDisp = averageNullable(monthlyRows.map((row) => row.dispReal));
+
+      const wb = XLSX.utils.book_new();
+      const wsResumo = XLSX.utils.aoa_to_sheet([
+        ["Relatório mensal consolidado"],
+        [],
+        ["Cliente", "Ineer Energia"],
+        ["Período", `${brDate(start)} - ${brDate(endSafe)}`],
+        ["Usinas válidas", success.length],
+        ["Usinas com falha", failures.length],
+        ["Linhas mensais", monthlyRows.length],
+        ["Linhas diárias", dailyRows.length],
+        ["Geração total (MWh)", totalGeneration],
+        ["% P90 médio", avgP90],
+        ["% PR médio", avgPr],
+        ["Disponibilidade média", avgDisp],
+      ]);
+      wsResumo["!cols"] = [{ wch: 24 }, { wch: 24 }];
+      XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
+
+      const wsMensal = monthlyExcelRows.length
+        ? XLSX.utils.json_to_sheet(monthlyExcelRows)
+        : XLSX.utils.aoa_to_sheet([["Sem dados mensais para o período"]]);
+      wsMensal["!cols"] = getSheetCols(monthlyExcelRows);
+      if (wsMensal["!ref"]) wsMensal["!autofilter"] = { ref: wsMensal["!ref"] };
+      XLSX.utils.book_append_sheet(wb, wsMensal, "Mensal");
+
+      const wsDiario = dailyExcelRows.length
+        ? XLSX.utils.json_to_sheet(dailyExcelRows)
+        : XLSX.utils.aoa_to_sheet([["Sem dados diários para o período"]]);
+      wsDiario["!cols"] = getSheetCols(dailyExcelRows);
+      if (wsDiario["!ref"]) wsDiario["!autofilter"] = { ref: wsDiario["!ref"] };
+      XLSX.utils.book_append_sheet(wb, wsDiario, "Diario");
+
+      if (failures.length) {
+        const wsFalhas = XLSX.utils.json_to_sheet(
+          failures.map((item) => ({
+            Usina: item.station.name,
+            Código: item.station.code,
+            Erro: item.error,
+          }))
+        );
+        XLSX.utils.book_append_sheet(wb, wsFalhas, "Falhas");
+      }
+
+      XLSX.writeFile(wb, `${monthlyReportBaseName}.xlsx`, {
+        compression: true,
+      });
 
       const doc = new jsPDF({
         orientation: "landscape",
@@ -2142,11 +2049,11 @@ export function TecsciPage() {
 
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
-      const margin = 26;
+      const margin = 24;
       const usableW = pageW - margin * 2;
-      const footerY = pageH - 26;
+      const footerY = pageH - 22;
       let pageNo = 1;
-      let usedInitialPage = false;
+      let hasStarted = false;
 
       const fitText = (value: string, width: number) => {
         const textValue = String(value || "");
@@ -2174,12 +2081,12 @@ export function TecsciPage() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
-        doc.text("Relatórios gerenciais de performance", x + 54, y + 32);
+        doc.text("Relatório gerencial consolidado", x + 54, y + 32);
       };
 
       const drawFooter = () => {
         doc.setDrawColor(226, 232, 240);
-        doc.line(margin, footerY - 12, pageW - margin, footerY - 12);
+        doc.line(margin, footerY - 10, pageW - margin, footerY - 10);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8.5);
         doc.setTextColor(100, 116, 139);
@@ -2187,97 +2094,62 @@ export function TecsciPage() {
         doc.text(`Página ${pageNo}`, pageW - margin, footerY, { align: "right" });
       };
 
-      const drawHeader = (sectionTitle: string, sectionHint?: string) => {
+      const drawHeader = (title: string, subtitle: string) => {
         doc.setFillColor(248, 250, 252);
-        doc.rect(0, 0, pageW, 72, "F");
+        doc.rect(0, 0, pageW, 74, "F");
         drawAyaLogo(margin, 14);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.setTextColor(11, 18, 32);
-        doc.text(sectionTitle, pageW - margin, 28, { align: "right" });
+        doc.text(title, pageW - margin, 28, { align: "right" });
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9.5);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Cliente: Ineer Energia • Período: ${brDate(start)} - ${brDate(endSafe)}`, pageW - margin, 44, {
+        doc.text(subtitle, pageW - margin, 44, { align: "right" });
+        doc.text(`Emitido em ${brDateTime(new Date().toISOString())}`, pageW - margin, 58, {
           align: "right",
         });
 
-        if (sectionHint) {
-          doc.text(sectionHint, pageW - margin, 58, { align: "right" });
-        }
-
         doc.setFillColor(22, 101, 52);
-        doc.rect(0, 72, pageW, 4, "F");
+        doc.rect(0, 74, pageW, 4, "F");
         drawFooter();
       };
 
-      const addNewPage = (sectionTitle: string, sectionHint?: string, continued = false) => {
-        if (!usedInitialPage) {
-          usedInitialPage = true;
-          drawHeader(sectionTitle, continued ? `${sectionHint || ""} • Continuação`.trim() : sectionHint);
+      const openSectionPage = (title: string, subtitle: string) => {
+        if (!hasStarted) {
+          hasStarted = true;
+          drawHeader(title, subtitle);
           return;
         }
-
         doc.addPage();
         pageNo += 1;
-        drawHeader(sectionTitle, continued ? `${sectionHint || ""} • Continuação`.trim() : sectionHint);
+        drawHeader(title, subtitle);
       };
 
+      const cols = [
+        { key: "usina", label: "Usina", width: 146, align: "left" as const },
+        { key: "periodo", label: "Período", width: 64, align: "left" as const },
+        { key: "geracao", label: "Geração (MWh)", width: 72, align: "right" as const },
+        { key: "p90Pct", label: "% P90", width: 50, align: "right" as const },
+        { key: "estimadoTec", label: "Estimado Tecsci", width: 74, align: "right" as const },
+        { key: "tecPct", label: "% Tecsci", width: 52, align: "right" as const },
+        { key: "estimadoAya", label: "Estimado AYA", width: 72, align: "right" as const },
+        { key: "ayaPct", label: "% AYA", width: 50, align: "right" as const },
+        { key: "irrPct", label: "% Irrad", width: 50, align: "right" as const },
+        { key: "prPct", label: "% PR", width: 44, align: "right" as const },
+        { key: "dispReal", label: "Disp real", width: 54, align: "right" as const },
+      ];
 
-
-      const drawTableSection = ({
-        sectionTitle,
-        sectionHint,
-        rows,
-      }: {
-        sectionTitle: string;
-        sectionHint: string;
-        rows: Array<{
-          usina: string;
-          periodo: string;
-          geracao: number | null;
-          p90Pct: number | null;
-          estimadoTec: number | null;
-          tecPct: number | null;
-          estimadoAya: number | null;
-          ayaPct: number | null;
-          irrPct: number | null;
-          prPct: number | null;
-          dispReal: number | null;
-        }>;
-      }) => {
-        addNewPage(sectionTitle, sectionHint);
-
-        const cols = [
-          { key: "usina", label: "Usina", width: 160, align: "left" as const },
-          { key: "periodo", label: "Período", width: 72, align: "left" as const },
-          { key: "geracao", label: "Geração (MWh)", width: 76, align: "right" as const },
-          { key: "p90Pct", label: "% P90", width: 50, align: "right" as const },
-          { key: "estimadoTec", label: "Estimado Tecsci", width: 82, align: "right" as const },
-          { key: "tecPct", label: "% TecSci", width: 54, align: "right" as const },
-          { key: "estimadoAya", label: "Estimado AYA", width: 76, align: "right" as const },
-          { key: "ayaPct", label: "% AYA", width: 50, align: "right" as const },
-          { key: "irrPct", label: "% Irrad", width: 50, align: "right" as const },
-          { key: "prPct", label: "% PR", width: 44, align: "right" as const },
-          { key: "dispReal", label: "Disp real", width: 56, align: "right" as const },
-        ];
-
-        const rowH = 22;
-        let y = 98;
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(11, 18, 32);
-        doc.text(sectionTitle, margin, y);
-        y += 14;
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text(sectionHint, margin, y);
-        y += 16;
+      const drawTableSection = (
+        title: string,
+        subtitle: string,
+        rows: MonthlyReportRow[]
+      ) => {
+        openSectionPage(title, subtitle);
+        let y = 96;
+        const rowH = 20;
 
         const drawTableHeader = () => {
           doc.setFillColor(241, 245, 249);
@@ -2286,12 +2158,12 @@ export function TecsciPage() {
 
           let x = margin;
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(8.5);
+          doc.setFontSize(8.2);
           doc.setTextColor(71, 85, 105);
 
           cols.forEach((col) => {
             const tx = col.align === "left" ? x + 6 : x + col.width - 6;
-            doc.text(col.label, tx, y + 14, { align: col.align === "left" ? "left" : "right" });
+            doc.text(col.label, tx, y + 13, { align: col.align === "left" ? "left" : "right" });
             x += col.width;
           });
 
@@ -2302,28 +2174,18 @@ export function TecsciPage() {
 
         if (!rows.length) {
           doc.setDrawColor(226, 232, 240);
-          doc.rect(margin, y, usableW, 48);
+          doc.rect(margin, y, usableW, 40);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(10);
           doc.setTextColor(100, 116, 139);
-          doc.text("Sem dados disponíveis para esta visão no período selecionado.", margin + 10, y + 28);
+          doc.text("Sem dados para o período selecionado.", margin + 12, y + 24);
           return;
         }
 
         rows.forEach((row, index) => {
-          if (y + rowH > pageH - 42) {
-            addNewPage(sectionTitle, sectionHint, true);
-            y = 98;
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(13);
-            doc.setTextColor(11, 18, 32);
-            doc.text(sectionTitle, margin, y);
-            y += 14;
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`${sectionHint} • Continuação`, margin, y);
-            y += 16;
+          if (y + rowH > pageH - 40) {
+            openSectionPage(title, `${subtitle} • Continuação`);
+            y = 96;
             drawTableHeader();
           }
 
@@ -2336,7 +2198,7 @@ export function TecsciPage() {
           doc.line(margin, y + rowH, pageW - margin, y + rowH);
 
           const values = {
-            usina: fitText(row.usina, 156),
+            usina: fitText(row.usina, 140),
             periodo: row.periodo,
             geracao: row.geracao == null ? "—" : brNum(row.geracao, 2),
             p90Pct: row.p90Pct == null ? "—" : `${brNum(row.p90Pct, 1)}%`,
@@ -2351,13 +2213,11 @@ export function TecsciPage() {
 
           let x = margin;
           cols.forEach((col) => {
-            const rawValue = values[col.key as keyof typeof values];
             const tx = col.align === "left" ? x + 6 : x + col.width - 6;
-
             doc.setFont("helvetica", col.key === "usina" ? "bold" : "normal");
-            doc.setFontSize(8.8);
+            doc.setFontSize(8.7);
             doc.setTextColor(15, 23, 42);
-            doc.text(String(rawValue), tx, y + 14, {
+            doc.text(String(values[col.key as keyof typeof values]), tx, y + 13, {
               align: col.align === "left" ? "left" : "right",
             });
             x += col.width;
@@ -2367,58 +2227,48 @@ export function TecsciPage() {
         });
       };
 
-      drawTableSection({
-        sectionTitle: "Visão Mensal Consolidada",
-        sectionHint: "Tabela gerencial mensal de todas as usinas",
-        rows: monthlyRows,
-      });
+      drawTableSection(
+        "Visão Mensal Consolidada",
+        `Período ${brDate(start)} - ${brDate(endSafe)}`,
+        monthlyRows
+      );
 
-      drawTableSection({
-        sectionTitle: "Visão Diária Consolidada",
-        sectionHint: "Tabela gerencial diária de todas as usinas",
-        rows: dailyRows,
-      });
+      drawTableSection(
+        "Visão Diária Consolidada",
+        `Período ${brDate(start)} - ${brDate(endSafe)}`,
+        dailyRows
+      );
 
       if (failures.length) {
-        addNewPage("Falhas de Coleta", "Usinas com erro durante a geração do relatório");
-        let y = 98;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(11, 18, 32);
-        doc.text("Falhas de Coleta", margin, y);
-        y += 16;
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text("Estas usinas não retornaram dados válidos para uma ou ambas as visões no período.", margin, y);
-        y += 18;
+        openSectionPage("Falhas de coleta", `Período ${brDate(start)} - ${brDate(endSafe)}`);
+        let yFail = 96;
 
         failures.forEach((item, index) => {
-          if (y + 46 > pageH - 42) {
-            addNewPage("Falhas de Coleta", "Continuação", true);
-            y = 98;
+          if (yFail + 44 > pageH - 40) {
+            openSectionPage("Falhas de coleta", "Continuação");
+            yFail = 96;
           }
 
           doc.setFillColor(index % 2 === 0 ? 252 : 255, 253, 254);
           doc.setDrawColor(226, 232, 240);
-          doc.roundedRect(margin, y, usableW, 38, 10, 10, "FD");
+          doc.roundedRect(margin, yFail, usableW, 38, 10, 10, "FD");
           doc.setFont("helvetica", "bold");
           doc.setFontSize(10);
           doc.setTextColor(11, 18, 32);
-          doc.text(item.station.name, margin + 12, y + 15);
+          doc.text(item.station.name, margin + 12, yFail + 15);
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
           doc.setTextColor(100, 116, 139);
-          doc.text(fitText(item.error, usableW - 24), margin + 12, y + 28);
-          y += 46;
+          doc.text(fitText(item.error, usableW - 24), margin + 12, yFail + 28);
+          yFail += 46;
         });
       }
 
-      doc.save(`${multiReportFileName}.pdf`);
+      doc.save(`${monthlyReportBaseName}.pdf`);
 
       setMsg({
         type: "ok",
-        text: `PDF multiusinas gerado com sucesso. Usinas válidas: ${success.length}${
+        text: `Relatório consolidado mensal e diário exportado em PDF e Excel. Usinas válidas: ${success.length}${
           failures.length ? ` • Falhas: ${failures.length}` : ""
         }.`,
       });
@@ -2429,17 +2279,17 @@ export function TecsciPage() {
         text:
           error instanceof Error
             ? error.message
-            : "Falha ao gerar relatório consolidado multiusinas.",
+            : "Falha ao gerar relatório consolidado.",
       });
     } finally {
-      setMultiReportLoading(false);
-      setMultiReportProgress({
+      setReportBundleLoading(false);
+      setReportBundleProgress({
         done: 0,
         total: 0,
         current: "",
       });
     }
-  }, [stations, start, end, energyUnit, multiReportFileName, setMsg]);
+  }, [stations, start, end, monthlyReportBaseName, setMsg]);
 
   const loadingInitial = loading && !data;
   const isReloading = loading && !!data;
@@ -2458,25 +2308,19 @@ export function TecsciPage() {
           style={{ borderColor: T.border, background: T.card }}
         >
           <div
-            className="px-5 sm:px-6 py-5"
+            className="px-5 sm:px-6 py-6"
             style={{
               background:
-                "linear-gradient(135deg, rgba(22,101,52,0.05) 0%, rgba(22,101,52,0.00) 40%, rgba(15,23,42,0.03) 100%)",
+                "linear-gradient(135deg, rgba(22,101,52,0.06) 0%, rgba(22,101,52,0.00) 42%, rgba(15,23,42,0.03) 100%)",
             }}
           >
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  
-
-                  <div className="min-w-0">
-                    <div className={UI.headerTitle} style={{ color: T.text }}>
-                      Painel Ineer Energia
-                    </div>
-                    <div className="mt-1 text-sm font-semibold truncate" style={{ color: T.text2 }}>
-                      {selectedStation ? selectedStation.name : "Selecione a usina"}
-                    </div>
-                  </div>
+                <div className={UI.headerTitle} style={{ color: T.text }}>
+                  Dashboard de Performance
+                </div>
+                <div className="mt-1 text-sm font-semibold truncate" style={{ color: T.text2 }}>
+                  Cliente Ineer Energia
                 </div>
               </div>
 
@@ -2488,40 +2332,41 @@ export function TecsciPage() {
 
                 <Btn
                   tone="primary"
-                  onClick={exportMultiStationManagerialReport}
-                  disabled={multiReportLoading || !stations.length}
-                  title="Gerar relatório gerencial multiusinas em PDF"
+                  onClick={exportMonthlyBundle}
+                  disabled={reportBundleLoading || !stations.length}
+                  title="Exportar relatório consolidado mensal e diário em PDF e Excel"
                 >
-                  {multiReportLoading ? (
+                  {reportBundleLoading ? (
                     <>
                       <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      {`Gerando ${multiReportProgress.done}/${multiReportProgress.total}`}
+                      {`Exportando ${reportBundleProgress.done}/${reportBundleProgress.total}`}
                     </>
                   ) : (
                     <>
                       <FileDown className="w-4 h-4" />
-                      Relatório Gerencial
+                      Relatório 
                     </>
                   )}
                 </Btn>
 
                 <Btn tone="secondary" onClick={startPresentation} title="Modo apresentação">
                   <LayoutDashboard className="w-4 h-4" />
-                  Apresentar
+                  Modo Dashboard
                 </Btn>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
-              {heroMetrics.map((item) => (
-                <ExecutiveMetric key={item.label} {...item} />
-              ))}
-            </div>
+            {/* <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <ContextMetric label="Usina selecionada" value={selectedStation?.name || "—"} />
+              <ContextMetric label="Período" value={`${brDate(start)} — ${brDate(clampEndToToday(end))}`} />
+              <ContextMetric label="Granularidade" value={groupLabel(resolvedGroup)} />
+              <ContextMetric label="Atualização" value={lastUpdatedAt ? brDateTime(lastUpdatedAt) : "Sem atualização"} />
+            </div> */}
           </div>
         </div>
 
         {!presentationActive ? (
-          <div className="mt-4 max-w-[520px]">
+          <div className="mt-4 max-w-[760px]">
             <MsgBox m={msg} />
           </div>
         ) : null}
@@ -2545,13 +2390,12 @@ export function TecsciPage() {
               >
                 <SectionHeader
                   title="Filtros"
-                  hint="Defina os parâmetros para visualização dos dados"
+                  hint="Defina o período, a usina, a granularidade e a unidade de exibição"
                   right={
                     <Btn
                       tone="secondary"
                       onClick={() => {
                         setMsg(null);
-                        setTableQuery("");
                         applyPreset("thisMonth");
                       }}
                       title="Restaurar filtro padrão"
@@ -2689,19 +2533,18 @@ export function TecsciPage() {
               }}
             >
               <SectionHeader
-                title={
-                  presentationActive
-                    ? `Modo apresentação — ${selectedStation?.name || "Usina"}`
-                    : `Painel de performance — ${selectedStation?.name || "Usina"}`
-                }
+                title={presentationActive ? "Modo apresentação" : "Performance operacional"}
                 hint={
                   presentationActive
-                    ? "Troca automática de usina a cada 20 segundos"
-                    : "Visualizações de performance energética, irradiação, PR e disponibilidade"
+                    ? `Troca automática de usina a cada ${PRESENTATION_STATION_SECONDS} segundos`
+                    : "Geração, irradiação, performance ratio e disponibilidade"
                 }
                 right={
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="rounded-2xl border px-3 py-2 text-[11px] font-semibold" style={{ borderColor: T.border, background: T.cardSoft2, color: T.text2 }}>
+                    <div
+                      className="rounded-2xl border px-3 py-2 text-[11px] font-semibold"
+                      style={{ borderColor: T.border, background: T.cardSoft2, color: T.text2 }}
+                    >
                       {presentationActive
                         ? `Próxima usina em ${stationCountdown}s`
                         : `Atualizado em ${lastUpdatedAt ? brDateTime(lastUpdatedAt) : "—"}`}
@@ -2721,55 +2564,13 @@ export function TecsciPage() {
                       </>
                     ) : (
                       <Btn tone="secondary" onClick={chartsFullscreen.toggle} title="Tela cheia">
-                        <Maximize2 className="w-4 h-4" />
-                        Tela cheia
+                        <LayoutDashboard className="w-4 h-4" />
+                        Modo Dashboard
                       </Btn>
                     )}
                   </div>
                 }
               />
-
-              {presentationActive ? (
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-[-100000px] top-0 w-[1400px] opacity-0"
-                >
-                  <div
-                    className="border rounded-[20px] p-4"
-                    style={{ borderColor: T.border, background: T.cardSoft }}
-                  >
-                    <MiniChart
-                      title="Irradiação"
-                      subtitle="Real versus meta"
-                      data={seriesIrr}
-                      xKey="periodo"
-                      series={chartIrr1}
-                      height={320}
-                      formatterLeft={(v) => brNum(v, 2)}
-                      svgRef={svgIrrRef}
-                      xLabelCount={8}
-                    />
-                  </div>
-
-                  <div
-                    className="mt-4 border rounded-[20px] p-4"
-                    style={{ borderColor: T.border, background: T.cardSoft }}
-                  >
-                    <MiniChart
-                      title="Disponibilidade"
-                      subtitle="Disponibilidade operacional versus meta"
-                      data={seriesAvail}
-                      xKey="periodo"
-                      series={chartAvail}
-                      height={300}
-                      yDomain={[0, 100]}
-                      formatterLeft={(v) => `${brNum(v, 0)}%`}
-                      svgRef={svgAvailRef}
-                      xLabelCount={8}
-                    />
-                  </div>
-                </div>
-              ) : null}
 
               <div
                 className={cx(
@@ -2785,13 +2586,12 @@ export function TecsciPage() {
                     >
                       <MiniChart
                         title="Performance energética"
-                        subtitle="Geração, perdas e referências do período"
+                        subtitle="Geração, perdas e curvas de referência"
                         data={seriesEnergy}
                         xKey="periodo"
                         series={chartEnergySeries}
                         height={360}
                         formatterLeft={(v) => brNum(v, 2)}
-                        svgRef={svgEnergyRef}
                         xLabelCount={14}
                         stackBars
                       />
@@ -2803,13 +2603,12 @@ export function TecsciPage() {
                     >
                       <MiniChart
                         title="Irradiação acumulada"
-                        subtitle="Curva acumulada do período"
+                        subtitle="Ritmo acumulado do período"
                         data={seriesIrr}
                         xKey="periodo"
                         series={chartIrr2}
                         height={250}
                         formatterLeft={(v) => brNum(v, 2)}
-                        svgRef={svgIrrAccRef}
                         xLabelCount={10}
                       />
                     </div>
@@ -2819,15 +2618,14 @@ export function TecsciPage() {
                       style={{ borderColor: T.border, background: T.cardSoft2 }}
                     >
                       <MiniChart
-                        title="Performance ratio versus meta"
-                        subtitle="PR real comparado com a meta"
+                        title="Performance Ratio"
+                        subtitle="PR real comparado à meta"
                         data={seriesPR}
                         xKey="periodo"
                         series={chartPR}
                         height={250}
                         yDomain={[0, 100]}
                         formatterLeft={(v) => `${brNum(v, 0)}%`}
-                        svgRef={svgPrRef}
                         xLabelCount={10}
                       />
                     </div>
@@ -2840,13 +2638,12 @@ export function TecsciPage() {
                     >
                       <MiniChart
                         title="Performance energética"
-                        subtitle="Geração real, perdas estimadas e curvas de referência do período"
+                        subtitle="Geração real, perdas estimadas e curvas de referência"
                         data={seriesEnergy}
                         xKey="periodo"
                         series={chartEnergySeries}
                         height={390}
                         formatterLeft={(v) => brNum(v, 2)}
-                        svgRef={svgEnergyRef}
                         xLabelCount={10}
                         stackBars
                       />
@@ -2859,13 +2656,12 @@ export function TecsciPage() {
                       >
                         <MiniChart
                           title="Irradiação POA"
-                          subtitle="Irradiação solar projetada nos módulos solares"
+                          subtitle="Real versus meta do período"
                           data={seriesIrr}
                           xKey="periodo"
                           series={chartIrr1}
                           height={320}
                           formatterLeft={(v) => brNum(v, 2)}
-                          svgRef={svgIrrRef}
                           xLabelCount={8}
                         />
                       </div>
@@ -2876,13 +2672,12 @@ export function TecsciPage() {
                       >
                         <MiniChart
                           title="Irradiação acumulada"
-                          subtitle="Ritmo acumulado real versus referência"
+                          subtitle="Ritmo acumulado frente à referência"
                           data={seriesIrr}
                           xKey="periodo"
                           series={chartIrr2}
                           height={320}
                           formatterLeft={(v) => brNum(v, 2)}
-                          svgRef={svgIrrAccRef}
                           xLabelCount={8}
                         />
                       </div>
@@ -2902,7 +2697,6 @@ export function TecsciPage() {
                           height={300}
                           yDomain={[0, 100]}
                           formatterLeft={(v) => `${brNum(v, 0)}%`}
-                          svgRef={svgPrRef}
                           xLabelCount={8}
                         />
                       </div>
@@ -2913,14 +2707,13 @@ export function TecsciPage() {
                       >
                         <MiniChart
                           title="Disponibilidade operacional"
-                          subtitle="Disponibilidade real da usina frente à meta"
+                          subtitle="Disponibilidade real frente à meta"
                           data={seriesAvail}
                           xKey="periodo"
                           series={chartAvail}
                           height={300}
                           yDomain={[0, 100]}
                           formatterLeft={(v) => `${brNum(v, 0)}%`}
-                          svgRef={svgAvailRef}
                           xLabelCount={8}
                         />
                       </div>
@@ -2936,25 +2729,24 @@ export function TecsciPage() {
                 style={{ borderColor: T.border, background: T.card }}
               >
                 <SectionHeader
-                  title="Historico de performance"
-                  hint="Exporte os dados de geração, irradiação, PR e disponibilidade para o período selecionado"
+                  title="Histórico analítico"
+                  hint="Base detalhada da usina selecionada para conferência e exportação"
                   right={
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Btn
-                        tone="secondary"
-                        onClick={exportExcel}
-                        loading={xlsxLoading}
-                        disabled={!data?.ok || !tableRows.length}
-                        title="Exportar tabela para Excel"
-                      >
-                        <FileSpreadsheet className="w-4 h-4" />
-                      </Btn>
-                    </div>
+                    <Btn
+                      tone="secondary"
+                      onClick={exportExcel}
+                      loading={xlsxLoading}
+                      disabled={!data?.ok || !tableRows.length}
+                      title="Exportar histórico para Excel"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Excel
+                    </Btn>
                   }
                 />
 
                 <div className="p-5 space-y-4">
-                  <GerencialTable rows={filteredTableRows} energyUnit={energyUnit} />
+                  <GerencialTable rows={tableRows} />
                 </div>
               </div>
             ) : null}
